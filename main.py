@@ -1,21 +1,31 @@
 from PIL import Image
 
-# Opening the original image
-img = Image.open('pillow-rotate-earth.png')
 
-# Showcasing the original image
-img.show()
+def rotate_image(angle, image_path):
+    """
+    Rotates an image by a given angle.
 
-# Rotating the image by 30 degrees
-image_rotated = img.rotate(30)
+    :param angle: The angle (in degrees) to rotate the image.
+    :param image_path: Path to the image file to be rotated.
+    :return: Rotated image object.
+    """
+    try:
+        # Open the original image
+        img = Image.open(image_path)
+        # Rotate the image by the given angle
+        image_rotated = img.rotate(angle, expand=True)
+        # Return the rotated image
+        return image_rotated
+    except Exception as e:
+        print(f"Error while rotating the image: {e}")
+        return None
 
-# Showcasing the rotated image
-image_rotated.show()
 
-# Press the green button in the gutter to run the script.
+# Example usage
 if __name__ == '__main__':
-    # Showcasing the rotated image
-    image_rotated.show()
+    rot_angle = -10
 
-
-
+    img_path = 'pillow-rotate-earth.png'
+    rotated_image = rotate_image(rot_angle, img_path)
+    if rotated_image:
+        rotated_image.show()
