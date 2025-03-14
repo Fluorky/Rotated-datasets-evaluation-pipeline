@@ -66,15 +66,14 @@ plt.show()
 
 
 
-"""kąty podział
+"""Division angles
 
-nie wszystkie o jeden kod tylko losowo każdy w tych przedziałach z dokładnością co do stopnia
+Not all with the same code, but randomly selected from each range with a precision of one degree:
 
-20-50 stopni
+20-50 degrees
 
-50-90 stopni
+50-90 degrees
 
-90-120 stopni
+90-120 degrees
 
-*obracać batche o różne kąt
-"""
+*Rotate batches by different angles"""
