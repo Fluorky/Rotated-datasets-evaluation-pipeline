@@ -1,11 +1,12 @@
 import os
 import struct
+from typing import Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 
 
-def load_mnist_images(filename):
+def load_mnist_images(filename: str) -> Tuple[np.ndarray, int, int, int]:
     """Loads MNIST images from an IDX3-UBYTE file."""
     with open(filename, 'rb') as f:
         # Read the header information
@@ -18,7 +19,7 @@ def load_mnist_images(filename):
     return images, num_images, rows, cols
 
 
-def rotate_images(images, angle):
+def rotate_images(images: np.ndarray, angle: float) -> np.ndarray:
     """Rotates each image in the dataset by a given angle."""
     rotated_images = []
     for img in images:
@@ -29,7 +30,7 @@ def rotate_images(images, angle):
     return np.array(rotated_images)
 
 
-def save_mnist_images(filename, images, num_images, rows, cols):
+def save_mnist_images(filename: str, images: np.ndarray, num_images: int, rows: int, cols: int) -> None:
     """Saves images into an IDX3-UBYTE file."""
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'wb') as f:
