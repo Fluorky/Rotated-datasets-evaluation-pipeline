@@ -66,7 +66,7 @@ print(f"Rotated MNIST  {num_images} images saved to {output_filename}")
 # === Configuration ===
 input_file = "dataset/train-images-idx3-ubyte"
 output_file = "dataset/rotated-45/train-images-idx3-ubyte"
-rotation_angle = 45  # degrees
+rotation_angle = 45  # degrees  #TODO: Change it to  [(20, 50), (50, 90), (90, 120)]
 
 # === Processing ===
 images, num_images, rows, cols = load_mnist_images(input_file)
