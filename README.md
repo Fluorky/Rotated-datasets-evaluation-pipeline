@@ -28,10 +28,10 @@ This is a step-by-step guide for running the [CyCNN](https://github.com/mcrl/CyC
 
 ## 🔧 Requirements
 
-- Python 3.6 or 3.7 *(recommended)*
+- Python 3.9 or higher, Python 3.10 *(recommended)*
 - pip & virtualenv *(optional but recommended)*
 - Git
-- CPU or GPU (CUDA 10.x for GPU acceleration)
+- NVIDIA GPU (CUDA 11.x for GPU acceleration)
 
 ---
 
