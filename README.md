@@ -72,16 +72,6 @@ pip install -r requirements.txt
 
 ---
 
-## Project Structure
-
-- `src/` – model and training code
-- `src/cycnn.py` – main training and evaluation script
-- `data/` – dataset folder
-- `models/` – saved models
-- `plots/` – accuracy/loss plots
-
----
-
 ## Prepare Dataset
 
 CyCNN uses the **MNIST-C** dataset. Clone it and move it to the `data/` directory:
@@ -95,41 +85,56 @@ mv mnist-c data/
 
 ## Run the Model
 
-### Train
+### Train a Model
 
 ```bash
-python src/cycnn.py --dataset_path ./data/mnist-c --model_type cyc --epochs 30
+python main.py --train --model=cyvgg19 --dataset=mnist --polar-transform=linearpolar
 ```
 
-Available model types:
+Example Output:
+```
+configuration:  {'model': 'cyvgg19', 'train': True, 'test': False, 'polar_transform': 'linearpolar', 'augmentation': None, 'data_dir': './data', 'batch_size': 128, 'num_epochs': 9999999, 'lr': 0.05, 'dataset': 'mnist', 'redirect': False, 'early_stop_epochs': 15, 'test_while_training': False}
+Using device:  cuda
+1 devices available
+# Parameters: 20559.2K
+54000 Train data. 6000 Validation data. 10000 Test data.
+===> Training mnist-cyvgg19-linearpolar begin
+[Epoch 0] Train Loss: 0.508112
+[Epoch 0] Validation loss: 0.1685, Accuracy: 5669/6000 (94.48%)
+Saving model checkpoint to saves/mnist-cyvgg19-linearpolar.pt
+...
+[Epoch 52] Train Loss: 0.000117
+[Epoch 52] Validation loss: 0.0367, Accuracy: 5966/6000 (99.43%)
+Training Done!
+```
 
-- `fc` – Fully connected
-- `cnn` – Standard CNN
-- `cyc` – CyCNN (default)
-
-Optional parameters:
-
-- `--batch_size` (default: 128)
-- `--device` (`cpu` or `cuda`)
-
-### Evaluate
-
-To run evaluation only (assuming the model is trained):
+### Evaluate a Model
 
 ```bash
-python src/cycnn.py --dataset_path ./data/mnist-c --model_type cyc --eval
+python main.py --test --model=cyvgg19 --dataset=mnist --polar-transform=linearpolar
+```
+
+Example Output:
+```
+configuration:  {'model': 'cyvgg19', 'train': False, 'test': True, 'polar_transform': 'linearpolar', 'augmentation': None, 'data_dir': './data', 'batch_size': 128, 'num_epochs': 9999999, 'lr': 0.05, 'dataset': 'mnist', 'redirect': False, 'early_stop_epochs': 15, 'test_while_training': False}
+Using device:  cuda
+1 devices available
+# Parameters: 20559.2K
+54000 Train data. 6000 Validation data. 10000 Test data.
+===> Testing mnist-cyvgg19-linearpolar with rotated dataset begin
+Test loss: 1.0565, Accuracy: 8343/10000 (83.43%)
 ```
 
 ---
 
 ## Outputs
 
-- Trained models: `models/`
+- Trained models: `saves/`
 - Performance plots: `plots/`
 
 ---
 
-## 🛠 Notes
+## Notes
 
 - Code may require minor fixes for newer PyTorch versions (e.g., deprecation of `Variable`).
 - Ensure that data tensors and weights are of the same dtype.
