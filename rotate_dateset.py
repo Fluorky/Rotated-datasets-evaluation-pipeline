@@ -1,5 +1,6 @@
 import os
 import struct
+import random
 from typing import Tuple
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,13 +14,11 @@ def load_mnist_images(filename: str) -> Tuple[np.ndarray, int, int, int]:
         magic, num_images, rows, cols = struct.unpack(">IIII", f.read(16))
 
         # Read the image data
-        images = np.frombuffer(f.read(), dtype=np.uint8)
-        images = images.reshape(num_images, rows, cols)
+        images = np.frombuffer(f.read(), dtype=np.uint8).reshape(num_images, rows, cols)
 
     return images, num_images, rows, cols
 
-
-def rotate_images(images: np.ndarray, angle: float) -> np.ndarray:
+def rotate_images_by_angle(images: np.ndarray, angle: float) -> np.ndarray:
     """Rotates each image in the dataset by a given angle."""
     rotated_images = []
     for img in images:
@@ -29,6 +28,14 @@ def rotate_images(images: np.ndarray, angle: float) -> np.ndarray:
 
     return np.array(rotated_images)
 
+def rotate_images(images: np.ndarray, angle_range: Tuple[float, float]) -> np.ndarray:
+    rotated_images = []
+    for img in images:
+        angle = random.uniform(*angle_range)
+        pil_img = Image.fromarray(img)
+        rotated_img = pil_img.rotate(angle)
+        rotated_images.append(np.array(rotated_img, dtype=np.uint8))
+    return np.array(rotated_images)
 
 def save_mnist_images(filename: str, images: np.ndarray, num_images: int, rows: int, cols: int) -> None:
     """Saves images into an IDX3-UBYTE file."""
@@ -45,11 +52,12 @@ def save_mnist_images(filename: str, images: np.ndarray, num_images: int, rows: 
 input_filename = "dataset/t10k-images-idx3-ubyte"  # Original MNIST file
 output_filename = "dataset/rotated-45/t10k-images-idx3-ubyte"  # Transformed file
 
+
 # Load images
 images, num_images, rows, cols = load_mnist_images(input_filename)
 
 # Rotate images by 45 degrees
-rotated_images = rotate_images(images, 45)
+rotated_images = rotate_images_by_angle(images, 45)
 
 # Save the transformed images back into a new IDX3-UBYTE file
 save_mnist_images(output_filename, rotated_images, num_images, rows, cols)
