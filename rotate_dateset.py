@@ -41,7 +41,7 @@ def save_mnist_images(filename: str, images: np.ndarray, num_images: int, rows: 
     """Saves images into an IDX3-UBYTE file."""
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'wb') as f:
-        # Write header (magic number, number of images, rows, columns)
+        # Write header (magic nugitmber, number of images, rows, columns)
         f.write(struct.pack(">IIII", 2051, num_images, rows, cols))
 
         # Write image data
@@ -52,6 +52,11 @@ def save_mnist_images(filename: str, images: np.ndarray, num_images: int, rows: 
 input_filename = "dataset/t10k-images-idx3-ubyte"  # Original MNIST file
 output_filename = "dataset/rotated-45/t10k-images-idx3-ubyte"  # Transformed file
 
+rotation_angle_ranges = [
+    (20, 50),
+    (50, 90),
+    (90, 120)
+]
 
 # Load images
 images, num_images, rows, cols = load_mnist_images(input_filename)
@@ -63,10 +68,10 @@ rotated_images = rotate_images_by_angle(images, 45)
 save_mnist_images(output_filename, rotated_images, num_images, rows, cols)
 
 # Display the first rotated image
-plt.imshow(rotated_images[0], cmap='gray')
+# plt.imshow(rotated_images[0], cmap='gray')
 plt.title("First Rotated MNIST Test Image (45°)")
 plt.axis("off")
-plt.show()
+# plt.show()
 
 print(f"Rotated MNIST  {num_images} images saved to {output_filename}")
 
@@ -78,13 +83,33 @@ rotation_angle = 45  # degrees  #TODO: Change it to  [(20, 50), (50, 90), (90, 1
 
 # === Processing ===
 images, num_images, rows, cols = load_mnist_images(input_file)
-rotated_images = rotate_images(images, rotation_angle)
+rotated_images = rotate_images_by_angle(images, rotation_angle)
 save_mnist_images(output_file, rotated_images, num_images, rows, cols)
 
 # === Preview ===
-plt.imshow(rotated_images[0], cmap='gray')
+# plt.imshow(rotated_images[0], cmap='gray')
 plt.title(f"Rotated Training Image (angle={rotation_angle}°)")
 plt.axis("off")
-plt.show()
+# plt.show()
 
 print(f"Saved {num_images} rotated images to '{output_file}'")
+
+# === Processing Multiple Ranges===
+input_files = ["dataset/t10k-images-idx3-ubyte", "dataset/train-images-idx3-ubyte"]
+for input_file in input_files:
+    images, num_images, rows, cols = load_mnist_images(input_file)
+
+    for angle_range in rotation_angle_ranges:
+        range_str = f"{angle_range[0]}-{angle_range[1]}"
+        output_file = f"dataset/rotated-{range_str}/{os.path.basename(input_file)}"
+
+        rotated_images = rotate_images(images, angle_range)
+        save_mnist_images(output_file, rotated_images, num_images, rows, cols)
+
+        # Preview
+        plt.imshow(rotated_images[0], cmap='gray')
+        plt.title(f"Rotated (angle ∈ {angle_range}°)")
+        plt.axis("off")
+        plt.show()
+
+        print(f"Saved {num_images} images rotated in range {angle_range}° to '{output_file}'")
