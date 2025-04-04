@@ -3,9 +3,11 @@ import sqlite3
 import os
 import re
 
+
 def extract_config(line):
     match = re.search(r"configuration:\s+({.*})", line)
     return eval(match.group(1)) if match else {}
+
 
 def parse_filename(filename):
     name = os.path.basename(filename).replace('_train.txt', '').replace('.txt', '')
@@ -13,6 +15,7 @@ def parse_filename(filename):
     dataset = parts[0] if parts else ''
     augmentation = '-'.join(parts[1:]) if len(parts) > 1 else ''
     return dataset, augmentation
+
 
 def parse_log_file(filepath):
     with open(filepath, 'r') as f:
@@ -60,6 +63,7 @@ def parse_log_file(filepath):
 
     return rows
 
+
 # Plotting utility
 def plot_metrics(data):
     epochs = [d['epoch'] for d in data]
@@ -85,6 +89,7 @@ def plot_metrics(data):
     plt.tight_layout()
     plt.show()
 
+
 def init_db(db_path='training_logs.db'):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -108,6 +113,7 @@ def init_db(db_path='training_logs.db'):
     conn.commit()
     conn.close()
 
+
 def save_to_sqlite(data, db_path='training_logs.db'):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -128,6 +134,7 @@ def save_to_sqlite(data, db_path='training_logs.db'):
     conn.commit()
     conn.close()
     print(f"✅ Saved {len(data)} rows to {db_path}")
+
 
 # === USAGE ===
 
