@@ -1,0 +1,7 @@
+configuration:  {'model': 'cyvgg19', 'train': False, 'test': True, 'polar_transform': 'linearpolar', 'augmentation': None, 'data_dir': './data', 'batch_size': 128, 'num_epochs': 9999999, 'lr': 0.05, 'dataset': 'mnist', 'redirect': False, 'early_stop_epochs': 15, 'test_while_training': False}
+Using device:  cuda
+1 devices available
+# Parameters: 20559.2K
+54000 Train data. 6000 Validation data. 10000 Test data.
+===> Testing mnist-cyvgg19-linearpolar with rotated dataset begin
+Test loss: 0.2282, Accuracy: 9493/10000 (94.93%)
