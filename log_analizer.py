@@ -114,11 +114,27 @@ def init_db(db_path='training_logs.db'):
     conn.close()
 
 
-def save_to_sqlite(data, db_path='training_logs.db'):
+def save_to_sqlite(data, db_path='training_logs.db', overwrite=False):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
+    inserted = 0
+    skipped = 0
 
     for row in data:
+        # Check if record already exists
+        cursor.execute('''
+            SELECT id FROM training_logs
+            WHERE model_id = ? AND log_file = ? AND epoch = ?
+        ''', (row['model_id'], row['log_file'], row['epoch']))
+        existing = cursor.fetchone()
+
+        if existing:
+            if overwrite:
+                cursor.execute('DELETE FROM training_logs WHERE id = ?', (existing[0],))
+            else:
+                skipped += 1
+                continue
+
         cursor.execute('''
             INSERT INTO training_logs (
                 model_id, log_file, dataset, augmentation_info,
@@ -130,10 +146,11 @@ def save_to_sqlite(data, db_path='training_logs.db'):
             row['transform'], row['batch_size'], row['lr'], row['epoch'],
             row['train_loss'], row['val_loss'], row['accuracy'], row['elapsed_time']
         ))
+        inserted += 1
 
     conn.commit()
     conn.close()
-    print(f"✅ Saved {len(data)} rows to {db_path}")
+    print(f"✅ Inserted: {inserted} row(s). Skipped: {skipped} existing row(s).")
 
 
 # === USAGE ===
