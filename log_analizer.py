@@ -115,26 +115,29 @@ def init_db(db_path='training_logs.db'):
 
 
 def save_to_sqlite(data, db_path='training_logs.db', overwrite=False):
+    if not data:
+        print("⚠️ No data to insert.")
+        return
+
+    log_file = data[0]['log_file']
+
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    inserted = 0
-    skipped = 0
+
+    # Check if log_file already exists in the DB
+    cursor.execute('SELECT COUNT(*) FROM training_logs WHERE log_file = ?', (log_file,))
+    existing_count = cursor.fetchone()[0]
+
+    if existing_count > 0:
+        if overwrite:
+            print(f"♻️ Overwriting existing entries for log file: {log_file} ({existing_count} rows)")
+            cursor.execute('DELETE FROM training_logs WHERE log_file = ?', (log_file,))
+        else:
+            print(f"⏩ Skipped: Log file '{log_file}' already exists in database ({existing_count} rows)")
+            conn.close()
+            return
 
     for row in data:
-        # Check if record already exists
-        cursor.execute('''
-            SELECT id FROM training_logs
-            WHERE model_id = ? AND log_file = ? AND epoch = ?
-        ''', (row['model_id'], row['log_file'], row['epoch']))
-        existing = cursor.fetchone()
-
-        if existing:
-            if overwrite:
-                cursor.execute('DELETE FROM training_logs WHERE id = ?', (existing[0],))
-            else:
-                skipped += 1
-                continue
-
         cursor.execute('''
             INSERT INTO training_logs (
                 model_id, log_file, dataset, augmentation_info,
@@ -146,11 +149,10 @@ def save_to_sqlite(data, db_path='training_logs.db', overwrite=False):
             row['transform'], row['batch_size'], row['lr'], row['epoch'],
             row['train_loss'], row['val_loss'], row['accuracy'], row['elapsed_time']
         ))
-        inserted += 1
 
     conn.commit()
     conn.close()
-    print(f"✅ Inserted: {inserted} row(s). Skipped: {skipped} existing row(s).")
+    print(f"✅ Inserted {len(data)} row(s) for log file: {log_file}")
 
 
 # === USAGE ===
