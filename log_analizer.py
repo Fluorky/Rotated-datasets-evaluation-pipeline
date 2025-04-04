@@ -139,4 +139,4 @@ if not os.path.exists(db_file):
     init_db(db_file)
 parsed_data = parse_log_file(log_path)
 plot_metrics(parsed_data)
-# save_to_sqlite(parsed_data, db_file)
+save_to_sqlite(parsed_data, db_file)
