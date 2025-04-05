@@ -4,7 +4,19 @@ from rotate_dateset import load_mnist_images, rotate_images, rotate_images_by_an
 
 
 def rotate_and_save_fixed_angle(input_path: str, output_path: str, angle: float):
-    """Rotate dataset by a fixed angle and save it."""
+    """
+    Rotate an MNIST dataset by a fixed angle and save the result to a specified path.
+
+    :param input_path: Path to the original MNIST image file.
+    :type input_path: str
+    :param output_path: Path where the rotated images will be saved.
+    :type output_path: str
+    :param angle: Angle in degrees by which to rotate each image.
+    :type angle: float
+
+    :return: None
+    :rtype: None
+    """
     images, num_images, rows, cols = load_mnist_images(input_path)
     rotated_images = rotate_images_by_angle(images, angle)
     save_mnist_images(output_path, rotated_images, num_images, rows, cols)
@@ -19,7 +31,18 @@ def rotate_and_save_fixed_angle(input_path: str, output_path: str, angle: float)
 
 
 def rotate_and_save_ranges(input_path: str, angle_ranges: list[tuple[int, int]]):
-    """Rotate dataset by multiple angle ranges and save to separate folders."""
+    """
+    Rotate an MNIST dataset using multiple angle ranges and save results to separate folders.
+
+    :param input_path: Path to the original MNIST image file.
+    :type input_path: str
+    :param angle_ranges: List of angle ranges (min, max) in degrees.
+                         Each range is applied randomly to images.
+    :type angle_ranges: list[tuple[int, int]]
+
+    :return: None
+    :rtype: None
+    """
     images, num_images, rows, cols = load_mnist_images(input_path)
 
     for angle_range in angle_ranges:
