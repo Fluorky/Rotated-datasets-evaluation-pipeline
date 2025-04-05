@@ -17,6 +17,7 @@ def load_mnist_images(filename: str) -> Tuple[np.ndarray, int, int, int]:
 
     return images, num_images, rows, cols
 
+
 def rotate_images_by_angle(images: np.ndarray, angle: float) -> np.ndarray:
     """Rotates each image in the dataset by a given angle."""
     rotated_images = []
@@ -27,6 +28,7 @@ def rotate_images_by_angle(images: np.ndarray, angle: float) -> np.ndarray:
 
     return np.array(rotated_images)
 
+
 def rotate_images(images: np.ndarray, angle_range: Tuple[float, float]) -> np.ndarray:
     rotated_images = []
     for img in images:
@@ -35,6 +37,7 @@ def rotate_images(images: np.ndarray, angle_range: Tuple[float, float]) -> np.nd
         rotated_img = pil_img.rotate(angle)
         rotated_images.append(np.array(rotated_img, dtype=np.uint8))
     return np.array(rotated_images)
+
 
 def save_mnist_images(filename: str, images: np.ndarray, num_images: int, rows: int, cols: int) -> None:
     """Saves images into an IDX3-UBYTE file."""
