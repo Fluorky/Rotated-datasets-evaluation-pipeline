@@ -64,7 +64,6 @@ def parse_log_file(filepath):
     return rows
 
 
-# Plotting utility
 def plot_metrics(data):
     epochs = [d['epoch'] for d in data]
     train_loss = [d['train_loss'] for d in data]
@@ -124,7 +123,6 @@ def save_to_sqlite(data, db_path='training_logs.db', overwrite=False):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # Check if log_file already exists in the DB
     cursor.execute('SELECT COUNT(*) FROM training_logs WHERE log_file = ?', (log_file,))
     existing_count = cursor.fetchone()[0]
 
@@ -155,14 +153,32 @@ def save_to_sqlite(data, db_path='training_logs.db', overwrite=False):
     print(f"✅ Inserted {len(data)} row(s) for log file: {log_file}")
 
 
+def collect_log_files(log_path):
+    if os.path.isfile(log_path):
+        return [log_path]
+
+    log_files = []
+    for root, _, files in os.walk(log_path):
+        for file in files:
+            if file.endswith('.txt'):
+                log_files.append(os.path.join(root, file))
+    return log_files
+
+
 # === USAGE ===
 
-log_path = 'log_files_from_slave/logs/mnist-rotated-20-50_train.txt'
+log_path = 'log_files_from_slave/logs'  # File or folder
 db_file = 'training_logs.db'
+overwrite_existing = False
 
 if not os.path.exists(db_file):
-    print("Creating database...")
+    print("📦 Creating database...")
     init_db(db_file)
-parsed_data = parse_log_file(log_path)
-plot_metrics(parsed_data)
-save_to_sqlite(parsed_data, db_file)
+
+log_files = collect_log_files(log_path)
+
+for file_path in log_files:
+    print(f"\n📄 Processing: {file_path}")
+    parsed_data = parse_log_file(file_path)
+    plot_metrics(parsed_data)
+    save_to_sqlite(parsed_data, db_file, overwrite=overwrite_existing)
