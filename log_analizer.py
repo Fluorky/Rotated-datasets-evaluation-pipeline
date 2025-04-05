@@ -128,10 +128,10 @@ def save_to_sqlite(data, db_path='training_logs.db', overwrite=False):
 
     if existing_count > 0:
         if overwrite:
-            print(f"♻️ Overwriting existing entries for log file: {log_file} ({existing_count} rows)")
+            print(f"Overwriting existing entries for log file: {log_file} ({existing_count} rows)")
             cursor.execute('DELETE FROM training_logs WHERE log_file = ?', (log_file,))
         else:
-            print(f"⏩ Skipped: Log file '{log_file}' already exists in database ({existing_count} rows)")
+            print(f"Skipped: Log file '{log_file}' already exists in database ({existing_count} rows)")
             conn.close()
             return
 
@@ -150,7 +150,7 @@ def save_to_sqlite(data, db_path='training_logs.db', overwrite=False):
 
     conn.commit()
     conn.close()
-    print(f"✅ Inserted {len(data)} row(s) for log file: {log_file}")
+    print(f"Inserted {len(data)} row(s) for log file: {log_file}")
 
 
 def collect_log_files(log_path):
@@ -172,13 +172,13 @@ db_file = 'training_logs.db'
 overwrite_existing = False
 
 if not os.path.exists(db_file):
-    print("📦 Creating database...")
+    print("Creating database...")
     init_db(db_file)
 
 log_files = collect_log_files(log_path)
 
 for file_path in log_files:
-    print(f"\n📄 Processing: {file_path}")
+    print(f"\nProcessing: {file_path}")
     parsed_data = parse_log_file(file_path)
     plot_metrics(parsed_data)
     save_to_sqlite(parsed_data, db_file, overwrite=overwrite_existing)
