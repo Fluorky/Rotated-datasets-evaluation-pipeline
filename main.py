@@ -68,13 +68,13 @@ if __name__ == '__main__':
 
     # === Fixed-angle processing ===
     rotate_and_save_fixed_angle(
-        input_path="dataset/t10k-images-idx3-ubyte",
+        input_path="dataset/dataset_mnist_non_rotated/t10k-images-idx3-ubyte",
         output_path="dataset/rotated-45/t10k-images-idx3-ubyte",
         angle=fixed_angle
     )
 
     rotate_and_save_fixed_angle(
-        input_path="dataset/train-images-idx3-ubyte",
+        input_path="dataset/dataset_mnist_non_rotated/train-images-idx3-ubyte",
         output_path="dataset/rotated-45/train-images-idx3-ubyte",
         angle=fixed_angle
     )
