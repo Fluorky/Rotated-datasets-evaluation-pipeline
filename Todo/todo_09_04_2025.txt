@@ -1,0 +1,22 @@
+TODO – CyCnn for master’s thesis
+
+0. Save model test results to an SQL database – to store evaluation metrics (e.g., accuracy, loss, confusion matrix) for easier comparison and analysis.
+
+1. Train the model on a single dataset (e.g., non-rotated images), then test it on other datasets (e.g., rotated images) – to evaluate how well it generalizes.
+
+2. Generate confusion matrices for each training and testing dataset separately – to analyze where the model makes mistakes and which images are most effective for learning.
+
+3. Combine two (or more) different training datasets and train the model on the merged set – to check if this improves performance.
+
+4. Perform model fine-tuning – for example, train first on non-rotated images, then fine-tune on rotated ones.
+
+5. Run an experiment using all datasets at once – train the model on the combined data, keeping in mind that labels are in order only (no indexing).
+
+6. Set up automatic replacement of the MNIST (or other) model in the WSL folder – to streamline testing different trained models.
+
+7. Test Dockerization of the model on newer versions of Python and libraries – using an official NVIDIA Docker image (e.g., from nvcr.io/nvidia/pytorch:19.08-py3) to ensure compatibility and GPU support
+
+8. Search for an alternative dataset – preferably with images of size 32x32 pixels (e.g., GTSRB https://www.kaggle.com/code/hamdipolu/gtsrb-german-traffic-sign-image-classification/notebook – needs resizing, Omniglot, Chinese MNIST https://www.kaggle.com/datasets/gpreda/chinese-mnist).
+
+9. Check how the model handles different input sizes – modify the input resolution and evaluate performance (e.g., upscale MNIST from 28×28 to 32×32, or test with other resolutions).
+

@@ -64,7 +64,7 @@ def rotate_and_save_ranges(input_path: str, angle_ranges: list[tuple[int, int]])
 if __name__ == '__main__':
     # === Config ===
     fixed_angle = 45
-    angle_ranges = [(20, 50), (50, 90), (90, 120)]
+    angle_ranges = [(20, 50), (50, 90), (90, 120), (120,180)]
 
     # === Fixed-angle processing ===
     rotate_and_save_fixed_angle(
@@ -80,6 +80,6 @@ if __name__ == '__main__':
     )
 
     # === Multi-range processing ===
-    input_files = ["dataset/t10k-images-idx3-ubyte", "dataset/train-images-idx3-ubyte"]
+    input_files = ["dataset/dataset_mnist_non_rotated/t10k-images-idx3-ubyte", "dataset/dataset_mnist_non_rotated/train-images-idx3-ubyte"]
     for input_file in input_files:
         rotate_and_save_ranges(input_file, angle_ranges)
