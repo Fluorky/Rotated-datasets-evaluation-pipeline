@@ -64,7 +64,7 @@ def parse_log_file(filepath):
     return rows
 
 
-def plot_metrics(data):
+def plot_metrics(data, file_path=None):
     epochs = [d['epoch'] for d in data]
     train_loss = [d['train_loss'] for d in data]
     val_loss = [d['val_loss'] for d in data]
@@ -86,10 +86,19 @@ def plot_metrics(data):
     plt.title('Validation Accuracy over Epochs')
 
     plt.tight_layout()
-    plt.show()
+
+    # === Save to file if file_path is given ===
+    if file_path:
+        os.makedirs("plots", exist_ok=True)
+        filename = os.path.basename(file_path).replace(".txt", ".png")
+        save_path = os.path.join("plots", filename)
+        plt.savefig(save_path)
+        print(f"Saved plot to {save_path}")
+
+    plt.close()  # close plot to avoid displaying inline if not needed
 
 
-def init_db(db_path='training_logs.db'):
+def init_db(db_path='mnist_logs.db'):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute('''
@@ -113,7 +122,7 @@ def init_db(db_path='training_logs.db'):
     conn.close()
 
 
-def save_to_sqlite(data, db_path='training_logs.db', overwrite=False):
+def save_to_sqlite(data, db_path='mnist_logs.db', overwrite=False):
     if not data:
         print("⚠️ No data to insert.")
         return
@@ -168,7 +177,7 @@ def collect_log_files(log_path):
 # === USAGE ===
 
 log_path = 'log_files_from_slave/logs'  # File or folder
-db_file = 'training_logs.db'
+db_file = 'mnist_logs.db'
 overwrite_existing = False
 
 if not os.path.exists(db_file):
@@ -180,5 +189,5 @@ log_files = collect_log_files(log_path)
 for file_path in log_files:
     print(f"\nProcessing: {file_path}")
     parsed_data = parse_log_file(file_path)
-    plot_metrics(parsed_data)
+    plot_metrics(parsed_data, file_path)
     save_to_sqlite(parsed_data, db_file, overwrite=overwrite_existing)
