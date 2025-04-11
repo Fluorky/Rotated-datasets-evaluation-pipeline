@@ -1,6 +1,6 @@
 import os
-import shutil
 from pathlib import Path
+
 
 def merge_ubyte_files(folders, output_folder):
     os.makedirs(output_folder, exist_ok=True)
@@ -31,6 +31,7 @@ def merge_ubyte_files(folders, output_folder):
         with open(output_path, "wb") as f:
             f.write(merged_data)
         print(f"Merged {filename} → {output_path}")
+
 
 # === CONFIGURATION ===
 folders_to_merge = [
