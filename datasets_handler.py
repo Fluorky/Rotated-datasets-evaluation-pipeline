@@ -35,12 +35,11 @@ def merge_ubyte_files(folders, output_folder):
 
 # === CONFIGURATION ===
 folders_to_merge = [
-    "dataset_mnist_non_rotated",
-    "rotated-45",
-    "rotated-90-120"
+    "dataset/dataset_mnist_non_rotated",
+    "dataset/rotated-45",
 ]
 
-merged_output_folder = "merged_datasets/merged_nonrot_45_90_120"
+merged_output_folder = "merged_datasets/merged_nonrot_45"
 
 # === RUN ===
 merge_ubyte_files(folders_to_merge, merged_output_folder)
