@@ -3,7 +3,7 @@ import sqlite3
 import shutil
 import os
 import re
-
+from wsl_handler import sync_wsl_logs
 
 def extract_config(line):
     match = re.search(r"configuration:\s+({.*})", line)
@@ -173,26 +173,6 @@ def collect_log_files(log_path):
             if file.endswith('.txt'):
                 log_files.append(os.path.join(root, file))
     return log_files
-
-
-def sync_wsl_logs(source_folder, dest_folder, overwrite=False):
-    os.makedirs(dest_folder, exist_ok=True)
-
-    for file in os.listdir(source_folder):
-        if file.endswith(".txt"):
-            src = os.path.join(source_folder, file)
-            dst = os.path.join(dest_folder, file)
-
-            if os.path.exists(dst):
-                if overwrite:
-                    shutil.copy2(src, dst)
-                    print(f"Overwritten existing log: {file}")
-                else:
-                    print(f"Skipped existing log: {file}")
-            else:
-                shutil.copy2(src, dst)
-                print(f"Copied log: {file}")
-
 
 
 # ===  ===
