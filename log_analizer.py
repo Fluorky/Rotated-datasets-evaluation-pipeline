@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import sqlite3
+import shutil
 import os
 import re
 
@@ -174,9 +175,38 @@ def collect_log_files(log_path):
     return log_files
 
 
-# === USAGE ===
+def sync_wsl_logs(source_folder, dest_folder, overwrite=False):
+    os.makedirs(dest_folder, exist_ok=True)
 
-log_path = 'log_files_from_slave/logs'  # File or folder
+    for file in os.listdir(source_folder):
+        if file.endswith(".txt"):
+            src = os.path.join(source_folder, file)
+            dst = os.path.join(dest_folder, file)
+
+            if os.path.exists(dst):
+                if overwrite:
+                    shutil.copy2(src, dst)
+                    print(f"Overwritten existing log: {file}")
+                else:
+                    print(f"Skipped existing log: {file}")
+            else:
+                shutil.copy2(src, dst)
+                print(f"Copied log: {file}")
+
+
+
+# ===  ===
+
+# WSL logs source and local logs destination
+
+wsl_logs_source = r'\\wsl.localhost\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\logs'
+local_logs_folder = 'log_files_from_slave/logs'
+overwrite_logs = False  # Set to True if you want to overwrite existing files
+
+print("Syncing WSL logs...")
+
+sync_wsl_logs(wsl_logs_source, local_logs_folder, overwrite=overwrite_logs)
+
 db_file = 'mnist_logs.db'
 overwrite_existing = False
 
@@ -184,7 +214,7 @@ if not os.path.exists(db_file):
     print("Creating database...")
     init_db(db_file)
 
-log_files = collect_log_files(log_path)
+log_files = collect_log_files(local_logs_folder)
 
 for file_path in log_files:
     print(f"\nProcessing: {file_path}")
