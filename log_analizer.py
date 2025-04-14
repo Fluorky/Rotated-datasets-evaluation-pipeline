@@ -1,9 +1,11 @@
-import matplotlib.pyplot as plt
-import sqlite3
-import shutil
 import os
 import re
+import sqlite3
+
+import matplotlib.pyplot as plt
+
 from wsl_handler import sync_wsl_logs
+
 
 def extract_config(line):
     match = re.search(r"configuration:\s+({.*})", line)
@@ -139,6 +141,7 @@ def init_db(db_path='mnist_logs.db'):
     conn.commit()
     conn.close()
 
+
 def parse_test_log_file(filepath):
     with open(filepath, 'r') as f:
         lines = f.readlines()
@@ -218,6 +221,7 @@ def save_to_sqlite(data, db_path='mnist_logs.db', overwrite=False):
     conn.commit()
     conn.close()
     print(f"Inserted {len(data)} row(s) for log file: {log_file}")
+
 
 def save_test_to_sqlite(data, db_path='mnist_logs.db', overwrite=False):
     if not data:
