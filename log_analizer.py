@@ -119,8 +119,65 @@ def init_db(db_path='mnist_logs.db'):
             elapsed_time REAL
         )
     ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS test_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            model_id TEXT,
+            log_file TEXT,
+            dataset TEXT,
+            augmentation_info TEXT,
+            transform TEXT,
+            batch_size INTEGER,
+            lr REAL,
+            test_loss REAL,
+            accuracy REAL,
+            correct INTEGER,
+            total INTEGER
+        )
+    ''')
+
     conn.commit()
     conn.close()
+
+def parse_test_log_file(filepath):
+    with open(filepath, 'r') as f:
+        lines = f.readlines()
+
+    config_line = next((line for line in lines if line.startswith("configuration:")), None)
+    config = extract_config(config_line)
+    dataset, augmentation = parse_filename(filepath)
+
+    model_id = config.get('model', '')
+    transform = config.get('polar_transform', '')
+    batch_size = config.get('batch_size', None)
+    lr = config.get('lr', None)
+
+    test_line = next((line for line in lines if line.startswith("Test loss:")), None)
+    if not test_line:
+        return []  # nie ma testu
+
+    match = re.search(r'Test loss: ([\d.]+), Accuracy: (\d+)/(\d+) \(([\d.]+)%\)', test_line)
+    if not match:
+        return []
+
+    test_loss = float(match.group(1))
+    correct = int(match.group(2))
+    total = int(match.group(3))
+    accuracy = float(match.group(4))
+
+    return [{
+        'model_id': model_id,
+        'log_file': os.path.basename(filepath),
+        'dataset': dataset,
+        'augmentation_info': augmentation,
+        'transform': transform,
+        'batch_size': batch_size,
+        'lr': lr,
+        'test_loss': test_loss,
+        'accuracy': accuracy,
+        'total': total,
+        'correct': correct
+    }]
 
 
 def save_to_sqlite(data, db_path='mnist_logs.db', overwrite=False):
@@ -162,6 +219,42 @@ def save_to_sqlite(data, db_path='mnist_logs.db', overwrite=False):
     conn.close()
     print(f"Inserted {len(data)} row(s) for log file: {log_file}")
 
+def save_test_to_sqlite(data, db_path='mnist_logs.db', overwrite=False):
+    if not data:
+        print("⚠️ No test data to insert.")
+        return
+
+    log_file = data[0]['log_file']
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT COUNT(*) FROM test_logs WHERE log_file = ?', (log_file,))
+    exists = cursor.fetchone()[0]
+
+    if exists > 0:
+        if overwrite:
+            print(f"Overwriting test log: {log_file}")
+            cursor.execute('DELETE FROM test_logs WHERE log_file = ?', (log_file,))
+        else:
+            print(f"Skipped test log: {log_file}")
+            conn.close()
+            return
+
+    for row in data:
+        cursor.execute('''
+            INSERT INTO test_logs (
+                model_id, log_file, dataset, augmentation_info, transform,
+                batch_size, lr, test_loss, accuracy, correct, total
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            row['model_id'], row['log_file'], row['dataset'], row['augmentation_info'], row['transform'],
+            row['batch_size'], row['lr'], row['test_loss'], row['accuracy'], row['correct'], row['total']
+        ))
+
+    conn.commit()
+    conn.close()
+    print(f"Inserted test log for: {log_file}")
+
 
 def collect_log_files(log_path):
     if os.path.isfile(log_path):
@@ -199,5 +292,12 @@ log_files = collect_log_files(local_logs_folder)
 for file_path in log_files:
     print(f"\nProcessing: {file_path}")
     parsed_data = parse_log_file(file_path)
-    plot_metrics(parsed_data, file_path)
-    save_to_sqlite(parsed_data, db_file, overwrite=overwrite_existing)
+    if parsed_data:
+        plot_metrics(parsed_data, file_path)
+        save_to_sqlite(parsed_data, db_file, overwrite=overwrite_existing)
+    else:
+        test_data = parse_test_log_file(file_path)
+        if test_data:
+            save_test_to_sqlite(test_data, db_file, overwrite=overwrite_existing)
+        else:
+            print("⚠️ Nothing to insert from this file.")
