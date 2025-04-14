@@ -2,12 +2,13 @@ import os
 from pathlib import Path
 import struct
 
+
 def merge_ubyte_files(folders, output_folder):
     os.makedirs(output_folder, exist_ok=True)
 
     files_to_merge = [
-        ("train-images-idx3-ubyte", "train-images-idx3-ubyte", 16, ">IIII"),   # magic, num, rows, cols
-        ("train-labels-idx1-ubyte", "train-labels-idx1-ubyte", 8, ">II"),      # magic, num
+        ("train-images-idx3-ubyte", "train-images-idx3-ubyte", 16, ">IIII"),  # magic, num, rows, cols
+        ("train-labels-idx1-ubyte", "train-labels-idx1-ubyte", 8, ">II"),  # magic, num
         ("t10k-images-idx3-ubyte", "t10k-images-idx3-ubyte", 16, ">IIII"),
         ("t10k-labels-idx1-ubyte", "t10k-labels-idx1-ubyte", 8, ">II"),
     ]
@@ -48,6 +49,7 @@ def merge_ubyte_files(folders, output_folder):
                 f.write(new_header)
                 f.write(merged_body)
             print(f"Merged {filename} → {output_path} (samples: {total_samples})")
+
 
 # === CONFIGURATION ===
 folders_to_merge = [
