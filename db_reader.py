@@ -27,6 +27,32 @@ def add_test_logs_table(db_path='mnist_logs.db'):
     conn.close()
     print("✅ Table `test_logs` added or already existed.")
 
+
+def add_training_logs_table(db_path):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS training_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            model_id TEXT,
+            log_file TEXT,
+            dataset TEXT,
+            augmentation_info TEXT,
+            transform TEXT,
+            batch_size INTEGER,
+            lr REAL,
+            epoch INTEGER,
+            train_loss REAL,
+            val_loss REAL,
+            accuracy REAL,
+            elapsed_time REAL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+    print("✅ Table `training_logs` added or already existed.")
+
+
 def drop_table(table_name, db_path='mnist_logs.db'):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
