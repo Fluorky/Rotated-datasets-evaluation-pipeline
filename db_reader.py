@@ -61,6 +61,7 @@ def drop_table(table_name, db_path='mnist_logs.db'):
     conn.close()
     print(f"🗑️ Dropped table `{table_name}` (if it existed).")
 
+
 def show_table(table_name='training_logs', db_path='mnist_logs.db'):
     try:
         pd.set_option('display.max_rows', None)
@@ -76,6 +77,7 @@ def show_table(table_name='training_logs', db_path='mnist_logs.db'):
 
     except Exception as e:
         print(f"❌ Error reading table `{table_name}`: {e}")
+
 
 show_table()
 show_table("training_logs")
