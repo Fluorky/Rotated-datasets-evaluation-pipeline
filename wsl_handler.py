@@ -28,6 +28,7 @@ def sync_wsl_logs(source_folder, dest_folder, overwrite=False):
                 shutil.copy2(src, dst)
                 print(f"Copied log: {file}")
 
+
 copy_to_wsl = False
 wsl_raw_path = Path(r"\\wsl.localhost\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\data\MNIST\raw")
 
