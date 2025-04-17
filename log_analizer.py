@@ -4,6 +4,7 @@ import sqlite3
 
 import matplotlib.pyplot as plt
 
+from db_handler import init_database
 from wsl_handler import sync_wsl_logs
 
 
@@ -99,47 +100,6 @@ def plot_metrics(data, file_path=None):
         print(f"Saved plot to {save_path}")
 
     plt.close()  # close plot to avoid displaying inline if not needed
-
-
-def init_db(db_path='mnist_logs.db'):
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS training_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            model_id TEXT,
-            log_file TEXT,
-            dataset TEXT,
-            augmentation_info TEXT,
-            transform TEXT,
-            batch_size INTEGER,
-            lr REAL,
-            epoch INTEGER,
-            train_loss REAL,
-            val_loss REAL,
-            accuracy REAL,
-            elapsed_time REAL
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS test_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            model_id TEXT,
-            log_file TEXT,
-            dataset TEXT,
-            augmentation_info TEXT,
-            transform TEXT,
-            batch_size INTEGER,
-            lr REAL,
-            test_loss REAL,
-            accuracy REAL,
-            correct INTEGER,
-            total INTEGER
-        )
-    ''')
-
-    conn.commit()
-    conn.close()
 
 
 def parse_test_log_file(filepath):
@@ -289,7 +249,7 @@ overwrite_existing = False
 
 if not os.path.exists(db_file):
     print("Creating database...")
-    init_db(db_file)
+    init_database(db_file)
 
 log_files = collect_log_files(local_logs_folder)
 
