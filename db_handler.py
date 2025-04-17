@@ -53,6 +53,11 @@ def add_training_logs_table(db_path):
     print("✅ Table `training_logs` added or already existed.")
 
 
+def init_database(db_path='mnist_logs.db'):
+    add_test_logs_table(db_path)
+    add_training_logs_table(db_path)
+
+
 def drop_table(table_name, db_path='mnist_logs.db'):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
