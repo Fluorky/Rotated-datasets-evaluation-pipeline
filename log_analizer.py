@@ -1,6 +1,5 @@
 import os
 import re
-import sqlite3
 
 import matplotlib.pyplot as plt
 
@@ -154,37 +153,38 @@ def collect_log_files(log_path):
                 log_files.append(os.path.join(root, file))
     return log_files
 
+def main():
+    print("🔄 Syncing logs from WSL...")
+    sync_wsl_logs(wsl_logs_source, local_logs_folder, overwrite=overwrite_logs)
 
-# ===  ===
+    if not os.path.exists(db_file):
+        print("🗂️ Creating database...")
+        init_database(db_file)
 
-# WSL logs source and local logs destination
+    log_files = collect_log_files(local_logs_folder)
 
-wsl_logs_source = r'\\wsl.localhost\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\logs'
-local_logs_folder = 'log_files_from_slave/logs'
-overwrite_logs = False  # Set to True if you want to overwrite existing files
+    for file_path in log_files:
+        print(f"\n📂 Processing: {file_path}")
+        parsed_data = parse_log_file(file_path)
 
-print("Syncing WSL logs...")
-
-sync_wsl_logs(wsl_logs_source, local_logs_folder, overwrite=overwrite_logs)
-
-db_file = 'mnist_logs.db'
-overwrite_existing = False
-
-if not os.path.exists(db_file):
-    print("Creating database...")
-    init_database(db_file)
-
-log_files = collect_log_files(local_logs_folder)
-
-for file_path in log_files:
-    print(f"\nProcessing: {file_path}")
-    parsed_data = parse_log_file(file_path)
-    if parsed_data:
-        plot_metrics(parsed_data, file_path)
-        insert_training_logs(parsed_data, db_file, overwrite=overwrite_existing)
-    else:
-        test_data = parse_test_log_file(file_path)
-        if test_data:
-            insert_test_logs(test_data, db_file, overwrite=overwrite_existing)
+        if parsed_data:
+            plot_metrics(parsed_data, file_path)
+            insert_training_logs(parsed_data, db_file, overwrite=overwrite_existing)
         else:
-            print("⚠️ Nothing to insert from this file.")
+            test_data = parse_test_log_file(file_path)
+            if test_data:
+                insert_test_logs(test_data, db_file, overwrite=overwrite_existing)
+            else:
+                print("⚠️ No data found in file.")
+
+
+if __name__ == "__main__":
+    # === Config ===
+    wsl_logs_source = r'\\wsl.localhost\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\logs'
+    local_logs_folder = 'log_files_from_slave/logs'
+    db_file = 'mnist_logs.db'
+
+    overwrite_logs = False         # Whether to overwrite files during WSL sync
+    overwrite_existing = False    # Whether to overwrite existing DB entries
+
+    main()
