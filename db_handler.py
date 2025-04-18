@@ -58,6 +58,82 @@ def init_database(db_path='mnist_logs.db'):
     add_training_logs_table(db_path)
 
 
+def insert_training_logs(data, db_path='mnist_logs.db', overwrite=False):
+    if not data:
+        print("⚠️ No training data to insert.")
+        return
+
+    log_file = data[0]['log_file']
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT COUNT(*) FROM training_logs WHERE log_file = ?', (log_file,))
+    existing_count = cursor.fetchone()[0]
+
+    if existing_count > 0:
+        if overwrite:
+            print(f"Overwriting existing training logs: {log_file} ({existing_count} rows)")
+            cursor.execute('DELETE FROM training_logs WHERE log_file = ?', (log_file,))
+        else:
+            print(f"⏩ Skipped training logs: '{log_file}' already in database")
+            conn.close()
+            return
+
+    for row in data:
+        cursor.execute('''
+            INSERT INTO training_logs (
+                model_id, log_file, dataset, augmentation_info,
+                transform, batch_size, lr, epoch,
+                train_loss, val_loss, accuracy, elapsed_time
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            row['model_id'], row['log_file'], row['dataset'], row['augmentation_info'],
+            row['transform'], row['batch_size'], row['lr'], row['epoch'],
+            row['train_loss'], row['val_loss'], row['accuracy'], row['elapsed_time']
+        ))
+
+    conn.commit()
+    conn.close()
+    print(f"✅ Inserted {len(data)} row(s) to training_logs for: {log_file}")
+
+
+def insert_test_logs(data, db_path='mnist_logs.db', overwrite=False):
+    if not data:
+        print("⚠️ No test data to insert.")
+        return
+
+    log_file = data[0]['log_file']
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT COUNT(*) FROM test_logs WHERE log_file = ?', (log_file,))
+    exists = cursor.fetchone()[0]
+
+    if exists > 0:
+        if overwrite:
+            print(f"Overwriting test log: {log_file}")
+            cursor.execute('DELETE FROM test_logs WHERE log_file = ?', (log_file,))
+        else:
+            print(f"⏩ Skipped test log: {log_file}")
+            conn.close()
+            return
+
+    for row in data:
+        cursor.execute('''
+            INSERT INTO test_logs (
+                model_id, log_file, dataset, augmentation_info, transform,
+                batch_size, lr, test_loss, accuracy, correct, total
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            row['model_id'], row['log_file'], row['dataset'], row['augmentation_info'], row['transform'],
+            row['batch_size'], row['lr'], row['test_loss'], row['accuracy'], row['correct'], row['total']
+        ))
+
+    conn.commit()
+    conn.close()
+    print(f"✅ Inserted test log for: {log_file}")
+
+
 def drop_table(table_name, db_path='mnist_logs.db'):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
