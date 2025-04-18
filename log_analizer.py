@@ -4,7 +4,7 @@ import sqlite3
 
 import matplotlib.pyplot as plt
 
-from db_handler import init_database
+from db_handler import init_database, insert_training_logs, insert_test_logs
 from wsl_handler import sync_wsl_logs
 
 
@@ -143,83 +143,6 @@ def parse_test_log_file(filepath):
     }]
 
 
-def save_to_sqlite(data, db_path='mnist_logs.db', overwrite=False):
-    if not data:
-        print("⚠️ No data to insert.")
-        return
-
-    log_file = data[0]['log_file']
-
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-
-    cursor.execute('SELECT COUNT(*) FROM training_logs WHERE log_file = ?', (log_file,))
-    existing_count = cursor.fetchone()[0]
-
-    if existing_count > 0:
-        if overwrite:
-            print(f"Overwriting existing entries for log file: {log_file} ({existing_count} rows)")
-            cursor.execute('DELETE FROM training_logs WHERE log_file = ?', (log_file,))
-        else:
-            print(f"Skipped: Log file '{log_file}' already exists in database ({existing_count} rows)")
-            conn.close()
-            return
-
-    for row in data:
-        cursor.execute('''
-            INSERT INTO training_logs (
-                model_id, log_file, dataset, augmentation_info,
-                transform, batch_size, lr, epoch,
-                train_loss, val_loss, accuracy, elapsed_time
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            row['model_id'], row['log_file'], row['dataset'], row['augmentation_info'],
-            row['transform'], row['batch_size'], row['lr'], row['epoch'],
-            row['train_loss'], row['val_loss'], row['accuracy'], row['elapsed_time']
-        ))
-
-    conn.commit()
-    conn.close()
-    print(f"Inserted {len(data)} row(s) for log file: {log_file}")
-
-
-def save_test_to_sqlite(data, db_path='mnist_logs.db', overwrite=False):
-    if not data:
-        print("⚠️ No test data to insert.")
-        return
-
-    log_file = data[0]['log_file']
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-
-    cursor.execute('SELECT COUNT(*) FROM test_logs WHERE log_file = ?', (log_file,))
-    exists = cursor.fetchone()[0]
-
-    if exists > 0:
-        if overwrite:
-            print(f"Overwriting test log: {log_file}")
-            cursor.execute('DELETE FROM test_logs WHERE log_file = ?', (log_file,))
-        else:
-            print(f"Skipped test log: {log_file}")
-            conn.close()
-            return
-
-    for row in data:
-        cursor.execute('''
-            INSERT INTO test_logs (
-                model_id, log_file, dataset, augmentation_info, transform,
-                batch_size, lr, test_loss, accuracy, correct, total
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            row['model_id'], row['log_file'], row['dataset'], row['augmentation_info'], row['transform'],
-            row['batch_size'], row['lr'], row['test_loss'], row['accuracy'], row['correct'], row['total']
-        ))
-
-    conn.commit()
-    conn.close()
-    print(f"Inserted test log for: {log_file}")
-
-
 def collect_log_files(log_path):
     if os.path.isfile(log_path):
         return [log_path]
@@ -258,10 +181,10 @@ for file_path in log_files:
     parsed_data = parse_log_file(file_path)
     if parsed_data:
         plot_metrics(parsed_data, file_path)
-        save_to_sqlite(parsed_data, db_file, overwrite=overwrite_existing)
+        insert_training_logs(parsed_data, db_file, overwrite=overwrite_existing)
     else:
         test_data = parse_test_log_file(file_path)
         if test_data:
-            save_test_to_sqlite(test_data, db_file, overwrite=overwrite_existing)
+            insert_test_logs(test_data, db_file, overwrite=overwrite_existing)
         else:
             print("⚠️ Nothing to insert from this file.")
