@@ -1,9 +1,8 @@
-import os
 import struct
-import random
 from typing import Tuple
+import os
 import numpy as np
-from PIL import Image
+import matplotlib.pyplot as plt
 
 
 def load_mnist_images(filename: str) -> Tuple[np.ndarray, int, int, int]:
@@ -16,27 +15,6 @@ def load_mnist_images(filename: str) -> Tuple[np.ndarray, int, int, int]:
         images = np.frombuffer(f.read(), dtype=np.uint8).reshape(num_images, rows, cols)
 
     return images, num_images, rows, cols
-
-
-def rotate_images_by_angle(images: np.ndarray, angle: float) -> np.ndarray:
-    """Rotates each image in the dataset by a given angle."""
-    rotated_images = []
-    for img in images:
-        pil_img = Image.fromarray(img)  # Convert NumPy array to PIL Image
-        rotated_img = pil_img.rotate(angle)  # Rotate the image
-        rotated_images.append(np.array(rotated_img, dtype=np.uint8))  # Convert back to NumPy array
-
-    return np.array(rotated_images)
-
-
-def rotate_images(images: np.ndarray, angle_range: Tuple[float, float]) -> np.ndarray:
-    rotated_images = []
-    for img in images:
-        angle = random.uniform(*angle_range)
-        pil_img = Image.fromarray(img)
-        rotated_img = pil_img.rotate(angle)
-        rotated_images.append(np.array(rotated_img, dtype=np.uint8))
-    return np.array(rotated_images)
 
 
 def save_mnist_images(filename: str, images: np.ndarray, num_images: int, rows: int, cols: int) -> None:
