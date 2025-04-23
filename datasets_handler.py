@@ -1,6 +1,11 @@
 import os
-from pathlib import Path
+import random
 import struct
+import matplotlib.pyplot as plt
+import numpy as np
+from pathlib import Path
+from PIL import Image
+from typing import Tuple
 
 
 def merge_ubyte_files(folders, output_folder):
@@ -49,6 +54,108 @@ def merge_ubyte_files(folders, output_folder):
                 f.write(new_header)
                 f.write(merged_body)
             print(f"Merged {filename} → {output_path} (samples: {total_samples})")
+
+
+def load_mnist_images(filename: str) -> Tuple[np.ndarray, int, int, int]:
+    """Loads MNIST images from an IDX3-UBYTE file."""
+    with open(filename, 'rb') as f:
+        # Read the header information
+        magic, num_images, rows, cols = struct.unpack(">IIII", f.read(16))
+
+        # Read the image data
+        images = np.frombuffer(f.read(), dtype=np.uint8).reshape(num_images, rows, cols)
+
+    return images, num_images, rows, cols
+
+
+def rotate_images_by_angle(images: np.ndarray, angle: float) -> np.ndarray:
+    """Rotates each image in the dataset by a given angle."""
+    rotated_images = []
+    for img in images:
+        pil_img = Image.fromarray(img)  # Convert NumPy array to PIL Image
+        rotated_img = pil_img.rotate(angle)  # Rotate the image
+        rotated_images.append(np.array(rotated_img, dtype=np.uint8))  # Convert back to NumPy array
+
+    return np.array(rotated_images)
+
+
+def rotate_images(images: np.ndarray, angle_range: Tuple[float, float]) -> np.ndarray:
+    rotated_images = []
+    for img in images:
+        angle = random.uniform(*angle_range)
+        pil_img = Image.fromarray(img)
+        rotated_img = pil_img.rotate(angle)
+        rotated_images.append(np.array(rotated_img, dtype=np.uint8))
+    return np.array(rotated_images)
+
+
+def save_mnist_images(filename: str, images: np.ndarray, num_images: int, rows: int, cols: int) -> None:
+    """Saves images into an IDX3-UBYTE file."""
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    with open(filename, 'wb') as f:
+        # Write header (magic nugitmber, number of images, rows, columns)
+        f.write(struct.pack(">IIII", 2051, num_images, rows, cols))
+
+        # Write image data
+        f.write(images.tobytes())
+
+
+def rotate_and_save_fixed_angle(input_path: str, output_path: str, angle: float):
+    """
+    Rotate an MNIST dataset by a fixed angle and save the result to a specified path.
+
+    :param input_path: Path to the original MNIST image file.
+    :type input_path: str
+    :param output_path: Path where the rotated images will be saved.
+    :type output_path: str
+    :param angle: Angle in degrees by which to rotate each image.
+    :type angle: float
+
+    :return: None
+    :rtype: None
+    """
+    images, num_images, rows, cols = load_mnist_images(input_path)
+    rotated_images = rotate_images_by_angle(images, angle)
+    save_mnist_images(output_path, rotated_images, num_images, rows, cols)
+
+    # Optional preview
+    # plt.imshow(rotated_images[0], cmap='gray')
+    plt.title(f"Rotated Image (angle={angle}°)")
+    plt.axis("off")
+    # plt.show()
+
+    print(f"Rotated {num_images} images by {angle}° and saved to '{output_path}'")
+
+
+def rotate_and_save_ranges(input_path: str, angle_ranges: list[tuple[int, int]]):
+    """
+    Rotate an MNIST dataset using multiple angle ranges and save results to separate folders.
+
+    :param input_path: Path to the original MNIST image file.
+    :type input_path: str
+    :param angle_ranges: List of angle ranges (min, max) in degrees.
+                         Each range is applied randomly to images.
+    :type angle_ranges: list[tuple[int, int]]
+
+    :return: None
+    :rtype: None
+    """
+    images, num_images, rows, cols = load_mnist_images(input_path)
+
+    for angle_range in angle_ranges:
+        range_str = f"{angle_range[0]}-{angle_range[1]}"
+        output_path = f"dataset/rotated-{range_str}/{os.path.basename(input_path)}"
+
+        rotated_images = rotate_images(images, angle_range)
+        save_mnist_images(output_path, rotated_images, num_images, rows, cols)
+
+        # Optional preview
+        plt.imshow(rotated_images[0], cmap='gray')
+        plt.title(f"Rotated (angle ∈ {angle_range}°)")
+        plt.axis("off")
+        plt.show()
+
+        print(f"Saved {num_images} images rotated in range {angle_range}° to '{output_path}'")
 
 
 # === CONFIGURATION ===
