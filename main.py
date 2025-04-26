@@ -7,18 +7,18 @@ if __name__ == '__main__':
 
     # === Fixed-angle processing ===
     rotate_and_save_fixed_angle(
-        input_path="dataset/dataset_mnist_non_rotated/t10k-images-idx3-ubyte",
-        output_path="dataset/rotated-45/t10k-images-idx3-ubyte",
+        input_path="dataset/MNIST/dataset_mnist_non_rotated/t10k-images-idx3-ubyte",
+        output_path=f"dataset/MNIST/rotated-{fixed_angle}/t10k-images-idx3-ubyte",
         angle=fixed_angle
     )
 
     rotate_and_save_fixed_angle(
-        input_path="dataset/dataset_mnist_non_rotated/train-images-idx3-ubyte",
-        output_path="dataset/rotated-45/train-images-idx3-ubyte",
+        input_path="dataset/MNIST/dataset_mnist_non_rotated/train-images-idx3-ubyte",
+        output_path=f"dataset/MNIST/rotated-{fixed_angle}/train-images-idx3-ubyte",
         angle=fixed_angle
     )
 
     # === Multi-range processing ===
-    input_files = ["dataset/dataset_mnist_non_rotated/t10k-images-idx3-ubyte", "dataset/dataset_mnist_non_rotated/train-images-idx3-ubyte"]
+    input_files = ["dataset/MNIST/dataset_mnist_non_rotated/t10k-images-idx3-ubyte", "dataset/MNIST/dataset_mnist_non_rotated/train-images-idx3-ubyte"]
     for input_file in input_files:
         rotate_and_save_ranges(input_file, angle_ranges)
