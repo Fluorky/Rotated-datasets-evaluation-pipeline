@@ -127,12 +127,13 @@ def rotate_and_save_fixed_angle(input_path: str, output_path: str, angle: float)
     print(f"Rotated {num_images} images by {angle}° and saved to '{output_path}'")
 
 
-def rotate_and_save_ranges(input_path: str, angle_ranges: list[tuple[int, int]]):
+def rotate_and_save_ranges(input_path: str, output_path: str, angle_ranges: list[tuple[int, int]]):
     """
     Rotate an MNIST dataset using multiple angle ranges and save results to separate folders.
 
     :param input_path: Path to the original MNIST image file.
     :type input_path: str
+    :type output_path: str
     :param angle_ranges: List of angle ranges (min, max) in degrees.
                          Each range is applied randomly to images.
     :type angle_ranges: list[tuple[int, int]]
@@ -144,10 +145,10 @@ def rotate_and_save_ranges(input_path: str, angle_ranges: list[tuple[int, int]])
 
     for angle_range in angle_ranges:
         range_str = f"{angle_range[0]}-{angle_range[1]}"
-        output_path = f"dataset/rotated-{range_str}/{os.path.basename(input_path)}"
+        output_result_path = f"{output_path}/rotated-{range_str}/{os.path.basename(input_path)}"
 
         rotated_images = rotate_images(images, angle_range)
-        save_mnist_images(output_path, rotated_images, num_images, rows, cols)
+        save_mnist_images(output_result_path, rotated_images, num_images, rows, cols)
 
         # Optional preview
         plt.imshow(rotated_images[0], cmap='gray')
@@ -155,16 +156,4 @@ def rotate_and_save_ranges(input_path: str, angle_ranges: list[tuple[int, int]])
         plt.axis("off")
         plt.show()
 
-        print(f"Saved {num_images} images rotated in range {angle_range}° to '{output_path}'")
-
-
-# === CONFIGURATION ===
-folders_to_merge = [
-    "dataset/dataset_mnist_non_rotated",
-    "dataset/rotated-45",
-]
-
-merged_output_folder = "merged_datasets/merged_nonrot_45"
-
-# === RUN ===
-merge_ubyte_files(folders_to_merge, merged_output_folder)
+        print(f"Saved {num_images} images rotated in range {angle_range}° to '{output_result_path}'")
