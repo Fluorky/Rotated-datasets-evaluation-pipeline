@@ -2,6 +2,7 @@ import os
 import random
 import shutil
 import struct
+import itertools
 import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
@@ -186,3 +187,21 @@ def copy_labels_to_folders(source_folder, folder):
 
         shutil.copy2(source_path, target_path)
         print(f"✅ Copied {label_file} to {target_path}")
+
+# Function to make a safe folder name
+def make_merge_name(folders):
+    names = []
+    for path in folders:
+        last = os.path.basename(path)
+        last = last.replace("dataset_mnist_", "")  # Remove common prefixes
+        names.append(last)
+    return "_".join(names)
+
+
+# Function to create all combinations
+def generate_merging_scenarios(all_folders):
+    scenarios = []
+    for r in range(2, len(all_folders) + 1):  # All combinations of 2 to all
+        for combo in itertools.combinations(all_folders, r):
+            scenarios.append(combo)
+    return scenarios
