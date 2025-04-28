@@ -1,5 +1,6 @@
 import os
 import random
+import shutil
 import struct
 import matplotlib.pyplot as plt
 import numpy as np
@@ -144,11 +145,13 @@ def rotate_and_save_ranges(input_path: str, output_path: str, angle_ranges: list
     images, num_images, rows, cols = load_mnist_images(input_path)
 
     for angle_range in angle_ranges:
+        print(angle_range)
         range_str = f"{angle_range[0]}-{angle_range[1]}"
         output_result_path = f"{output_path}/rotated-{range_str}/{os.path.basename(input_path)}"
 
         rotated_images = rotate_images(images, angle_range)
         save_mnist_images(output_result_path, rotated_images, num_images, rows, cols)
+        copy_labels_to_folders(Path(input_path).parent, Path(output_result_path).parent)
 
         # Optional preview
         plt.imshow(rotated_images[0], cmap='gray')
@@ -157,3 +160,29 @@ def rotate_and_save_ranges(input_path: str, output_path: str, angle_ranges: list
         plt.show()
 
         print(f"Saved {num_images} images rotated in range {angle_range}° to '{output_result_path}'")
+
+def copy_labels_to_folders(source_folder, folder):
+    """
+    Copy label files (train-labels and t10k-labels) from source_folder to each folder in target_folders.
+
+    Args:
+        source_folder (str): Path to the folder where label files are located.
+        folder (str): List of target folder paths to copy labels into.
+    """
+    label_files = [
+        "train-labels-idx1-ubyte",
+        "t10k-labels-idx1-ubyte"
+    ]
+
+    for label_file in label_files:
+        source_path = Path(source_folder) / label_file
+
+        if not source_path.exists():
+            print(f"⚠️ Label file not found: {source_path}")
+            continue
+
+        target_path = Path(folder) / label_file
+        os.makedirs(folder, exist_ok=True)  # ensure target folder exists
+
+        shutil.copy2(source_path, target_path)
+        print(f"✅ Copied {label_file} to {target_path}")
