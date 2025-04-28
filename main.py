@@ -1,4 +1,8 @@
-from datasets_handler import rotate_and_save_ranges, rotate_and_save_fixed_angle, merge_ubyte_files
+import itertools
+
+from datasets_handler import rotate_and_save_ranges, rotate_and_save_fixed_angle, merge_ubyte_files, \
+    copy_labels_to_folders
+import os
 
 if __name__ == '__main__':
     # === Config ===
@@ -23,6 +27,7 @@ if __name__ == '__main__':
     output_path = "dataset/MNIST"
     for input_file in input_files:
         rotate_and_save_ranges(input_file, output_path, angle_ranges)
+        # copy_labels_to_folders("dataset/MNIST/dataset_mnist_non_rotated")
 
     # === MERGING ===
     folders_to_merge = [
@@ -34,3 +39,56 @@ if __name__ == '__main__':
 
     # === RUN ===
     merge_ubyte_files(folders_to_merge, merged_output_folder)
+
+
+    # # List of folders
+    # all_folders = [
+    #     "dataset/MNIST/dataset_mnist_non_rotated",
+    #     # "dataset/MNIST/rotated-0-20",
+    #     "dataset/MNIST/rotated-20-50",
+    #     "dataset/MNIST/rotated-45",
+    #     "dataset/MNIST/rotated-50-90",
+    #     "dataset/MNIST/rotated-90-120",
+    #     # "dataset/MNIST/rotated-120-150",
+    #     # "dataset/MNIST/rotated-120-180",
+    #     # "dataset/MNIST/rotated-150-180",
+    # ]
+    #
+    # # Destination base folder
+    # merged_base = "dataset/MNIST/merged_datasets"
+    #
+    #
+    # # Function to make a safe folder name
+    # def make_merge_name(folders):
+    #     names = []
+    #     for path in folders:
+    #         last = os.path.basename(path)
+    #         last = last.replace("dataset_mnist_", "")  # Remove common prefixes
+    #         names.append(last)
+    #     return "_".join(names)
+    #
+    #
+    # # Function to create all combinations
+    # def generate_merging_scenarios(all_folders):
+    #     scenarios = []
+    #     for r in range(2, len(all_folders) + 1):  # All combinations of 2 to all
+    #         for combo in itertools.combinations(all_folders, r):
+    #             scenarios.append(combo)
+    #     return scenarios
+    #
+    #
+    # # Get all merging scenarios
+    # scenarios = generate_merging_scenarios(all_folders)
+    #
+    # print(f"Generated {len(scenarios)} scenarios.")
+    #
+    # # Example usage
+    # i = 0
+    # for folders_to_merge in scenarios:
+    #     output_name = make_merge_name(folders_to_merge)
+    #     merged_output_folder = os.path.join(merged_base, f"merged_{output_name}")
+    #
+    #     print(f"{i}Merging: {folders_to_merge} -> {merged_output_folder}")
+    #     i = i + 1
+    #     # Here you would call your merging function, for example:
+    #     # merge_ubyte_files(folders_to_merge, merged_output_folder)
