@@ -162,6 +162,7 @@ def rotate_and_save_ranges(input_path: str, output_path: str, angle_ranges: list
 
         print(f"Saved {num_images} images rotated in range {angle_range}° to '{output_result_path}'")
 
+
 def copy_labels_to_folders(source_folder, folder):
     """
     Copy label files (train-labels and t10k-labels) from source_folder to each folder in target_folders.
@@ -187,6 +188,7 @@ def copy_labels_to_folders(source_folder, folder):
 
         shutil.copy2(source_path, target_path)
         print(f"✅ Copied {label_file} to {target_path}")
+
 
 # Function to make a safe folder name
 def make_merge_name(folders):
