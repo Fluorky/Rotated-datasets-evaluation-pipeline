@@ -153,6 +153,7 @@ def collect_log_files(log_path):
                 log_files.append(os.path.join(root, file))
     return log_files
 
+
 def main():
     print("🔄 Syncing logs from WSL...")
     sync_wsl_logs(wsl_logs_source, local_logs_folder, overwrite=overwrite_logs)
@@ -184,7 +185,7 @@ if __name__ == "__main__":
     local_logs_folder = 'log_files_from_slave/logs'
     db_file = 'mnist_logs.db'
 
-    overwrite_logs = False         # Whether to overwrite files during WSL sync
-    overwrite_existing = False    # Whether to overwrite existing DB entries
+    overwrite_logs = False  # Whether to overwrite files during WSL sync
+    overwrite_existing = False  # Whether to overwrite existing DB entries
 
     main()
