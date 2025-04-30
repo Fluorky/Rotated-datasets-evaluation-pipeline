@@ -6,7 +6,7 @@ from datasets_handler import rotate_and_save_ranges, rotate_and_save_fixed_angle
 if __name__ == '__main__':
     # === Config ===
     fixed_angle = 45
-    angle_ranges = [(0,20), (20, 50), (50, 90), (90, 120), (120, 150), (150, 180)]
+    angle_ranges = [(0, 20), (20, 50), (50, 90), (90, 120), (120, 150), (150, 180)]
 
     # === Fixed-angle processing ===
     rotate_and_save_fixed_angle(
@@ -22,7 +22,8 @@ if __name__ == '__main__':
     )
 
     # === Multi-range processing ===
-    input_files = ["dataset/MNIST/dataset_mnist_non_rotated/t10k-images-idx3-ubyte", "dataset/MNIST/dataset_mnist_non_rotated/train-images-idx3-ubyte"]
+    input_files = ["dataset/MNIST/dataset_mnist_non_rotated/t10k-images-idx3-ubyte",
+                   "dataset/MNIST/dataset_mnist_non_rotated/train-images-idx3-ubyte"]
     output_path = "dataset/MNIST"
     for input_file in input_files:
         rotate_and_save_ranges(input_file, output_path, angle_ranges)
@@ -39,7 +40,6 @@ if __name__ == '__main__':
     # === RUN ===
     merge_ubyte_files(folders_to_merge, merged_output_folder)
 
-
     # List of folders
     all_folders = [
         "dataset/MNIST/dataset_mnist_non_rotated",
@@ -55,7 +55,6 @@ if __name__ == '__main__':
 
     # Destination base folder
     merged_base = "dataset/MNIST/merged_datasets"
-
 
     # Get all merging scenarios
     scenarios = generate_merging_scenarios(all_folders)
