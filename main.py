@@ -70,7 +70,7 @@ if __name__ == '__main__':
         print(f"{i}Merging: {folders_to_merge} -> {merged_output_folder}")
         i = i + 1
         # Here you would call your merging function, for example:
-        # merge_ubyte_files(folders_to_merge, merged_output_folder)
+        merge_ubyte_files(folders_to_merge, merged_output_folder)
 
     train_folders = ["dataset/MNIST/rotated-20-50", "dataset/MNIST/rotated-45"]
     test_folders = ["dataset/MNIST/dataset_mnist_non_rotated"]
