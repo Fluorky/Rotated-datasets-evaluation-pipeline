@@ -1,5 +1,4 @@
 import os
-import itertools
 from datasets_handler import rotate_and_save_ranges, rotate_and_save_fixed_angle, merge_ubyte_files, \
     merge_train_or_test, make_merge_name, generate_merging_scenarios
 
