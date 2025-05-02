@@ -88,9 +88,3 @@ if __name__ == '__main__':
             train_names = "_".join([os.path.basename(f) for f in train_combo])
             out_train_path = os.path.join(merge_output_root, f"train_{train_names}")
             merge_train_or_test(list(train_combo), out_train_path, train=True)
-
-    # train_folders = ["dataset/MNIST/rotated-20-50", "dataset/MNIST/rotated-45"]
-    # test_folders = ["dataset/MNIST/dataset_mnist_non_rotated"]
-    #
-    # merge_train_or_test(train_folders, "dataset/MNIST/merged_sets/train_20-50_45", train=True)
-    # merge_train_or_test(test_folders, "dataset/MNIST/merged_sets/test_non_rotated", train=False)
