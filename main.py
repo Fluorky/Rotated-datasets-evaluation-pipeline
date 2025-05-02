@@ -72,8 +72,25 @@ if __name__ == '__main__':
         # Here you would call your merging function, for example:
         merge_ubyte_files(folders_to_merge, merged_output_folder)
 
-    train_folders = ["dataset/MNIST/rotated-20-50", "dataset/MNIST/rotated-45"]
-    test_folders = ["dataset/MNIST/dataset_mnist_non_rotated"]
+    merge_output_root = "dataset/MNIST/merged_sets"
 
-    merge_train_or_test(train_folders, "dataset/MNIST/merged_sets/train_20-50_45", train=True)
-    merge_train_or_test(test_folders, "dataset/MNIST/merged_sets/test_non_rotated", train=False)
+    # For each single folder – test
+    for test_folder in all_folders:
+        test_name = os.path.basename(test_folder)
+        out_test_path = os.path.join(merge_output_root, f"test_{test_name}")
+        merge_train_or_test([test_folder], out_test_path, train=False)
+
+    # For each 2+ folders combination – train
+    from itertools import combinations
+
+    for n in range(2, len(all_folders) + 1):
+        for train_combo in combinations(all_folders, n):
+            train_names = "_".join([os.path.basename(f) for f in train_combo])
+            out_train_path = os.path.join(merge_output_root, f"train_{train_names}")
+            merge_train_or_test(list(train_combo), out_train_path, train=True)
+
+    # train_folders = ["dataset/MNIST/rotated-20-50", "dataset/MNIST/rotated-45"]
+    # test_folders = ["dataset/MNIST/dataset_mnist_non_rotated"]
+    #
+    # merge_train_or_test(train_folders, "dataset/MNIST/merged_sets/train_20-50_45", train=True)
+    # merge_train_or_test(test_folders, "dataset/MNIST/merged_sets/test_non_rotated", train=False)
