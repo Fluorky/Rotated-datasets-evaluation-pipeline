@@ -69,7 +69,6 @@ if __name__ == '__main__':
 
         print(f"{i}Merging: {folders_to_merge} -> {merged_output_folder}")
         i = i + 1
-        # Here you would call your merging function, for example:
         merge_ubyte_files(folders_to_merge, merged_output_folder)
 
     merge_output_root = "dataset/MNIST/merged_sets"
