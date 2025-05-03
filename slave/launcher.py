@@ -6,8 +6,9 @@ venv_python = "venv/bin/python"  # WSL/Linux
 
 # Datasets
 train_datasets = [
-    "merged_nonrot_45",
-    "merged_20-50_45",
+    "merged_datasets/merged_nonrot_45",
+    "merged_datasets/merged_20-50_45",
+    # "merged_20-50_45",
     # Add more training datasets here
 ]
 
@@ -18,9 +19,9 @@ test_datasets = [
     "rotated-45",
     "rotated-50-90",
     "rotated-90-120",
-    "rotated-120-150",
-    "rotated-120-180",
-    "rotated-150-180",
+    # "rotated-120-150",
+    # "rotated-120-180",
+    # "rotated-150-180",
     # Add more testing datasets here
 ]
 
@@ -32,7 +33,7 @@ base_log_dir = "./logs"
 model_name = "cyvgg19"
 polar_transform = "linearpolar"
 
-overwrite_logs = False  # Skip if file already exists
+overwrite_logs = True  # Skip if file already exists
 overwrite_models = False
 
 # Ensure save/log directories exist
@@ -44,6 +45,7 @@ def run_command(cmd, log_file=None):
         if not overwrite_logs and os.path.exists(log_file):
             print(f"⚠️ Skipping existing log: {log_file}")
             return
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
         cmd = f"{cmd} > {log_file}"
     print(f"🚀 Running: {cmd}")
     os.system(cmd)
