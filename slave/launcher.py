@@ -59,6 +59,10 @@ def main():
         model_save_name = f"{train_set}.pt"
         model_save_path = os.path.join(base_save_dir, model_save_name)
 
+        if not os.path.exists(model_save_path):
+            print(f"⛔ Model not found: {model_save_path}, skipping test.")
+            continue  # Skip test if model is missing
+
         # Train model
         if overwrite_models or not os.path.exists(model_save_path):
             train_cmd = (
