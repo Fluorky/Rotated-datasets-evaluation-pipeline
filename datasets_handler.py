@@ -207,4 +207,3 @@ def generate_merging_scenarios(all_folders):
         for combo in itertools.combinations(all_folders, r):
             scenarios.append(combo)
     return scenarios
-
