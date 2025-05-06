@@ -1,4 +1,5 @@
 import os
+import json
 import random
 import shutil
 import struct
@@ -206,4 +207,44 @@ def generate_merging_scenarios(all_folders):
     for r in range(2, len(all_folders) + 1):  # All combinations of 2 to all
         for combo in itertools.combinations(all_folders, r):
             scenarios.append(combo)
+    return scenarios
+
+
+def generate_train_test_scenarios(
+    merged_datasets_dir,
+    output_json="train_test_scenarios.json",
+    important_tests=None,
+    full_merged=None,
+    max_tests=20
+):
+    if important_tests is None:
+        important_tests = []
+
+    dataset_folders = sorted([
+        name for name in os.listdir(merged_datasets_dir)
+        if os.path.isdir(os.path.join(merged_datasets_dir, name))
+    ])
+
+    scenarios = {}
+
+    for train_set in dataset_folders:
+        test_candidates = set(dataset_folders)
+        test_candidates.discard(train_set)
+
+        test_sets = {"dataset_mnist_non_rotated", train_set}
+        test_sets.update([t for t in important_tests if t in dataset_folders])
+
+        available = list(test_candidates - test_sets)
+        random.shuffle(available)
+        test_sets.update(available[:max(0, max_tests - len(test_sets))])
+
+        if full_merged and full_merged in dataset_folders:
+            test_sets.add(full_merged)
+
+        scenarios[train_set] = sorted(list(test_sets))[:max_tests]
+
+    with open(output_json, "w") as f:
+        json.dump(scenarios, f, indent=2)
+
+    print(f"[datasets_handler] Saved {len(scenarios)} scenarios to {output_json}")
     return scenarios
