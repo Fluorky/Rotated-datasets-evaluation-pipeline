@@ -5,6 +5,7 @@ from datasets_handler import (
     merge_ubyte_files,
     make_merge_name,
     generate_merging_scenarios,
+    generate_train_test_scenarios
 )
 
 if __name__ == '__main__':
@@ -55,3 +56,16 @@ if __name__ == '__main__':
         merged_output_folder = os.path.join(merged_dir, f"merged_{output_name}")
         print(f"{i} Merging: {folders_to_merge} -> {merged_output_folder}")
         merge_ubyte_files(folders_to_merge, merged_output_folder)
+
+    generate_train_test_scenarios(
+        merged_datasets_dir="./dataset/MNIST/merged_datasets",
+        output_json="train_test_scenarios.json",
+        important_tests=[
+            "merged_non_rotated_rotated-20-50",
+            "merged_rotated-20-50_rotated-45",
+            "merged_rotated-45_rotated-90-120",
+            "merged_non_rotated_rotated-20-50_rotated-45_rotated-50-90"
+        ],
+        full_merged="merged_non_rotated_rotated-20-50_rotated-45_rotated-50-90_rotated-90-120",
+        max_tests=20
+    )
