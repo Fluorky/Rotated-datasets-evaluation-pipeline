@@ -59,13 +59,6 @@ if __name__ == '__main__':
 
     generate_train_test_scenarios(
         merged_datasets_dir="./dataset/MNIST/merged_datasets",
-        output_json="train_test_scenarios.json",
-        important_tests=[
-            "merged_non_rotated_rotated-20-50",
-            "merged_rotated-20-50_rotated-45",
-            "merged_rotated-45_rotated-90-120",
-            "merged_non_rotated_rotated-20-50_rotated-45_rotated-50-90"
-        ],
-        full_merged="merged_non_rotated_rotated-20-50_rotated-45_rotated-50-90_rotated-90-120",
+        output_json_path="./train_test_scenarios.json",
         max_tests=20
     )
