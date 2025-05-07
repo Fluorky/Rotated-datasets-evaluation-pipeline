@@ -1,4 +1,8 @@
 import os
+import json
+
+with open("train_test_pairs.json") as f:
+    train_test_dict = json.load(f)
 
 # Paths
 main_script = "main.py"
@@ -24,6 +28,7 @@ test_datasets = [
     # "rotated-150-180",
     # Add more testing datasets here
 ]
+
 
 # Paths and Settings
 # base_data_dir = "./dataset/MNIST"
@@ -51,9 +56,7 @@ def run_command(cmd, log_file=None):
     os.system(cmd)
 
 def main():
-    for train_set in train_datasets:
-        print(f"\n=== TRAINING on {train_set} ===")
-
+    for train_set, test_sets in train_test_dict.items():
         train_data_dir = os.path.join(base_data_dir, train_set)
         train_log_file = os.path.join(base_log_dir, f"{train_set}_train.txt")
         model_save_name = f"{train_set}.pt"
@@ -63,7 +66,8 @@ def main():
             print(f"⛔ Model not found: {model_save_path}, skipping test.")
             continue  # Skip test if model is missing
 
-        # Train model
+        print(f"\n=== TRAINING on {train_set} ===")
+
         if overwrite_models or not os.path.exists(model_save_path):
             train_cmd = (
                 f"{venv_python} {main_script} "
@@ -74,8 +78,7 @@ def main():
         else:
             print(f"✅ Model already exists: {model_save_path}")
 
-        # Test model on all test datasets
-        for test_set in test_datasets:
+        for test_set in test_sets:
             print(f"--- TESTING {train_set} model on {test_set} ---")
 
             test_data_dir = os.path.join(base_data_dir, test_set)
@@ -85,7 +88,7 @@ def main():
                 f"{venv_python} {main_script} "
                 f"--test --model={model_name} --dataset=mnist-custom "
                 f"--polar-transform={polar_transform} "
-                f"--data-dir={train_data_dir} "   # still needed for generating name
+                f"--data-dir={train_data_dir} "
                 f"--test-data-dir={test_data_dir}"
             )
             run_command(test_cmd, test_log_file)
