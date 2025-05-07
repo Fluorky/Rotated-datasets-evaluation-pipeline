@@ -8,8 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 from PIL import Image
-from typing import Tuple
-
+from typing import Tuple, Dict, List
 
 def merge_ubyte_files(folders, output_folder):
     os.makedirs(output_folder, exist_ok=True)
@@ -209,42 +208,42 @@ def generate_merging_scenarios(all_folders):
             scenarios.append(combo)
     return scenarios
 
-
 def generate_train_test_scenarios(
-    merged_datasets_dir,
-    output_json="train_test_scenarios.json",
-    important_tests=None,
-    full_merged=None,
-    max_tests=20
+    merged_datasets_dir: str,
+    output_json_path: str,
+    max_tests: int = 20,
+    seed: int = 42
 ):
-    if important_tests is None:
-        important_tests = []
+    """
+    Generates a JSON with test scenarios per training set.
+    Ensures 'dataset_mnist_non_rotated' and the training set itself are included in the test list.
+    Adds random diverse test sets (up to `max_tests` in total).
+    """
+    random.seed(seed)
 
-    dataset_folders = sorted([
-        name for name in os.listdir(merged_datasets_dir)
-        if os.path.isdir(os.path.join(merged_datasets_dir, name))
+    all_sets = sorted([
+        f for f in os.listdir(merged_datasets_dir)
+        if os.path.isdir(os.path.join(merged_datasets_dir, f))
     ])
 
-    scenarios = {}
+    result: Dict[str, List[str]] = {}
 
-    for train_set in dataset_folders:
-        test_candidates = set(dataset_folders)
-        test_candidates.discard(train_set)
+    for train_set in all_sets:
+        base_tests = {"dataset_mnist_non_rotated", train_set}
 
-        test_sets = {"dataset_mnist_non_rotated", train_set}
-        test_sets.update([t for t in important_tests if t in dataset_folders])
+        # Exclude training set and very similar ones
+        candidates = [s for s in all_sets if s != train_set and train_set not in s]
+        random.shuffle(candidates)
 
-        available = list(test_candidates - test_sets)
-        random.shuffle(available)
-        test_sets.update(available[:max(0, max_tests - len(test_sets))])
+        selected_tests = list(base_tests)
+        for test in candidates:
+            if len(selected_tests) >= max_tests:
+                break
+            selected_tests.append(test)
 
-        if full_merged and full_merged in dataset_folders:
-            test_sets.add(full_merged)
+        # Sort for consistency
+        result[train_set] = sorted(selected_tests)
 
-        scenarios[train_set] = sorted(list(test_sets))[:max_tests]
-
-    with open(output_json, "w") as f:
-        json.dump(scenarios, f, indent=2)
-
-    print(f"[datasets_handler] Saved {len(scenarios)} scenarios to {output_json}")
-    return scenarios
+    # Save to JSON
+    with open(output_json_path, "w") as f:
+        json.dump(result, f, indent=2)
