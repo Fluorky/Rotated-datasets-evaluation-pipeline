@@ -1,49 +1,32 @@
 import os
 import json
 
-with open("train_test_pairs.json") as f:
-    train_test_dict = json.load(f)
-
-# Paths
+# === Config ===
 main_script = "main.py"
-venv_python = "venv/bin/python"  # WSL/Linux
+venv_python = "venv/bin/python"  # Path to your Python inside venv
 
-# Datasets
-train_datasets = [
-    "merged_datasets/merged_nonrot_45",
-    "merged_datasets/merged_20-50_45",
-    # "merged_20-50_45",
-    # Add more training datasets here
-]
-
-test_datasets = [
-    "dataset_mnist_non_rotated",
-    "rotated-0-20",
-    "rotated-20-50",
-    "rotated-45",
-    "rotated-50-90",
-    "rotated-90-120",
-    # "rotated-120-150",
-    # "rotated-120-180",
-    # "rotated-150-180",
-    # Add more testing datasets here
-]
-
-
-# Paths and Settings
-# base_data_dir = "./dataset/MNIST"
 base_data_dir = "./data/MNIST_WIN"
+merged_dir = os.path.join(base_data_dir, "merged_datasets")
+dataset_mnist_non_rotated = os.path.join(base_data_dir, "dataset_mnist_non_rotated")
+
 base_save_dir = "./saves"
-base_log_dir = "./logs"
+base_log_dir = "./logs/json/"
 model_name = "cyvgg19"
 polar_transform = "linearpolar"
 
-overwrite_logs = True  # Skip if file already exists
+overwrite_logs = True
 overwrite_models = False
 
-# Ensure save/log directories exist
-os.makedirs(base_save_dir, exist_ok=True)
-os.makedirs(base_log_dir, exist_ok=True)
+required_files = [
+    "train-images-idx3-ubyte",
+    "train-labels-idx1-ubyte",
+    "t10k-images-idx3-ubyte",
+    "t10k-labels-idx1-ubyte",
+]
+
+# === Utilities ===
+def dataset_valid(path):
+    return all(os.path.exists(os.path.join(path, f)) for f in required_files)
 
 def run_command(cmd, log_file=None):
     if log_file:
@@ -51,39 +34,57 @@ def run_command(cmd, log_file=None):
             print(f"⚠️ Skipping existing log: {log_file}")
             return
         os.makedirs(os.path.dirname(log_file), exist_ok=True)
-        cmd = f"{cmd} > {log_file}"
+        cmd = f"{cmd} > {log_file} 2>&1"
     print(f"🚀 Running: {cmd}")
     os.system(cmd)
 
+# === Setup ===
+os.makedirs(base_save_dir, exist_ok=True)
+os.makedirs(base_log_dir, exist_ok=True)
+
+# === Load Scenarios ===
+try:
+    with open("train_test_scenarios.json") as f:
+        train_test_dict = json.load(f)
+except FileNotFoundError:
+    print("❌ train_test_scenarios.json not found.")
+    exit(1)
+
+# === Main Launcher ===
 def main():
     for train_set, test_sets in train_test_dict.items():
-        train_data_dir = os.path.join(base_data_dir, train_set)
+        train_data_dir = os.path.join(merged_dir, train_set)
+        model_save_path = os.path.join(base_save_dir, f"{train_set}.pt")
         train_log_file = os.path.join(base_log_dir, f"{train_set}_train.txt")
-        model_save_name = f"{train_set}.pt"
-        model_save_path = os.path.join(base_save_dir, model_save_name)
 
-        if not os.path.exists(model_save_path):
-            print(f"⛔ Model not found: {model_save_path}, skipping test.")
-            continue  # Skip test if model is missing
+        if not dataset_valid(train_data_dir):
+            print(f"❌ Missing training data files for: {train_set}")
+            continue
 
         print(f"\n=== TRAINING on {train_set} ===")
-
         if overwrite_models or not os.path.exists(model_save_path):
             train_cmd = (
                 f"{venv_python} {main_script} "
                 f"--train --model={model_name} --dataset=mnist-custom "
-                f"--polar-transform={polar_transform} --data-dir={train_data_dir}"
+                f"--polar-transform={polar_transform} "
+                f"--data-dir={train_data_dir}"
             )
             run_command(train_cmd, train_log_file)
         else:
             print(f"✅ Model already exists: {model_save_path}")
 
         for test_set in test_sets:
+            test_data_dir = (
+                dataset_mnist_non_rotated if test_set == "dataset_mnist_non_rotated"
+                else os.path.join(merged_dir, test_set)
+            )
+
+            if not dataset_valid(test_data_dir):
+                print(f"❌ Missing test data for: {test_set}, skipping.")
+                continue
+
             print(f"--- TESTING {train_set} model on {test_set} ---")
-
-            test_data_dir = os.path.join(base_data_dir, test_set)
             test_log_file = os.path.join(base_log_dir, f"{train_set}_test_on_{test_set}.txt")
-
             test_cmd = (
                 f"{venv_python} {main_script} "
                 f"--test --model={model_name} --dataset=mnist-custom "
