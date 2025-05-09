@@ -46,13 +46,17 @@ def run_command(cmd, log_file=None):
     print(f"🚀 Running: {cmd}")
     os.system(cmd)
 
+def generate_model_save_path(train_set):
+    """Generate model save path based on dataset, model, and polar transform"""
+    fname = f"mnist-custom-{model_name}-{polar_transform}_{train_set}.pt"
+    return os.path.join(base_save_dir, fname)
+
 def main():
     for train_set, test_sets in train_test_dict.items():
         train_data_dir = os.path.join(merged_dir, train_set)
         train_log_file = os.path.join(train_log_dir, f"{train_set}_train.txt")
-        model_save_name = f"{train_set}.pt"
-        model_save_path = os.path.join(base_save_dir, model_save_name)
-        print(model_save_path)
+        model_save_path = generate_model_save_path(train_set)
+        print(f"Model save path: {model_save_path}")
 
         if not dataset_valid(train_data_dir):
             print(f"❌ Missing training data files for: {train_set}")
@@ -67,7 +71,7 @@ def main():
                 f"{venv_python} {main_script} "
                 f"--train --model={model_name} --dataset=mnist-custom "
                 f"--polar-transform={polar_transform} --data-dir={train_data_dir} "
-                f"--model-save-path={train_set}"
+                f"--model-save-path={model_save_path}"
             )
             run_command(train_cmd, train_log_file)
 
