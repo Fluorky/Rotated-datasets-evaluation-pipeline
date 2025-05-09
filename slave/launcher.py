@@ -52,6 +52,7 @@ def main():
         train_log_file = os.path.join(train_log_dir, f"{train_set}_train.txt")
         model_save_name = f"{train_set}.pt"
         model_save_path = os.path.join(base_save_dir, model_save_name)
+        print(model_save_path)
 
         if not dataset_valid(train_data_dir):
             print(f"❌ Missing training data files for: {train_set}")
@@ -59,15 +60,16 @@ def main():
 
         print(f"\n=== TRAINING on {train_set} ===")
 
-        if overwrite_models or not os.path.exists(model_save_path):
+        if os.path.exists(model_save_path) and not overwrite_models:
+            print(f"✅ Model already exists and overwrite is disabled: {model_save_path}")
+        else:
             train_cmd = (
                 f"{venv_python} {main_script} "
                 f"--train --model={model_name} --dataset=mnist-custom "
-                f"--polar-transform={polar_transform} --data-dir={train_data_dir}"
+                f"--polar-transform={polar_transform} --data-dir={train_data_dir} "
+                f"--model-save-path={train_set}"
             )
             run_command(train_cmd, train_log_file)
-        else:
-            print(f"✅ Model already exists: {model_save_path}")
 
         for test_set in test_sets:
             test_data_dir = (
