@@ -18,7 +18,7 @@ test_log_dir = os.path.join(base_log_dir, "test")
 model_name = "cyvgg19"
 polar_transform = "linearpolar"
 
-overwrite_logs = True
+overwrite_logs = False
 overwrite_models = False
 
 required_files = [
@@ -48,8 +48,9 @@ def run_command(cmd, log_file=None):
 
 def generate_model_save_path(train_set):
     """Generate model save path based on dataset, model, and polar transform"""
-    fname = f"mnist-custom-{model_name}-{polar_transform}_{train_set}.pt"
-    return os.path.join(base_save_dir, fname)
+    fname = f"mnist-custom-{model_name}-{polar_transform}_{train_set}"
+    return f"./saves/{fname}.pt"
+
 
 def main():
     for train_set, test_sets in train_test_dict.items():
@@ -71,7 +72,7 @@ def main():
                 f"{venv_python} {main_script} "
                 f"--train --model={model_name} --dataset=mnist-custom "
                 f"--polar-transform={polar_transform} --data-dir={train_data_dir} "
-                f"--model-save-path={model_save_path}"
+                f"--model-save-path={generate_model_save_path(train_set)}"
             )
             run_command(train_cmd, train_log_file)
 
