@@ -116,7 +116,7 @@ def parse_test_log_file(filepath):
 
     test_line = next((line for line in lines if line.startswith("Test loss:")), None)
     if not test_line:
-        return []  # nie ma testu
+        return []
 
     match = re.search(r'Test loss: ([\d.]+), Accuracy: (\d+)/(\d+) \(([\d.]+)%\)', test_line)
     if not match:
