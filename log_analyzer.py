@@ -42,8 +42,8 @@ def parse_log_file(filepath):
 
             val_line = lines[i + 1]
             val_match = re.search(r'Validation loss: ([\d.]+), Accuracy: (\d+)/(\d+) \(([\d.]+)%\)', val_line)
-            val_loss = float(val_match.group(1))
-            accuracy = float(val_match.group(4))
+            val_loss = float(val_match.group(1)) if val_match else None
+            accuracy = float(val_match.group(4)) if val_match else None
 
             time_line = lines[i + 2] if (i + 2) < len(lines) else ''
             elapsed_match = re.search(r'Elapsed time: ([\d.]+) sec', time_line)
@@ -122,11 +122,6 @@ def parse_test_log_file(filepath):
     if not match:
         return []
 
-    test_loss = float(match.group(1))
-    correct = int(match.group(2))
-    total = int(match.group(3))
-    accuracy = float(match.group(4))
-
     return [{
         'model_id': model_id,
         'log_file': os.path.basename(filepath),
@@ -135,22 +130,23 @@ def parse_test_log_file(filepath):
         'transform': transform,
         'batch_size': batch_size,
         'lr': lr,
-        'test_loss': test_loss,
-        'accuracy': accuracy,
-        'total': total,
-        'correct': correct
+        'test_loss': float(match.group(1)),
+        'accuracy': float(match.group(4)),
+        'total': int(match.group(3)),
+        'correct': int(match.group(2))
     }]
 
 
 def collect_log_files(log_path):
-    if os.path.isfile(log_path):
-        return [log_path]
-
     log_files = []
     for root, _, files in os.walk(log_path):
+        if "launcher_" in root:
+            continue  # Skip directories with "launcher_"
+
         for file in files:
-            if file.endswith('.txt'):
-                log_files.append(os.path.join(root, file))
+            if file.startswith("launcher_") or not file.endswith('.txt'):
+                continue
+            log_files.append(os.path.join(root, file))
     return log_files
 
 
