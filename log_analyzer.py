@@ -24,10 +24,6 @@ def parse_filename(filename):
     else:
         dataset = name
         augmentation = ''
-        # parts = name.split('-')
-        # dataset = parts[0] if parts else ''
-        # augmentation = '-'.join(parts[1:]) if len(parts) > 1 else ''
-
     return dataset, augmentation
 
 
