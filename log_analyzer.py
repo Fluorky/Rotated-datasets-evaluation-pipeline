@@ -8,23 +8,39 @@ from wsl_handler import sync_wsl_logs
 
 
 def extract_config(line):
+    if line is None or not isinstance(line, str):
+        return {}
     match = re.search(r"configuration:\s+({.*})", line)
     return eval(match.group(1)) if match else {}
 
 
 def parse_filename(filename):
     name = os.path.basename(filename).replace('_train.txt', '').replace('.txt', '')
-    parts = name.split('-')
-    dataset = parts[0] if parts else ''
-    augmentation = '-'.join(parts[1:]) if len(parts) > 1 else ''
+
+    if "_test_on_" in name:
+        train_part, test_part = name.split("_test_on_")
+        dataset = train_part
+        augmentation = test_part
+    else:
+        dataset = name
+        augmentation = ''
+        # parts = name.split('-')
+        # dataset = parts[0] if parts else ''
+        # augmentation = '-'.join(parts[1:]) if len(parts) > 1 else ''
+
     return dataset, augmentation
 
 
 def parse_log_file(filepath):
-    with open(filepath, 'r') as f:
+    with open(filepath, 'r', encoding='utf-8') as f:
         lines = f.readlines()
 
     config_line = next((line for line in lines if line.startswith("configuration:")), None)
+
+    if config_line is None:
+        print(f"⚠️ Warning: No configuration found in file: {filepath}")
+        return []
+
     config = extract_config(config_line)
     dataset, augmentation = parse_filename(filepath)
 
@@ -40,8 +56,9 @@ def parse_log_file(filepath):
             epoch = int(match.group(1))
             train_loss = float(match.group(2))
 
-            val_line = lines[i + 1]
+            val_line = lines[i + 1] if (i + 1) < len(lines) else ''
             val_match = re.search(r'Validation loss: ([\d.]+), Accuracy: (\d+)/(\d+) \(([\d.]+)%\)', val_line)
+
             val_loss = float(val_match.group(1)) if val_match else None
             accuracy = float(val_match.group(4)) if val_match else None
 
@@ -179,7 +196,7 @@ if __name__ == "__main__":
     # === Config ===
     wsl_logs_source = r'\\wsl.localhost\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\logs'
     local_logs_folder = 'log_files_from_slave/logs'
-    db_file = 'mnist_logs.db'
+    db_file = 'mnist_logs_json.db'
 
     overwrite_logs = False  # Whether to overwrite files during WSL sync
     overwrite_existing = False  # Whether to overwrite existing DB entries
