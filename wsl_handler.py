@@ -40,13 +40,3 @@ def sync_wsl_logs(source_folder, dest_folder, overwrite=False):
             else:
                 shutil.copy2(src, dst)
                 print(f"Copied log: {dst}")
-
-
-
-copy_to_wsl = False
-wsl_raw_path = Path(r"\\wsl.localhost\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\data\MNIST\raw")
-
-merged_output_folder = "merged_datasets/merged_nonrot_45_90_120"
-
-if copy_to_wsl:
-    copy_to_wsl_ubuntu_raw(merged_output_folder, wsl_raw_path)
