@@ -221,29 +221,41 @@ def generate_train_test_scenarios(
     """
     random.seed(seed)
 
-    all_sets = sorted([
-        f for f in os.listdir(merged_datasets_dir)
-        if os.path.isdir(os.path.join(merged_datasets_dir, f))
-    ])
+    # Recursively find all directories in the merged_datasets_dir
+    all_sets = []
+    for root, dirs, _ in os.walk(merged_datasets_dir):
+        for d in dirs:
+            full_path = os.path.join(root, d)
+            if os.path.isdir(full_path):
+                all_sets.append(full_path)
 
-    result: Dict[str, List[str]] = {}
+    # Sort for consistency
+    all_sets = sorted(all_sets)
+
+    result = {}
 
     for train_set in all_sets:
-        base_tests = {"dataset_mnist_non_rotated", train_set}
+        # Normalize train set path for dictionary key
+        train_set_name = os.path.relpath(train_set, merged_datasets_dir).replace("\\", "/")
 
-        # Exclude training set and very similar ones
-        candidates = [s for s in all_sets if s != train_set and train_set not in s]
+        # Base tests always include the non-rotated dataset and the training set itself
+        base_tests = {"dataset_mnist_non_rotated", train_set_name}
+
+        # Generate a random selection of additional test sets
+        candidates = [os.path.relpath(s, merged_datasets_dir).replace("\\", "/") for s in all_sets if s != train_set]
         random.shuffle(candidates)
 
+        # Create the final list of test sets
         selected_tests = list(base_tests)
         for test in candidates:
             if len(selected_tests) >= max_tests:
                 break
             selected_tests.append(test)
 
-        # Sort for consistency
-        result[train_set] = sorted(selected_tests)
+        # Sort for consistency and assign to result
+        result[train_set_name] = sorted(selected_tests)
 
-    # Save to JSON
+    # Save to JSON file
     with open(output_json_path, "w") as f:
         json.dump(result, f, indent=2)
+    print(f"✅ Train-test scenarios saved to {output_json_path}")
