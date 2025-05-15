@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 from PIL import Image
-from typing import Tuple, Dict, List
+from typing import Tuple
+
 
 def merge_ubyte_files(folders, output_folder):
     os.makedirs(output_folder, exist_ok=True)
@@ -208,11 +209,12 @@ def generate_merging_scenarios(all_folders):
             scenarios.append(combo)
     return scenarios
 
+
 def generate_train_test_scenarios(
-    merged_datasets_dir: str,
-    output_json_path: str,
-    max_tests: int = 20,
-    seed: int = 42
+        merged_datasets_dir: str,
+        output_json_path: str,
+        max_tests: int = 20,
+        seed: int = 42
 ):
     """
     Generates a JSON with test scenarios per training set.
