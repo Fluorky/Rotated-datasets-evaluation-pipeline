@@ -28,13 +28,16 @@ required_files = [
     "t10k-labels-idx1-ubyte",
 ]
 
+
 def dataset_valid(path):
     return all(os.path.exists(os.path.join(path, f)) for f in required_files)
+
 
 # Create necessary directories
 os.makedirs(base_save_dir, exist_ok=True)
 os.makedirs(train_log_dir, exist_ok=True)
 os.makedirs(test_log_dir, exist_ok=True)
+
 
 def run_command(cmd, log_file=None):
     if log_file:
@@ -46,10 +49,12 @@ def run_command(cmd, log_file=None):
     print(f"🚀 Running: {cmd}")
     os.system(cmd)
 
+
 def generate_model_save_path(train_set):
     """Generate model save path based on dataset, model, and polar transform"""
     fname = f"mnist-custom-{model_name}-{polar_transform}_{train_set}.pt"
     return os.path.join(base_save_dir, fname)
+
 
 def main():
     for train_set, test_sets in train_test_dict.items():
@@ -101,6 +106,7 @@ def main():
             run_command(test_cmd, test_log_file)
 
     print("\n✅ All training and testing complete!")
+
 
 if __name__ == "__main__":
     main()
