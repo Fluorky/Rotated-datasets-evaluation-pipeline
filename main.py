@@ -58,7 +58,7 @@ if __name__ == '__main__':
         merge_ubyte_files(folders_to_merge, merged_output_folder)
 
     generate_train_test_scenarios(
-        merged_datasets_dir="./dataset/MNIST/merged_datasets",
-        output_json_path="./train_test_scenarios.json",
-        max_tests=20
+        merged_datasets_dir="./dataset/MNIST/",
+        output_json_path="./train_test_scenariosv4.json",
+        max_tests=200
     )
