@@ -1,7 +1,6 @@
 import os
 import numpy as np
-import pandas as pd
-
+import sqlite3
 from tqdm import tqdm
 
 def calculate_accuracy(conf_matrix):
@@ -9,7 +8,30 @@ def calculate_accuracy(conf_matrix):
     total = conf_matrix.sum()
     return correct / total if total > 0 else 0.0
 
-def collect_results(confusion_matrices_root_dir):
+def initialize_db(db_path):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS evaluations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            model TEXT NOT NULL,
+            test_case TEXT NOT NULL,
+            accuracy REAL NOT NULL
+        )
+    ''')
+    conn.commit()
+    return conn
+
+def insert_results(conn, results):
+    cursor = conn.cursor()
+    cursor.executemany('''
+        INSERT INTO evaluations (model, test_case, accuracy)
+        VALUES (?, ?, ?)
+    ''', results)
+    conn.commit()
+
+def collect_and_store_results(confusion_matrices_root_dir, db_path):
+    conn = initialize_db(db_path)
     results = []
 
     for model_dir in tqdm(os.listdir(confusion_matrices_root_dir)):
@@ -26,38 +48,44 @@ def collect_results(confusion_matrices_root_dir):
             try:
                 cm = np.load(cm_file)
                 acc = calculate_accuracy(cm)
-                results.append({
-                    "model": model_dir,
-                    "test_case": test_subdir,
-                    "accuracy": acc
-                })
+                results.append((model_dir, test_subdir, acc))
             except Exception as e:
                 print(f"⚠️ Failed to load {cm_file}: {e}")
 
-    return pd.DataFrame(results)
+    insert_results(conn, results)
+    conn.close()
+    print(f"✅ Saved {len(results)} entries to {db_path}")
 
-def analyze_confusion_matrices(confusion_matrices_root_dir):
-    df = collect_results(confusion_matrices_root_dir)
+def query_best_models(db_path):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
 
-    # Pivot for overview (rows: models, cols: test cases)
-    pivot_table = df.pivot(index="model", columns="test_case", values="accuracy")
+    cursor.execute('''
+        SELECT model, ROUND(AVG(accuracy), 4) as avg_accuracy
+        FROM evaluations
+        GROUP BY model
+        ORDER BY avg_accuracy DESC
+    ''')
 
-    # Compute average accuracy per model
-    model_means = pivot_table.mean(axis=1).sort_values(ascending=False)
+    print("\n📊 Average accuracy per model:")
+    for row in cursor.fetchall():
+        print(f"🧠 {row[0]}: {row[1]}")
 
-    print("\n📊 Average Accuracy per Model:")
-    print(model_means)
+    cursor.execute('''
+        SELECT model, ROUND(AVG(accuracy), 4) as avg_accuracy
+        FROM evaluations
+        GROUP BY model
+        ORDER BY avg_accuracy DESC
+        LIMIT 1
+    ''')
+    best = cursor.fetchone()
+    print(f"\n🏆 Best model: {best[0]} with avg accuracy: {best[1]}")
+    conn.close()
 
-    best_model = model_means.idxmax()
-    print(f"\n🏆 Best Performing Model: {best_model} with mean accuracy {model_means.max():.4f}")
+# === USAGE ===
 
-    return pivot_table, model_means
-
-# === Example usage ===
-# Set this to your actual directory path
 confusion_matrices_root_dir =  r'\\wsl.localhost\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\logs\json_4\confusion_matrices'
-pivot_table, model_means = analyze_confusion_matrices(confusion_matrices_root_dir)
+db_path = "confusion_results.sqlite"
 
-# Optionally, save to CSV
-pivot_table.to_csv("confusion_accuracy_matrix.csv")
-model_means.to_csv("model_average_accuracies.csv")
+collect_and_store_results(confusion_matrices_root_dir, db_path)
+query_best_models(db_path)
