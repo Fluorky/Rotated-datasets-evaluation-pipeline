@@ -85,7 +85,7 @@ def query_best_models(db_path):
 # === USAGE ===
 
 confusion_matrices_root_dir =  r'\\wsl.localhost\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\logs\json_4\confusion_matrices'
-db_path = "confusion_results.sqlite"
+db_path = "confusion_results.db"
 
 collect_and_store_results(confusion_matrices_root_dir, db_path)
 query_best_models(db_path)
