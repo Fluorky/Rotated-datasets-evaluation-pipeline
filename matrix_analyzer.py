@@ -2,6 +2,8 @@ import os
 import numpy as np
 import sqlite3
 from tqdm import tqdm
+from statistics import mean, median, stdev
+from collections import defaultdict
 
 def calculate_accuracy(conf_matrix):
     correct = np.trace(conf_matrix)
@@ -34,7 +36,7 @@ def collect_and_store_results(confusion_matrices_root_dir, db_path):
     conn = initialize_db(db_path)
     results = []
 
-    for model_dir in tqdm(os.listdir(confusion_matrices_root_dir)):
+    for model_dir in tqdm(os.listdir(confusion_matrices_root_dir), desc="📁 Scanning models"):
         model_path = os.path.join(confusion_matrices_root_dir, model_dir)
         if not os.path.isdir(model_path):
             continue
@@ -60,6 +62,7 @@ def query_best_models(db_path):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
+    # ✅ Your original average-accuracy SQL block
     cursor.execute('''
         SELECT model, ROUND(AVG(accuracy), 4) as avg_accuracy
         FROM evaluations
@@ -67,7 +70,7 @@ def query_best_models(db_path):
         ORDER BY avg_accuracy DESC
     ''')
 
-    print("\n📊 Average accuracy per model:")
+    print("\n📊 Average accuracy per model (SQL):")
     for row in cursor.fetchall():
         print(f"🧠 {row[0]}: {row[1]}")
 
@@ -79,12 +82,41 @@ def query_best_models(db_path):
         LIMIT 1
     ''')
     best = cursor.fetchone()
-    print(f"\n🏆 Best model: {best[0]} with avg accuracy: {best[1]}")
+    print(f"\n🏆 Best model (SQL): {best[0]} with avg accuracy: {best[1]}")
+
+    # 🧠 Extended Python-side statistics
+    cursor.execute('SELECT model, accuracy FROM evaluations')
+    all_rows = cursor.fetchall()
     conn.close()
+
+    model_stats = defaultdict(list)
+    for model, acc in all_rows:
+        model_stats[model].append(acc)
+
+    print("\n📈 Extended stats per model:")
+    summary = []
+    for model, acc_list in model_stats.items():
+        stats = {
+            'model': model,
+            'avg': round(mean(acc_list), 4),
+            'median': round(median(acc_list), 4),
+            'min': round(min(acc_list), 4),
+            'max': round(max(acc_list), 4),
+            'std': round(stdev(acc_list), 4) if len(acc_list) > 1 else 0.0
+        }
+        summary.append(stats)
+
+    summary.sort(key=lambda x: x['avg'], reverse=True)
+
+    for s in summary:
+        print(f"🧪 {s['model']}: avg={s['avg']}, median={s['median']}, min={s['min']}, max={s['max']}, std={s['std']}")
+
+    best_model = summary[0]
+    print(f"\n🏅 Best model (Python): {best_model['model']} with avg accuracy = {best_model['avg']}")
 
 # === USAGE ===
 
-confusion_matrices_root_dir =  r'\\wsl.localhost\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\logs\json_4\confusion_matrices'
+confusion_matrices_root_dir = r'\\wsl.localhost\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\logs\json_4_copy\confusion_matrices'
 db_path = "confusion_results.db"
 
 collect_and_store_results(confusion_matrices_root_dir, db_path)
