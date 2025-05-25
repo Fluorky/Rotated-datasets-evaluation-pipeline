@@ -62,7 +62,6 @@ def query_best_models(db_path):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # ✅ Your original average-accuracy SQL block
     cursor.execute('''
         SELECT model, ROUND(AVG(accuracy), 4) as avg_accuracy
         FROM evaluations
