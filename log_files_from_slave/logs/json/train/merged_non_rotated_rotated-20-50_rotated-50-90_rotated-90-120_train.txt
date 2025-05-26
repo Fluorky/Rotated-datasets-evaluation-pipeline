@@ -1,0 +1,263 @@
+/home/testhub/CyCNN/CyCNN-master/cycnn/venv/lib/python3.10/site-packages/torch/optim/lr_scheduler.py:60: UserWarning: The verbose parameter is deprecated. Please use get_last_lr() to access the learning rate.
+  warnings.warn(
+configuration:  {'model': 'cyvgg19', 'train': True, 'test': False, 'polar_transform': 'linearpolar', 'augmentation': None, 'data_dir': './data/MNIST_WIN/merged_datasets/merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120', 'batch_size': 128, 'num_epochs': 9999999, 'lr': 0.05, 'dataset': 'mnist-custom', 'redirect': False, 'early_stop_epochs': 15, 'test_while_training': False, 'test_data_dir': None, 'model_save_path': './saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt'}
+Using device:  cuda
+1 devices available
+# Parameters: 20560.3K
+✔️ Train data: 216000 samples
+✔️ Validation data: 24000 samples
+✔️ Test data: 40000 samples
+===> Training mnist-custom-cyvgg19-linearpolar begin
+[Epoch 0] Train Loss: 0.267149
+[Epoch 0] Validation loss: 0.0829, Accuracy: 23479/24000 (97.83%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 98.9 sec
+[Epoch 1] Train Loss: 0.060513
+[Epoch 1] Validation loss: 0.0471, Accuracy: 23685/24000 (98.69%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 99.0 sec
+[Epoch 2] Train Loss: 0.038561
+[Epoch 2] Validation loss: 0.0336, Accuracy: 23769/24000 (99.04%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 98.9 sec
+[Epoch 3] Train Loss: 0.028614
+[Epoch 3] Validation loss: 0.0296, Accuracy: 23785/24000 (99.10%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 98.9 sec
+[Epoch 4] Train Loss: 0.024815
+[Epoch 4] Validation loss: 0.0277, Accuracy: 23805/24000 (99.19%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 98.9 sec
+[Epoch 5] Train Loss: 0.019016
+[Epoch 5] Validation loss: 0.0325, Accuracy: 23810/24000 (99.21%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 99.0 sec
+[Epoch 6] Train Loss: 0.015316
+[Epoch 6] Validation loss: 0.0329, Accuracy: 23804/24000 (99.18%)
+Elapsed time: 98.9 sec
+[Epoch 7] Train Loss: 0.014430
+[Epoch 7] Validation loss: 0.0274, Accuracy: 23832/24000 (99.30%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 98.8 sec
+[Epoch 8] Train Loss: 0.011911
+[Epoch 8] Validation loss: 0.0201, Accuracy: 23863/24000 (99.43%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 98.9 sec
+[Epoch 9] Train Loss: 0.011358
+[Epoch 9] Validation loss: 0.0198, Accuracy: 23866/24000 (99.44%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 98.8 sec
+[Epoch 10] Train Loss: 0.009275
+[Epoch 10] Validation loss: 0.0193, Accuracy: 23875/24000 (99.48%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 99.1 sec
+[Epoch 11] Train Loss: 0.008080
+[Epoch 11] Validation loss: 0.0197, Accuracy: 23880/24000 (99.50%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 98.9 sec
+[Epoch 12] Train Loss: 0.007723
+[Epoch 12] Validation loss: 0.0201, Accuracy: 23878/24000 (99.49%)
+Elapsed time: 98.7 sec
+[Epoch 13] Train Loss: 0.007558
+[Epoch 13] Validation loss: 0.0251, Accuracy: 23854/24000 (99.39%)
+Elapsed time: 99.1 sec
+[Epoch 14] Train Loss: 0.005719
+[Epoch 14] Validation loss: 0.0208, Accuracy: 23879/24000 (99.50%)
+Elapsed time: 99.0 sec
+[Epoch 15] Train Loss: 0.005320
+[Epoch 15] Validation loss: 0.0318, Accuracy: 23830/24000 (99.29%)
+Elapsed time: 98.7 sec
+[Epoch 16] Train Loss: 0.005358
+[Epoch 16] Validation loss: 0.0270, Accuracy: 23858/24000 (99.41%)
+Elapsed time: 98.9 sec
+[Epoch 17] Train Loss: 0.004697
+[Epoch 17] Validation loss: 0.0190, Accuracy: 23890/24000 (99.54%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 98.9 sec
+[Epoch 18] Train Loss: 0.005328
+[Epoch 18] Validation loss: 0.0175, Accuracy: 23902/24000 (99.59%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 99.1 sec
+[Epoch 19] Train Loss: 0.004372
+[Epoch 19] Validation loss: 0.0190, Accuracy: 23895/24000 (99.56%)
+Elapsed time: 98.8 sec
+[Epoch 20] Train Loss: 0.004605
+[Epoch 20] Validation loss: 0.0185, Accuracy: 23902/24000 (99.59%)
+Elapsed time: 99.0 sec
+[Epoch 21] Train Loss: 0.003580
+[Epoch 21] Validation loss: 0.0173, Accuracy: 23912/24000 (99.63%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 99.0 sec
+[Epoch 22] Train Loss: 0.003154
+[Epoch 22] Validation loss: 0.0186, Accuracy: 23905/24000 (99.60%)
+Elapsed time: 98.9 sec
+[Epoch 23] Train Loss: 0.003106
+[Epoch 23] Validation loss: 0.0167, Accuracy: 23907/24000 (99.61%)
+Elapsed time: 98.9 sec
+[Epoch 24] Train Loss: 0.004269
+[Epoch 24] Validation loss: 0.0135, Accuracy: 23908/24000 (99.62%)
+Elapsed time: 99.2 sec
+[Epoch 25] Train Loss: 0.003298
+[Epoch 25] Validation loss: 0.0179, Accuracy: 23907/24000 (99.61%)
+Elapsed time: 99.1 sec
+[Epoch 26] Train Loss: 0.002900
+[Epoch 26] Validation loss: 0.0179, Accuracy: 23910/24000 (99.62%)
+Elapsed time: 99.0 sec
+[Epoch 27] Train Loss: 0.002432
+[Epoch 27] Validation loss: 0.0177, Accuracy: 23909/24000 (99.62%)
+Elapsed time: 99.0 sec
+[Epoch 28] Train Loss: 0.002691
+[Epoch 28] Validation loss: 0.0183, Accuracy: 23905/24000 (99.60%)
+Elapsed time: 98.8 sec
+[Epoch 29] Train Loss: 0.002815
+[Epoch 29] Validation loss: 0.0270, Accuracy: 23877/24000 (99.49%)
+Elapsed time: 98.8 sec
+[Epoch 30] Train Loss: 0.002892
+[Epoch 30] Validation loss: 0.0184, Accuracy: 23909/24000 (99.62%)
+Elapsed time: 98.9 sec
+[Epoch 31] Train Loss: 0.002430
+[Epoch 31] Validation loss: 0.0148, Accuracy: 23914/24000 (99.64%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 99.0 sec
+[Epoch 32] Train Loss: 0.002595
+[Epoch 32] Validation loss: 0.0212, Accuracy: 23886/24000 (99.53%)
+Elapsed time: 98.7 sec
+[Epoch 33] Train Loss: 0.003132
+[Epoch 33] Validation loss: 0.0131, Accuracy: 23927/24000 (99.70%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 99.1 sec
+[Epoch 34] Train Loss: 0.001208
+[Epoch 34] Validation loss: 0.0129, Accuracy: 23924/24000 (99.68%)
+Elapsed time: 98.7 sec
+[Epoch 35] Train Loss: 0.001892
+[Epoch 35] Validation loss: 0.0228, Accuracy: 23877/24000 (99.49%)
+Elapsed time: 98.7 sec
+[Epoch 36] Train Loss: 0.003516
+[Epoch 36] Validation loss: 0.0178, Accuracy: 23895/24000 (99.56%)
+Elapsed time: 98.8 sec
+[Epoch 37] Train Loss: 0.002582
+[Epoch 37] Validation loss: 0.0129, Accuracy: 23929/24000 (99.70%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 98.8 sec
+[Epoch 38] Train Loss: 0.001960
+[Epoch 38] Validation loss: 0.0117, Accuracy: 23935/24000 (99.73%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 98.9 sec
+[Epoch 39] Train Loss: 0.002384
+[Epoch 39] Validation loss: 0.0129, Accuracy: 23931/24000 (99.71%)
+Elapsed time: 98.7 sec
+[Epoch 40] Train Loss: 0.002880
+[Epoch 40] Validation loss: 0.0193, Accuracy: 23908/24000 (99.62%)
+Elapsed time: 99.0 sec
+[Epoch 41] Train Loss: 0.002018
+[Epoch 41] Validation loss: 0.0156, Accuracy: 23912/24000 (99.63%)
+Elapsed time: 98.7 sec
+[Epoch 42] Train Loss: 0.002152
+[Epoch 42] Validation loss: 0.0150, Accuracy: 23926/24000 (99.69%)
+Elapsed time: 98.8 sec
+[Epoch 43] Train Loss: 0.001414
+[Epoch 43] Validation loss: 0.0152, Accuracy: 23914/24000 (99.64%)
+Elapsed time: 98.9 sec
+[Epoch 44] Train Loss: 0.001933
+[Epoch 44] Validation loss: 0.0156, Accuracy: 23918/24000 (99.66%)
+Elapsed time: 99.2 sec
+[Epoch 45] Train Loss: 0.002219
+[Epoch 45] Validation loss: 0.0179, Accuracy: 23913/24000 (99.64%)
+Elapsed time: 99.1 sec
+[Epoch 46] Train Loss: 0.001980
+[Epoch 46] Validation loss: 0.0134, Accuracy: 23931/24000 (99.71%)
+Elapsed time: 99.0 sec
+[Epoch 47] Train Loss: 0.002502
+[Epoch 47] Validation loss: 0.0249, Accuracy: 23877/24000 (99.49%)
+Elapsed time: 98.9 sec
+[Epoch 48] Train Loss: 0.001479
+[Epoch 48] Validation loss: 0.0137, Accuracy: 23936/24000 (99.73%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 98.9 sec
+[Epoch 49] Train Loss: 0.002143
+[Epoch 49] Validation loss: 0.0192, Accuracy: 23902/24000 (99.59%)
+Elapsed time: 98.8 sec
+[Epoch 50] Train Loss: 0.000566
+[Epoch 50] Validation loss: 0.0128, Accuracy: 23942/24000 (99.76%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 99.1 sec
+[Epoch 51] Train Loss: 0.000110
+[Epoch 51] Validation loss: 0.0126, Accuracy: 23944/24000 (99.77%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 99.2 sec
+[Epoch 52] Train Loss: 0.000080
+[Epoch 52] Validation loss: 0.0130, Accuracy: 23944/24000 (99.77%)
+Elapsed time: 98.9 sec
+[Epoch 53] Train Loss: 0.000064
+[Epoch 53] Validation loss: 0.0134, Accuracy: 23939/24000 (99.75%)
+Elapsed time: 99.2 sec
+[Epoch 54] Train Loss: 0.000062
+[Epoch 54] Validation loss: 0.0129, Accuracy: 23946/24000 (99.78%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 99.0 sec
+[Epoch 55] Train Loss: 0.000043
+[Epoch 55] Validation loss: 0.0131, Accuracy: 23943/24000 (99.76%)
+Elapsed time: 98.9 sec
+[Epoch 56] Train Loss: 0.000046
+[Epoch 56] Validation loss: 0.0131, Accuracy: 23945/24000 (99.77%)
+Elapsed time: 98.9 sec
+[Epoch 57] Train Loss: 0.000031
+[Epoch 57] Validation loss: 0.0129, Accuracy: 23951/24000 (99.80%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 99.3 sec
+[Epoch 58] Train Loss: 0.000036
+[Epoch 58] Validation loss: 0.0131, Accuracy: 23951/24000 (99.80%)
+Elapsed time: 99.1 sec
+[Epoch 59] Train Loss: 0.000024
+[Epoch 59] Validation loss: 0.0131, Accuracy: 23953/24000 (99.80%)
+💾 Model saved at: ./saves/mnist-custom-cyvgg19-linearpolar_merged_non_rotated_rotated-20-50_rotated-50-90_rotated-90-120.pt
+Elapsed time: 99.0 sec
+[Epoch 60] Train Loss: 0.000048
+[Epoch 60] Validation loss: 0.0128, Accuracy: 23947/24000 (99.78%)
+Elapsed time: 98.9 sec
+[Epoch 61] Train Loss: 0.000027
+[Epoch 61] Validation loss: 0.0127, Accuracy: 23948/24000 (99.78%)
+Elapsed time: 99.0 sec
+[Epoch 62] Train Loss: 0.000018
+[Epoch 62] Validation loss: 0.0130, Accuracy: 23947/24000 (99.78%)
+Elapsed time: 98.9 sec
+[Epoch 63] Train Loss: 0.000023
+[Epoch 63] Validation loss: 0.0129, Accuracy: 23948/24000 (99.78%)
+Elapsed time: 98.9 sec
+[Epoch 64] Train Loss: 0.000018
+[Epoch 64] Validation loss: 0.0131, Accuracy: 23946/24000 (99.78%)
+Elapsed time: 98.9 sec
+[Epoch 65] Train Loss: 0.000015
+[Epoch 65] Validation loss: 0.0131, Accuracy: 23946/24000 (99.78%)
+Elapsed time: 98.9 sec
+[Epoch 66] Train Loss: 0.000013
+[Epoch 66] Validation loss: 0.0136, Accuracy: 23950/24000 (99.79%)
+Elapsed time: 99.0 sec
+[Epoch 67] Train Loss: 0.000016
+[Epoch 67] Validation loss: 0.0131, Accuracy: 23949/24000 (99.79%)
+Elapsed time: 98.9 sec
+[Epoch 68] Train Loss: 0.000015
+[Epoch 68] Validation loss: 0.0129, Accuracy: 23948/24000 (99.78%)
+Elapsed time: 98.9 sec
+[Epoch 69] Train Loss: 0.000016
+[Epoch 69] Validation loss: 0.0133, Accuracy: 23947/24000 (99.78%)
+Elapsed time: 98.8 sec
+[Epoch 70] Train Loss: 0.000015
+[Epoch 70] Validation loss: 0.0135, Accuracy: 23947/24000 (99.78%)
+Elapsed time: 99.0 sec
+[Epoch 71] Train Loss: 0.000013
+[Epoch 71] Validation loss: 0.0135, Accuracy: 23949/24000 (99.79%)
+Elapsed time: 98.9 sec
+[Epoch 72] Train Loss: 0.000016
+[Epoch 72] Validation loss: 0.0132, Accuracy: 23947/24000 (99.78%)
+Elapsed time: 98.9 sec
+[Epoch 73] Train Loss: 0.000015
+[Epoch 73] Validation loss: 0.0128, Accuracy: 23947/24000 (99.78%)
+Elapsed time: 98.9 sec
+[Epoch 74] Train Loss: 0.000015
+[Epoch 74] Validation loss: 0.0129, Accuracy: 23946/24000 (99.78%)
+Elapsed time: 98.9 sec
+[Epoch 75] Train Loss: 0.000015
+[Epoch 75] Validation loss: 0.0128, Accuracy: 23949/24000 (99.79%)
+Elapsed time: 98.8 sec
+Training Done!

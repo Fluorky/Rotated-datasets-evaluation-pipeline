@@ -200,6 +200,18 @@ def make_merge_name(folders):
         names.append(last)
     return "_".join(names)
 
+def has_data_files(directory):
+    """
+    Check if the given directory contains all the required data files.
+    """
+    required_files = [
+        "train-images-idx3-ubyte",
+        "train-labels-idx1-ubyte",
+        "t10k-images-idx3-ubyte",
+        "t10k-labels-idx1-ubyte",
+    ]
+    return all(os.path.exists(os.path.join(directory, f)) for f in required_files)
+
 
 # Function to create all combinations
 def generate_merging_scenarios(all_folders):
@@ -228,7 +240,7 @@ def generate_train_test_scenarios(
     for root, dirs, _ in os.walk(merged_datasets_dir):
         for d in dirs:
             full_path = os.path.join(root, d)
-            if os.path.isdir(full_path):
+            if has_data_files(full_path):
                 all_sets.append(full_path)
 
     # Sort for consistency
@@ -241,7 +253,8 @@ def generate_train_test_scenarios(
         train_set_name = os.path.relpath(train_set, merged_datasets_dir).replace("\\", "/")
 
         # Base tests always include the non-rotated dataset and the training set itself
-        base_tests = {"dataset_mnist_non_rotated", train_set_name}
+        # base_tests = {"dataset_mnist_non_rotated", train_set_name}
+        base_tests = {train_set_name}
 
         # Generate a random selection of additional test sets
         candidates = [os.path.relpath(s, merged_datasets_dir).replace("\\", "/") for s in all_sets if s != train_set]
