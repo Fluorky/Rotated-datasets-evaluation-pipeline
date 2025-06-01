@@ -1,7 +1,7 @@
 import os
 import json
 
-with open("train_test_scenariosv2.json") as f:
+with open("train_test_scenarios.json") as f:
     train_test_dict = json.load(f)
 
 main_script = "main.py"
@@ -9,16 +9,18 @@ venv_python = "venv/bin/python"
 
 base_data_dir = "./data/MNIST_WIN"
 merged_dir = base_data_dir
-# merged_dir = os.path.join(base_data_dir, "merged_datasets")
 dataset_mnist_non_rotated = os.path.join(base_data_dir, "dataset_mnist_non_rotated")
 
 base_save_dir = "./saves/MNIST/"
 base_log_dir = "./logs/json_4/"
+# base_log_dir = "./logs/json_4_copy/"
 train_log_dir = os.path.join(base_log_dir, "train")
 test_log_dir = os.path.join(base_log_dir, "test")
 cm_log_dir = os.path.join(base_log_dir, "confusion_matrices")
-model_name = "cyvgg19"
-polar_transform = "linearpolar"
+
+# models = ["cyvgg19"]
+models = ["cyvgg19", "cyresnet56"]
+polar_transforms = ["logpolar", "linearpolar"]
 
 overwrite_logs = False
 overwrite_models = False
@@ -35,13 +37,6 @@ def dataset_valid(path):
     return all(os.path.exists(os.path.join(path, f)) for f in required_files)
 
 
-# Create necessary directories
-os.makedirs(base_save_dir, exist_ok=True)
-os.makedirs(train_log_dir, exist_ok=True)
-os.makedirs(test_log_dir, exist_ok=True)
-os.makedirs(cm_log_dir, exist_ok=True)
-
-
 def run_command(cmd, log_file=None):
     if log_file:
         if not overwrite_logs and os.path.exists(log_file):
@@ -53,78 +48,67 @@ def run_command(cmd, log_file=None):
     os.system(cmd)
 
 
-def generate_model_save_path(train_set):
-    """Generate model save path based on dataset, model, and polar transform"""
+def generate_model_save_path(model_name, polar_transform, train_set):
     fname = f"mnist-custom-{model_name}-{polar_transform}_{train_set}.pt"
     return os.path.join(base_save_dir, fname)
 
 
 def main():
-    for train_set, test_sets in train_test_dict.items():
-        train_data_dir = os.path.join(merged_dir, train_set)
-        train_set = train_set.replace("/", "_")
-        train_log_file = os.path.join(train_log_dir,
-                                      f"mnist-custom-{model_name}-{polar_transform}_{train_set}_train.txt")
-        model_save_path = generate_model_save_path(train_set)
-        print(f"SAVE MODEL PATH{model_save_path}")
-        cm_output_dir = os.path.join(cm_log_dir, train_set)
+    for model_name in models:
+        for polar_transform in polar_transforms:
+            for train_set, test_sets in train_test_dict.items():
+                train_data_dir = os.path.join(merged_dir, train_set)
+                train_set_safe = train_set.replace("/", "_")
+                train_log_file = os.path.join(train_log_dir, f"mnist-custom-{model_name}-{polar_transform}_{train_set_safe}_train.txt")
+                model_save_path = generate_model_save_path(model_name, polar_transform, train_set_safe)
+                cm_output_dir = os.path.join(cm_log_dir, train_set_safe)
 
-        print(f"Model save path: {model_save_path}")
+                if not dataset_valid(train_data_dir):
+                    print(f"❌ Missing training data files for: {train_set}")
+                    continue
 
-        # train_data_dir = (
-        #     dataset_mnist_non_rotated if train_set == "dataset_mnist_non_rotated"
-        #     else os.path.join(merged_dir, train_set)
-        # )
+                print(f"\n=== TRAINING on {train_set} with {model_name} and {polar_transform} ===")
 
-        if not dataset_valid(train_data_dir):
-            print(f"❌  not dataset_valid {train_data_dir}")
-            print(f"❌ Missing training data files for: {train_set}")
-            continue
+                if os.path.exists(model_save_path) and not overwrite_models:
+                    print(f"✅ Model already exists and overwrite is disabled: {model_save_path}")
+                else:
+                    train_cmd = (
+                        f"{venv_python} {main_script} "
+                        f"--train --model={model_name} --dataset=mnist-custom "
+                        f"--polar-transform={polar_transform} --data-dir={train_data_dir} "
+                        f"--model-save-path={model_save_path} --output-dir={cm_output_dir}"
+                    )
+                    run_command(train_cmd, train_log_file)
 
-        print(f"\n=== TRAINING on {train_set} ===")
+                for test_set in test_sets:
+                    test_data_dir = (
+                        dataset_mnist_non_rotated
+                        if test_set == "dataset_mnist_non_rotated"
+                        else os.path.join(merged_dir, test_set)
+                    )
 
-        if os.path.exists(model_save_path) and not overwrite_models:
-            print(f"✅ Model already exists and overwrite is disabled: {model_save_path}")
-        else:
-            train_cmd = (
-                f"{venv_python} {main_script} "
-                f"--train --model={model_name} --dataset=mnist-custom "
-                f"--polar-transform={polar_transform} --data-dir={train_data_dir} "
-                f"--model-save-path={model_save_path} --output-dir={cm_output_dir}"
-            )
-            run_command(train_cmd, train_log_file)
+                    if not dataset_valid(test_data_dir):
+                        print(f"❌ Missing test data for: {test_set}, skipping.")
+                        continue
 
-        for test_set in test_sets:
-            test_data_dir = (
-                dataset_mnist_non_rotated
-                if test_set == "dataset_mnist_non_rotated"
-                else os.path.join(merged_dir, test_set)
-            )
+                    test_set_safe = test_set.replace("/", "_")
+                    test_subdir = os.path.join(test_log_dir, f"mnist-custom-{model_name}-{polar_transform}_{train_set_safe}")
+                    cm_output_dir = os.path.join(cm_log_dir, f"mnist-custom-{model_name}-{polar_transform}_{train_set_safe}/{train_set_safe}_test_on_{test_set_safe}")
+                    os.makedirs(test_subdir, exist_ok=True)
+                    test_log_file = os.path.join(test_subdir, f"mnist-custom-{model_name}-{polar_transform}_{train_set_safe}_test_on_{test_set_safe}.txt")
 
-            if not dataset_valid(test_data_dir):
-                print(f"❌ Missing test data for: {test_set}, skipping.")
-                continue
-            print(model_save_path)
+                    print(f"--- TESTING {train_set} model on {test_set} with {model_name} and {polar_transform} ---")
 
-            print(f"--- TESTING {train_set} model on {test_set} ---")
-            test_set = test_set.replace("/", "_")
-            test_subdir = os.path.join(test_log_dir, train_set)
-            cm_output_dir = os.path.join(cm_log_dir,
-                                         f"mnist-custom-{model_name}-{polar_transform}_{train_set}/{train_set}_test_on_{test_set}")
-            os.makedirs(test_subdir, exist_ok=True)
-            test_log_file = os.path.join(test_subdir,
-                                         f"mnist-custom-{model_name}-{polar_transform}_{train_set}_test_on_{test_set}.txt")
-            test_cmd = (
-                f"{venv_python} {main_script} "
-                f"--test --model={model_name} --dataset=mnist-custom "
-                f"--polar-transform={polar_transform} "
-                f"--data-dir={train_data_dir} "
-                f"--test-data-dir={test_data_dir} "
-                f"--output-dir={cm_output_dir} "
-                f"--model-path={generate_model_save_path(train_set)} "
-                # f"--model-path=JPRDADFASDDFFD.pt"
-            )
-            run_command(test_cmd, test_log_file)
+                    test_cmd = (
+                        f"{venv_python} {main_script} "
+                        f"--test --model={model_name} --dataset=mnist-custom "
+                        f"--polar-transform={polar_transform} "
+                        f"--data-dir={train_data_dir} "
+                        f"--test-data-dir={test_data_dir} "
+                        f"--output-dir={cm_output_dir} "
+                        f"--model-path={model_save_path}"
+                    )
+                    run_command(test_cmd, test_log_file)
 
     print("\n✅ All training and testing complete!")
 
