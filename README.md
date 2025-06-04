@@ -22,7 +22,7 @@ This project explores **rotationally invariant convolutional neural networks (CN
 
 # CyCNN - Local Installation Guide (No Docker)
 
-This is a step-by-step guide for running the [CyCNN](https://github.com/mcrl/CyCNN) project **without Docker**, using a local Python environment.
+This is a step-by-step guide for running the [CyCNN-Enhanced](https://github.com/Fluorky/CyCNN-Enhanced) project **without Docker**, using a local Python environment.
 
 ---
 
