@@ -121,7 +121,8 @@ def rotate_and_save_fixed_angle(input_path: str, output_path: str, angle: float)
 
     # Compose full output path including angle folder and filename
     angle_folder = f"rotated-{angle}"
-    full_output_path = os.path.join(os.path.dirname(os.path.dirname(output_path)), angle_folder, os.path.basename(output_path))
+    full_output_path = os.path.join(os.path.dirname(os.path.dirname(output_path)), angle_folder,
+                                    os.path.basename(output_path))
 
     save_mnist_images(full_output_path, rotated_images, num_images, rows, cols)
 
@@ -135,7 +136,6 @@ def rotate_and_save_fixed_angle(input_path: str, output_path: str, angle: float)
     # plt.show()
 
     print(f"Rotated {num_images} images by {angle}° and saved to '{full_output_path}'")
-
 
 
 def rotate_and_save_ranges(input_path: str, output_path: str, angle_ranges: list[tuple[int, int]]):
@@ -207,6 +207,7 @@ def make_merge_name(folders):
         last = last.replace("dataset_mnist_", "")  # Remove common prefixes
         names.append(last)
     return "_".join(names)
+
 
 def has_data_files(directory):
     """
