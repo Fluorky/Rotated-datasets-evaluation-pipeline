@@ -5,10 +5,12 @@ from tqdm import tqdm
 from statistics import mean, median, stdev
 from collections import defaultdict
 
+
 def calculate_accuracy(conf_matrix):
     correct = np.trace(conf_matrix)
     total = conf_matrix.sum()
     return correct / total if total > 0 else 0.0
+
 
 def initialize_db(db_path):
     conn = sqlite3.connect(db_path)
@@ -24,6 +26,7 @@ def initialize_db(db_path):
     conn.commit()
     return conn
 
+
 def insert_results(conn, results):
     cursor = conn.cursor()
     cursor.executemany('''
@@ -31,6 +34,7 @@ def insert_results(conn, results):
         VALUES (?, ?, ?)
     ''', results)
     conn.commit()
+
 
 def collect_and_store_results(confusion_matrices_root_dir, db_path):
     conn = initialize_db(db_path)
@@ -57,6 +61,7 @@ def collect_and_store_results(confusion_matrices_root_dir, db_path):
     insert_results(conn, results)
     conn.close()
     print(f"✅ Saved {len(results)} entries to {db_path}")
+
 
 def query_best_models(db_path):
     conn = sqlite3.connect(db_path)
@@ -112,6 +117,7 @@ def query_best_models(db_path):
 
     best_model = summary[0]
     print(f"\n🏅 Best model (Python): {best_model['model']} with avg accuracy = {best_model['avg']}")
+
 
 # === USAGE ===
 
