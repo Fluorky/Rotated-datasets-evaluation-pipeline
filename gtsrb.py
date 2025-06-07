@@ -6,7 +6,7 @@ import zipfile
 from PIL import Image
 import pandas as pd
 
-# 1️⃣ Download GTSRB from Kaggle
+
 def download_gtsrb_kaggle(output_path="dataset/GTSRB_raw"):
     os.makedirs(output_path, exist_ok=True)
 
@@ -22,7 +22,6 @@ def download_gtsrb_kaggle(output_path="dataset/GTSRB_raw"):
     print(f"✅ Download complete → {output_path}")
 
 
-# 2️⃣ Convert to 32x32 images
 def convert_images_to_32x32(source_dir, target_dir):
     print(f"🔄 Converting images from {source_dir} → {target_dir} ...")
     os.makedirs(target_dir, exist_ok=True)
@@ -45,7 +44,6 @@ def convert_images_to_32x32(source_dir, target_dir):
     print("✅ Conversion to 32x32 done.")
 
 
-# 3️⃣ Prepare train/test split
 def prepare_gtsrb_32x32():
     raw_dir = "dataset/GTSRB_raw"
     train_dir = os.path.join(raw_dir, "Train")
