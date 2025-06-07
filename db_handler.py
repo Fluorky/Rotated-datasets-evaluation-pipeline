@@ -160,6 +160,7 @@ def show_table(table_name='training_logs', db_path='mnist_logs.db'):
         print(f"❌ Error reading table `{table_name}`: {e}")
 
 
-show_table()
-show_table("training_logs")
-show_table("test_logs")
+if __name__ == "__main__":
+    show_table()
+    show_table("training_logs")
+    show_table("test_logs")
