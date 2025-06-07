@@ -158,9 +158,3 @@ def show_table(table_name='training_logs', db_path='mnist_logs.db'):
 
     except Exception as e:
         print(f"❌ Error reading table `{table_name}`: {e}")
-
-
-if __name__ == "__main__":
-    show_table()
-    show_table("training_logs")
-    show_table("test_logs")
