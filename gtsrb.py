@@ -73,7 +73,7 @@ def prepare_gtsrb_32x32():
     os.makedirs(target_test_dir, exist_ok=True)
 
     for _, row in test_csv.iterrows():
-        img_path = Path(test_images_dir) / row["Path"]
+        img_path = Path(raw_dir) / row["Path"]
         class_id = str(row["ClassId"]).zfill(5)
         output_class_dir = Path(target_test_dir) / class_id
         os.makedirs(output_class_dir, exist_ok=True)
