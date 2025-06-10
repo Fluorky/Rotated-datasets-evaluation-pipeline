@@ -65,11 +65,10 @@ def prepare_gtsrb_32x32():
         print("⚠️ No Test.csv found in Test folder → skipping test set preparation!")
         return  # skip test preparation gracefully
 
-    # If CSV exists → proceed
     test_csv = pd.read_csv(test_csv_path)
     print(f"✅ Found Test.csv with {len(test_csv)} entries → processing...")
 
-    test_images_dir = os.path.join(test_dir, "Images")
+    test_images_dir = test_dir
     target_test_dir = os.path.join(output_base, "test")
     os.makedirs(target_test_dir, exist_ok=True)
 
