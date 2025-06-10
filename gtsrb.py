@@ -79,7 +79,7 @@ def prepare_gtsrb_32x32():
         os.makedirs(output_class_dir, exist_ok=True)
 
         img = Image.open(img_path)
-        img_32 = img.resize((32, 32), Image.ANTIALIAS)
+        img_32 = img.resize((32, 32), Image.Resampling.LANCZOS)
 
         output_file = output_class_dir / (img_path.stem + ".png")
         img_32.save(output_file)
