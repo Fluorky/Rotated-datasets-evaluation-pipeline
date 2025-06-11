@@ -22,53 +22,68 @@ def download_gtsrb_kaggle(output_path="dataset/GTSRB_raw"):
     print(f"✅ Download complete → {output_path}")
 
 
-def convert_images_to_32x32(source_dir, target_dir):
-    print(f"🔄 Converting images from {source_dir} → {target_dir} ...")
-    os.makedirs(target_dir, exist_ok=True)
+def convert_train_csv_to_32x32():
+    raw_dir = "dataset/GTSRB_raw"
+    train_csv_path = os.path.join(raw_dir, "Train.csv")
+    target_train_dir = "dataset/GTSRB_32x32/train"
 
-    # Loop over class folders
-    for class_dir in Path(source_dir).glob("*"):
-        if class_dir.is_dir():
-            class_id = class_dir.name
-            output_class_dir = Path(target_dir) / class_id
-            os.makedirs(output_class_dir, exist_ok=True)
+    print("🔄 Preparing TRAIN set...")
 
-            for img_file in class_dir.glob("*.ppm"):
-                img = Image.open(img_file)
-                img_32 = img.resize((32, 32), Image.ANTIALIAS)
+    if not os.path.exists(train_csv_path):
+        print("⚠️ No Train.csv found → skipping train set preparation!")
+        return
 
-                # Save as PNG for convenience
-                output_file = output_class_dir / (img_file.stem + ".png")
-                img_32.save(output_file)
+    train_csv = pd.read_csv(train_csv_path)
+    print(f"✅ Found Train.csv with {len(train_csv)} entries → processing...")
 
-    print("✅ Conversion to 32x32 done.")
+    os.makedirs(target_train_dir, exist_ok=True)
+
+    for _, row in train_csv.iterrows():
+        # Use path relative to raw_dir
+        img_path = Path(raw_dir) / row["Path"]
+        class_id = str(row["ClassId"]).zfill(5)
+        output_class_dir = Path(target_train_dir) / class_id
+        os.makedirs(output_class_dir, exist_ok=True)
+
+        img = Image.open(img_path)
+        img_32 = img.resize((32, 32), Image.Resampling.LANCZOS)
+
+        output_file = output_class_dir / (img_path.stem + ".png")
+        img_32.save(output_file)
+
+    print("✅ TRAIN set prepared.")
 
 
 def prepare_gtsrb_32x32():
     raw_dir = "dataset/GTSRB_raw"
+    train_zip = os.path.join(raw_dir, "Train.zip")
+    test_zip = os.path.join(raw_dir, "Test.zip")
+
     train_dir = os.path.join(raw_dir, "Train")
     test_dir = os.path.join(raw_dir, "Test")
     output_base = "dataset/GTSRB_32x32"
 
-    # Train
-    convert_images_to_32x32(
-        source_dir=os.path.join(train_dir, "Images"),
-        target_dir=os.path.join(output_base, "train")
-    )
+    # Unzip if not already
+    if not os.path.exists(train_dir):
+        with zipfile.ZipFile(train_zip, 'r') as zip_ref:
+            zip_ref.extractall(train_dir)
+    if not os.path.exists(test_dir):
+        with zipfile.ZipFile(test_zip, 'r') as zip_ref:
+            zip_ref.extractall(test_dir)
 
-    # Test (test labels are in CSV)
+    # Convert train (correct version)
+    convert_train_csv_to_32x32()
+
+    # Prepare test
     print("🔄 Preparing TEST set...")
-
-    # Check if Test.csv exists
     test_csv_path = os.path.join(raw_dir, "Test.csv")
     if not os.path.exists(test_csv_path):
-        print("⚠️ No Test.csv found in Test folder → skipping test set preparation!")
-        return  # skip test preparation gracefully
+        print("⚠️ No Test.csv found → skipping test set preparation!")
+        return
 
     test_csv = pd.read_csv(test_csv_path)
     print(f"✅ Found Test.csv with {len(test_csv)} entries → processing...")
 
-    test_images_dir = test_dir
     target_test_dir = os.path.join(output_base, "test")
     os.makedirs(target_test_dir, exist_ok=True)
 
