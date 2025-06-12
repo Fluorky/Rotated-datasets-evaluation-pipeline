@@ -262,7 +262,6 @@ def generate_train_test_scenarios(
         train_set_name = os.path.relpath(train_set, merged_datasets_dir).replace("\\", "/")
 
         # Base tests always include the non-rotated dataset and the training set itself
-        # base_tests = {"dataset_mnist_non_rotated", train_set_name}
         base_tests = {train_set_name}
 
         # Generate a random selection of additional test sets
