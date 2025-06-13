@@ -124,6 +124,10 @@ def create_idx_files(image_dir: str, output_prefix: str):
 
     num_images, rows, cols = images.shape
 
+    # Ensure output directory exists
+    output_dir = os.path.dirname(output_prefix)
+    os.makedirs(output_dir, exist_ok=True)
+
     # Save images (idx3-ubyte)
     with open(f"{output_prefix}-images-idx3-ubyte", "wb") as f:
         f.write(struct.pack(">IIII", 2051, num_images, rows, cols))  # magic number for images
@@ -146,5 +150,3 @@ if __name__ == "__main__":
     prepare_gtsrb_32x32()
 
     print("All jobs done")
-
-
