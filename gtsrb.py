@@ -145,6 +145,6 @@ if __name__ == "__main__":
     # Step 2 & 3: prepare train/test split with 32x32 images
     prepare_gtsrb_32x32()
 
-    print("🎉 All done → ready to use in your pipeline!")
+    print("All jobs done")
 
 
