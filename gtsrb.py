@@ -5,6 +5,8 @@ from kaggle.api.kaggle_api_extended import KaggleApi
 import zipfile
 from PIL import Image
 import pandas as pd
+import struct
+import numpy as np
 
 
 def download_gtsrb_kaggle(output_path="dataset/GTSRB_raw"):
@@ -102,6 +104,39 @@ def prepare_gtsrb_32x32():
     print("✅ TEST set prepared.")
 
 
+def create_idx_files(image_dir: str, output_prefix: str):
+    images = []
+    labels = []
+
+    class_dirs = sorted(Path(image_dir).iterdir())
+    for class_dir in class_dirs:
+        if class_dir.is_dir():
+            label = int(class_dir.name)
+            for img_path in class_dir.glob("*.png"):
+                img = Image.open(img_path).convert("L")  # convert to grayscale
+                img = img.resize((28, 28))  # resize to 28x28 to match MNIST
+                img_array = np.array(img, dtype=np.uint8)
+                images.append(img_array)
+                labels.append(label)
+
+    images = np.stack(images)
+    labels = np.array(labels, dtype=np.uint8)
+
+    num_images, rows, cols = images.shape
+
+    # Save images (idx3-ubyte)
+    with open(f"{output_prefix}-images-idx3-ubyte", "wb") as f:
+        f.write(struct.pack(">IIII", 2051, num_images, rows, cols))  # magic number for images
+        f.write(images.tobytes())
+
+    # Save labels (idx1-ubyte)
+    with open(f"{output_prefix}-labels-idx1-ubyte", "wb") as f:
+        f.write(struct.pack(">II", 2049, num_images))  # magic number for labels
+        f.write(labels.tobytes())
+
+    print(f"✅ Saved: {output_prefix}-images-idx3-ubyte and -labels-idx1-ubyte")
+
+
 # MAIN flow
 if __name__ == "__main__":
     # Step 1: download
@@ -111,3 +146,5 @@ if __name__ == "__main__":
     prepare_gtsrb_32x32()
 
     print("🎉 All done → ready to use in your pipeline!")
+
+
