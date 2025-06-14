@@ -150,3 +150,7 @@ if __name__ == "__main__":
     prepare_gtsrb_32x32()
 
     print("All jobs done")
+
+    # Example usage
+    create_idx_files("dataset/GTSRB_32x32/train", "dataset/GTSRB_idx/train")
+    create_idx_files("dataset/GTSRB_32x32/test", "dataset/GTSRB_idx/t10k")
