@@ -1,5 +1,4 @@
 import os
-
 from pathlib import Path
 from kaggle.api.kaggle_api_extended import KaggleApi
 import zipfile
@@ -141,7 +140,6 @@ def create_idx_files(image_dir: str, output_prefix: str):
     print(f"✅ Saved: {output_prefix}-images-idx3-ubyte and -labels-idx1-ubyte")
 
 
-# MAIN flow
 if __name__ == "__main__":
     # Step 1: download
     download_gtsrb_kaggle()
