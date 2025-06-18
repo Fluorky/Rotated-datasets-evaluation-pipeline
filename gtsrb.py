@@ -8,7 +8,7 @@ import struct
 import numpy as np
 
 
-def download_gtsrb_kaggle(output_path="dataset/GTSRB_raw/dataset_GTSRB_non_rotated"):
+def download_gtsrb_kaggle(output_path="dataset/GTSRB/dataset_GTSRB_non_rotated"):
     os.makedirs(output_path, exist_ok=True)
 
     api = KaggleApi()
