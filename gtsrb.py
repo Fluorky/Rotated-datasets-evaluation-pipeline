@@ -8,7 +8,7 @@ import struct
 import numpy as np
 
 
-def download_gtsrb_kaggle(output_path="dataset/GTSRB/dataset_GTSRB_non_rotated"):
+def download_gtsrb_kaggle(output_path="dataset/GTSRB_raw"):
     os.makedirs(output_path, exist_ok=True)
 
     api = KaggleApi()
@@ -149,5 +149,6 @@ if __name__ == "__main__":
 
     print("All jobs done")
 
-    create_idx_files("dataset/GTSRB_32x32/train", "dataset/GTSRB_idx/train")
-    create_idx_files("dataset/GTSRB_32x32/test", "dataset/GTSRB_idx/t10k")
+    # Example usage
+    create_idx_files("dataset/GTSRB_32x32/train", "dataset/GTSRB/dataset_GTSRB_non_rotated/train")
+    create_idx_files("dataset/GTSRB_32x32/test", "dataset/GTSRB/dataset_GTSRB_non_rotated/t10k")
