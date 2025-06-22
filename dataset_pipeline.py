@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from datasets_handler import (
     rotate_and_save_ranges,
     rotate_and_save_fixed_angle,
@@ -8,39 +9,25 @@ from datasets_handler import (
     generate_train_test_scenarios
 )
 
-
-def rotate_fixed_angles(base_dir, angles):
+def rotate_fixed_angles(base_dir, dataset_name, angles):
     for angle in angles:
         for split in ["train", "t10k"]:
-            input_file = f"{base_dir}/dataset_mnist_non_rotated/{split}-images-idx3-ubyte"
+            input_file = f"{base_dir}/{dataset_name}/{split}-images-idx3-ubyte"
             output_file = f"{base_dir}/rotated-{angle}/{split}-images-idx3-ubyte"
             rotate_and_save_fixed_angle(input_file, output_file, angle)
 
-
-def rotate_angle_ranges(base_dir, ranges):
+def rotate_angle_ranges(base_dir, dataset_name, ranges):
     input_files = [
-        f"{base_dir}/dataset_mnist_non_rotated/train-images-idx3-ubyte",
-        f"{base_dir}/dataset_mnist_non_rotated/t10k-images-idx3-ubyte"
+        f"{base_dir}/{dataset_name}/train-images-idx3-ubyte",
+        f"{base_dir}/{dataset_name}/t10k-images-idx3-ubyte"
     ]
     for file in input_files:
         rotate_and_save_ranges(file, base_dir, ranges)
 
-
-def run_merge_scenarios(base_dir, output_dir, folders):
-    os.makedirs(output_dir, exist_ok=True)
-    scenarios = generate_merging_scenarios(folders)
-    print(f"📦 Generated {len(scenarios)} scenarios.")
-    for i, group in enumerate(scenarios):
-        merged_name = make_merge_name(group)
-        target_path = os.path.join(output_dir, f"merged_{merged_name}")
-        print(f"🔄 [{i}] Merging: {group} -> {target_path}")
-        merge_ubyte_files(group, target_path)
-
-
-def predefined_merges(base_dir, output_dir, angle_ranges):
+def predefined_merges(base_dir, dataset_name, output_dir, angle_ranges):
     def d(angle): return f"{base_dir}/rotated-{angle}"
     def dr(a, b): return f"{base_dir}/rotated-{a}-{b}"
-    def base(): return f"{base_dir}/dataset_mnist_non_rotated"
+    def base(): return f"{base_dir}/{dataset_name}"
 
     fixed_30 = list(range(30, 360, 30))
     fixed_45 = list(range(45, 360, 45))
@@ -71,30 +58,42 @@ def predefined_merges(base_dir, output_dir, angle_ranges):
             print(f"  - {p}")
         merge_ubyte_files(paths, os.path.join(output_dir, name))
 
-
-def run_pipeline():
-    base_dir = "dataset/MNIST_copy"
-    merged_dir = os.path.join(base_dir, "merged_datasets")
+def run_pipeline(
+    base_dir: str,
+    dataset_name: str,
+    merged_dir_name: str = "merged_datasets",
+    max_tests: int = 2000
+):
     angle_ranges = [(i, i + 30) for i in range(0, 360, 30)]
     fixed_angles = sorted(set().union(range(30, 360, 30), range(45, 360, 45)))
 
+    merged_dir = os.path.join(base_dir, merged_dir_name)
+    os.makedirs(merged_dir, exist_ok=True)
+
     print("🌀 Rotating fixed angles...")
-    rotate_fixed_angles(base_dir, fixed_angles)
+    rotate_fixed_angles(base_dir, dataset_name, fixed_angles)
 
     print("🌀 Rotating angle ranges...")
-    rotate_angle_ranges(base_dir, angle_ranges)
+    rotate_angle_ranges(base_dir, dataset_name, angle_ranges)
 
     print("🔧 Running predefined merges...")
-    predefined_merges(base_dir, merged_dir, angle_ranges)
+    predefined_merges(base_dir, dataset_name, merged_dir, angle_ranges)
+
+    json_out_name = f"train_test_scenarios_{dataset_name.replace('dataset_', '')}x2.json"
+    output_json_path = os.path.join(".", json_out_name)
 
     print("🧪 Generating train-test JSON...")
     generate_train_test_scenarios(
-        merged_datasets_dir="./dataset/MNIST_copy/",
-        output_json_path="./train_test_scenariosv11.json",
-        max_tests=2000
+        merged_datasets_dir=base_dir,
+        output_json_path=output_json_path,
+        max_tests=max_tests
     )
+
     print("✅ All preprocessing completed.")
 
 
 if __name__ == "__main__":
-    run_pipeline()
+    run_pipeline(
+        base_dir="dataset/MNIST_copy",
+        dataset_name="dataset_mnist_non_rotated"
+    )
