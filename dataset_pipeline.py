@@ -27,15 +27,15 @@ def rotate_angle_ranges(base_dir, ranges):
         rotate_and_save_ranges(file, base_dir, ranges)
 
 
-# def run_merge_scenarios(base_dir, output_dir, folders):
-#     os.makedirs(output_dir, exist_ok=True)
-#     scenarios = generate_merging_scenarios(folders)
-#     print(f"📦 Generated {len(scenarios)} scenarios.")
-#     for i, group in enumerate(scenarios):
-#         merged_name = make_merge_name(group)
-#         target_path = os.path.join(output_dir, f"merged_{merged_name}")
-#         print(f"🔄 [{i}] Merging: {group} -> {target_path}")
-#         merge_ubyte_files(group, target_path)
+def run_merge_scenarios(base_dir, output_dir, folders):
+    os.makedirs(output_dir, exist_ok=True)
+    scenarios = generate_merging_scenarios(folders)
+    print(f"📦 Generated {len(scenarios)} scenarios.")
+    for i, group in enumerate(scenarios):
+        merged_name = make_merge_name(group)
+        target_path = os.path.join(output_dir, f"merged_{merged_name}")
+        print(f"🔄 [{i}] Merging: {group} -> {target_path}")
+        merge_ubyte_files(group, target_path)
 
 
 def predefined_merges(base_dir, output_dir, angle_ranges):
@@ -84,19 +84,6 @@ def run_pipeline():
 
     print("🌀 Rotating angle ranges...")
     rotate_angle_ranges(base_dir, angle_ranges)
-
-    # print("📂 Running merge scenarios...")
-    # merge_sources = [
-    #     f"{base_dir}/dataset_mnist_non_rotated",
-    #     f"{base_dir}/rotated-20-50",
-    #     f"{base_dir}/rotated-45",
-    #     f"{base_dir}/rotated-50-90",
-    #     f"{base_dir}/rotated-90-120",
-    #     f"{base_dir}/rotated-120-150",
-    #     f"{base_dir}/rotated-120-180",
-    #     f"{base_dir}/rotated-150-180"
-    # ]
-    # run_merge_scenarios(base_dir, merged_dir, merge_sources)
 
     print("🔧 Running predefined merges...")
     predefined_merges(base_dir, merged_dir, angle_ranges)
