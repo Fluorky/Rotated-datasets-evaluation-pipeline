@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 from datasets_handler import (
     rotate_and_save_ranges,
     rotate_and_save_fixed_angle,
