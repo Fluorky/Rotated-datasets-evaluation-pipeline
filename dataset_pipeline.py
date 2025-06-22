@@ -27,15 +27,15 @@ def rotate_angle_ranges(base_dir, ranges):
         rotate_and_save_ranges(file, base_dir, ranges)
 
 
-def run_merge_scenarios(base_dir, output_dir, folders):
-    os.makedirs(output_dir, exist_ok=True)
-    scenarios = generate_merging_scenarios(folders)
-    print(f"📦 Generated {len(scenarios)} scenarios.")
-    for i, group in enumerate(scenarios):
-        merged_name = make_merge_name(group)
-        target_path = os.path.join(output_dir, f"merged_{merged_name}")
-        print(f"🔄 [{i}] Merging: {group} -> {target_path}")
-        merge_ubyte_files(group, target_path)
+# def run_merge_scenarios(base_dir, output_dir, folders):
+#     os.makedirs(output_dir, exist_ok=True)
+#     scenarios = generate_merging_scenarios(folders)
+#     print(f"📦 Generated {len(scenarios)} scenarios.")
+#     for i, group in enumerate(scenarios):
+#         merged_name = make_merge_name(group)
+#         target_path = os.path.join(output_dir, f"merged_{merged_name}")
+#         print(f"🔄 [{i}] Merging: {group} -> {target_path}")
+#         merge_ubyte_files(group, target_path)
 
 
 def predefined_merges(base_dir, output_dir, angle_ranges):
