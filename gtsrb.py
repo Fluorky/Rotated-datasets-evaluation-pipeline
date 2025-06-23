@@ -189,3 +189,6 @@ if __name__ == "__main__":
     # Step 4: Create IDX files
     create_idx_files("dataset/GTSRB_32x32/train", "dataset/GTSRB/dataset_GTSRB_non_rotated/train")
     create_idx_files("dataset/GTSRB_32x32/test", "dataset/GTSRB/dataset_GTSRB_non_rotated/t10k")
+
+    # Step 5: Cleanup
+    cleanup_temp_dirs(["dataset/GTSRB_raw", "dataset/GTSRB_32x32"])
