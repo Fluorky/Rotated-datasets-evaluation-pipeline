@@ -6,7 +6,7 @@ from PIL import Image
 import pandas as pd
 import struct
 import numpy as np
-
+import shutil
 
 def download_gtsrb_kaggle(output_path="dataset/GTSRB_raw"):
     os.makedirs(output_path, exist_ok=True)
@@ -166,6 +166,18 @@ def create_idx_files(image_dir: str, output_prefix: str):
     print(f"✅ Saved IDX files to {output_prefix}-images-idx3-ubyte and -labels-idx1-ubyte")
 
 
+def cleanup_temp_dirs(paths):
+    """Remove temporary directories after processing."""
+    for folder in paths:
+        try:
+            shutil.rmtree(folder)
+            print(f"🧹 Removed temporary folder: {folder}")
+        except FileNotFoundError:
+            print(f"⚠️ Folder not found (already removed?): {folder}")
+        except Exception as e:
+            print(f"❌ Failed to remove {folder}: {e}")
+
+
 if __name__ == "__main__":
     # Step 1: download
     download_gtsrb_kaggle()
@@ -173,5 +185,7 @@ if __name__ == "__main__":
     # Step 2 & 3: prepare train/test split with 32x32 images
     prepare_gtsrb_32x32()
     print("✅ All preprocessing done.")
+
+    # Step 4: Create IDX files
     create_idx_files("dataset/GTSRB_32x32/train", "dataset/GTSRB/dataset_GTSRB_non_rotated/train")
     create_idx_files("dataset/GTSRB_32x32/test", "dataset/GTSRB/dataset_GTSRB_non_rotated/t10k")
