@@ -1,4 +1,5 @@
 import os
+import argparse
 from pathlib import Path
 from datasets_handler import (
     rotate_and_save_ranges,
@@ -9,12 +10,14 @@ from datasets_handler import (
     generate_train_test_scenarios
 )
 
+
 def rotate_fixed_angles(base_dir, dataset_name, angles):
     for angle in angles:
         for split in ["train", "t10k"]:
             input_file = f"{base_dir}/{dataset_name}/{split}-images-idx3-ubyte"
             output_file = f"{base_dir}/rotated-{angle}/{split}-images-idx3-ubyte"
             rotate_and_save_fixed_angle(input_file, output_file, angle)
+
 
 def rotate_angle_ranges(base_dir, dataset_name, ranges):
     input_files = [
@@ -23,6 +26,7 @@ def rotate_angle_ranges(base_dir, dataset_name, ranges):
     ]
     for file in input_files:
         rotate_and_save_ranges(file, base_dir, ranges)
+
 
 def predefined_merges(base_dir, dataset_name, output_dir, angle_ranges):
     def d(angle): return f"{base_dir}/rotated-{angle}"
@@ -58,12 +62,8 @@ def predefined_merges(base_dir, dataset_name, output_dir, angle_ranges):
             print(f"  - {p}")
         merge_ubyte_files(paths, os.path.join(output_dir, name))
 
-def run_pipeline(
-    base_dir: str,
-    dataset_name: str,
-    merged_dir_name: str = "merged_datasets",
-    max_tests: int = 2000
-):
+
+def run_pipeline(base_dir: str, dataset_name: str, merged_dir_name="merged_datasets", max_tests=2000):
     angle_ranges = [(i, i + 30) for i in range(0, 360, 30)]
     fixed_angles = sorted(set().union(range(30, 360, 30), range(45, 360, 45)))
 
@@ -79,7 +79,7 @@ def run_pipeline(
     print("🔧 Running predefined merges...")
     predefined_merges(base_dir, dataset_name, merged_dir, angle_ranges)
 
-    json_out_name = f"train_test_scenarios_{dataset_name.replace('dataset_', '')}x2.json"
+    json_out_name = f"train_test_scenarios_{dataset_name.replace('dataset_', '')}.json"
     output_json_path = os.path.join(".", json_out_name)
 
     print("🧪 Generating train-test JSON...")
@@ -89,11 +89,27 @@ def run_pipeline(
         max_tests=max_tests
     )
 
-    print("✅ All preprocessing completed.")
+    print(f"✅ All preprocessing completed. JSON saved as {output_json_path}")
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Rotate, merge, and prepare dataset splits.")
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        choices=["GTSRB", "MNIST_copy"],
+        required=True,
+        help="Name of the dataset directory under ./dataset/"
+    )
+    args = parser.parse_args()
+
+    # Map dataset name to expected subdir (folder with IDX files)
+    dataset_config = {
+        "MNIST_copy": "dataset_mnist_non_rotated",
+        "GTSRB": "dataset_GTSRB_non_rotated"
+    }
+
     run_pipeline(
-        base_dir="dataset/MNIST_copy",
-        dataset_name="dataset_mnist_non_rotated"
+        base_dir=f"dataset/{args.dataset}",
+        dataset_name=dataset_config[args.dataset]
     )
