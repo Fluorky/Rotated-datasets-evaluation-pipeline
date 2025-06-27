@@ -53,9 +53,31 @@ def add_training_logs_table(db_path):
     print("✅ Table `training_logs` added or already existed.")
 
 
+def add_training_runs_table(db_path):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS training_runs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            model_id TEXT,
+            log_file TEXT UNIQUE,
+            dataset TEXT,
+            augmentation_info TEXT,
+            transform TEXT,
+            batch_size INTEGER,
+            lr REAL,
+            total_train_time REAL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+    print("✅ Table `training_runs` added or already existed.")
+
+
 def init_database(db_path='mnist_logs.db'):
     add_test_logs_table(db_path)
     add_training_logs_table(db_path)
+    add_training_runs_table(db_path)
 
 
 def insert_training_logs(data, db_path='mnist_logs.db', overwrite=False):
@@ -132,6 +154,46 @@ def insert_test_logs(data, db_path='mnist_logs.db', overwrite=False):
     conn.commit()
     conn.close()
     print(f"✅ Inserted test log for: {log_file}")
+
+
+def insert_training_run(data, db_path='mnist_logs.db', overwrite=False):
+    if not data:
+        print("⚠️ No training run data to insert.")
+        return
+
+    first = data[0]
+    log_file = first['log_file']
+    total_time = first.get('total_train_time')
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT COUNT(*) FROM training_runs WHERE log_file = ?', (log_file,))
+    exists = cursor.fetchone()[0]
+
+    if exists > 0:
+        if overwrite:
+            print(f"Overwriting training run: {log_file}")
+            cursor.execute('DELETE FROM training_runs WHERE log_file = ?', (log_file,))
+        else:
+            print(f"⏩ Skipped training run: {log_file}")
+            conn.close()
+            return
+
+    cursor.execute('''
+        INSERT INTO training_runs (
+            model_id, log_file, dataset, augmentation_info,
+            transform, batch_size, lr, total_train_time
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        first['model_id'], first['log_file'], first['dataset'], first['augmentation_info'],
+        first['transform'], first['batch_size'], first['lr'], total_time
+    ))
+
+    conn.commit()
+    conn.close()
+    print(f"✅ Inserted training run for: {log_file}")
+
 
 
 def drop_table(table_name, db_path='mnist_logs.db'):
