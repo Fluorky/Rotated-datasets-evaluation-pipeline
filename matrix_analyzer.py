@@ -202,7 +202,7 @@ def compute_and_insert_model_summaries(db_path):
             model, avg, median, min, max, std, train_time, perf_per_time
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ''', data_to_insert)
-
+    cursor.execute('DROP TABLE IF EXISTS training_runs')
     conn.commit()
     conn.close()
     print(f"✅ Inserted {len(data_to_insert)} model summary rows")
