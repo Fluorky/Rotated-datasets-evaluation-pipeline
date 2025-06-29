@@ -3,7 +3,7 @@ import re
 
 import matplotlib.pyplot as plt
 
-from db_handler import init_database, insert_training_logs, insert_test_logs
+from db_handler import init_database, insert_training_logs, insert_test_logs, insert_training_run
 from wsl_handler import sync_wsl_logs
 
 
@@ -45,7 +45,9 @@ def parse_log_file(filepath):
     batch_size = config.get('batch_size', None)
     lr = config.get('lr', None)
 
+    total_elapsed_time = 0.0
     rows = []
+
     for i, line in enumerate(lines):
         match = re.match(r'\[Epoch (\d+)\] Train Loss: ([\d.]+)', line)
         if match:
@@ -62,6 +64,9 @@ def parse_log_file(filepath):
             elapsed_match = re.search(r'Elapsed time: ([\d.]+) sec', time_line)
             elapsed = float(elapsed_match.group(1)) if elapsed_match else None
 
+            if elapsed:
+                total_elapsed_time += elapsed
+
             rows.append({
                 'model_id': model_id,
                 'log_file': os.path.basename(filepath),
@@ -76,6 +81,10 @@ def parse_log_file(filepath):
                 'accuracy': accuracy,
                 'elapsed_time': elapsed
             })
+
+    # Attach total training time to each row if needed (or just one row, depending on DB schema)
+    for row in rows:
+        row['total_train_time'] = total_elapsed_time
 
     return rows
 
@@ -180,6 +189,7 @@ def main():
         if parsed_data:
             plot_metrics(parsed_data, file_path)
             insert_training_logs(parsed_data, db_file, overwrite=overwrite_existing)
+            insert_training_run(parsed_data, db_file, overwrite=overwrite_existing)
         else:
             test_data = parse_test_log_file(file_path)
             if test_data:
@@ -192,7 +202,7 @@ if __name__ == "__main__":
     # === Config ===
     wsl_logs_source = r'\\wsl.localhost\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\logs'
     local_logs_folder = 'log_files_from_slave/logs'
-    db_file = 'mnist_logs_json.db'
+    db_file = 'mnist_logs_final.db'
 
     overwrite_logs = False  # Whether to overwrite files during WSL sync
     overwrite_existing = False  # Whether to overwrite existing DB entries
