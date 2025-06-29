@@ -1,12 +1,10 @@
-import os
 import argparse
-from pathlib import Path
+import os
+
 from datasets_handler import (
     rotate_and_save_ranges,
     rotate_and_save_fixed_angle,
     merge_ubyte_files,
-    make_merge_name,
-    generate_merging_scenarios,
     generate_train_test_scenarios
 )
 
@@ -29,9 +27,14 @@ def rotate_angle_ranges(base_dir, dataset_name, ranges):
 
 
 def predefined_merges(base_dir, dataset_name, output_dir, angle_ranges):
-    def d(angle): return f"{base_dir}/rotated-{angle}"
-    def dr(a, b): return f"{base_dir}/rotated-{a}-{b}"
-    def base(): return f"{base_dir}/{dataset_name}"
+    def d(angle):
+        return f"{base_dir}/rotated-{angle}"
+
+    def dr(a, b):
+        return f"{base_dir}/rotated-{a}-{b}"
+
+    def base():
+        return f"{base_dir}/{dataset_name}"
 
     fixed_30 = list(range(30, 360, 30))
     fixed_45 = list(range(45, 360, 45))
