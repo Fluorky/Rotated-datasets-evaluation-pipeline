@@ -8,6 +8,7 @@ import struct
 import numpy as np
 import shutil
 
+
 def download_gtsrb_kaggle(output_path="dataset/GTSRB_raw"):
     os.makedirs(output_path, exist_ok=True)
 
