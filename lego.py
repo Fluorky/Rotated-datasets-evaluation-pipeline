@@ -94,6 +94,3 @@ if __name__ == "__main__":
     process_images_to_idx(test_entries, img_dir, "dataset/LEGO_idx224x224/test")
 
     print(f"🔢 Number of classes: {len(label_map)}")
-
-# if __name__ == "__main__":
-#     download_lego_kaggle()
