@@ -1,12 +1,10 @@
 import os
 from pathlib import Path
 from kaggle.api.kaggle_api_extended import KaggleApi
-import zipfile
 from PIL import Image
 
 import struct
 import numpy as np
-import shutil
 
 
 def download_lego_kaggle(output_path="dataset/LEGO_raw"):
