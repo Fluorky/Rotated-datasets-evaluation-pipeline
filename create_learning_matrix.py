@@ -93,9 +93,6 @@ for group_key, data in results.items():
     df = df.sort_index(key=lambda idx: [rotation_sort_key(name) for name in idx])
     df = df[sorted(df.columns, key=rotation_sort_key)]
 
-    # df.index = df.index.str.replace(r'^mnist-custom-[^-]+-[^_]+_', '', regex=True)
-    #
-    #
     # # Sort rows by rotation angle or type
     # def rotation_sort_key(name):
     #     """
