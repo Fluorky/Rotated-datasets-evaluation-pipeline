@@ -9,7 +9,7 @@ from collections import defaultdict
 # Base directories
 base_dir = Path("/Users/maciej/PycharmProjects/MasterThesis")
 log_root = base_dir / "log_files_from_slave/logs/json_4/test"
-output_dir = base_dir / "heatmaps"
+output_dir = base_dir / "heatmaps_MNIST"
 output_dir.mkdir(parents=True, exist_ok=True)
 
 # Accuracy extraction pattern (match percentage in parentheses)
@@ -70,13 +70,6 @@ for group_key, data in results.items():
 
     sorted_columns = sorted(df.columns, key=extract_sort_key)
     df = df[sorted_columns]
-
-    # # Apply name extraction and sorting
-    # df.index = df.index.map(extract_train_set_name)
-    # df = df.sort_index(key=lambda idx: [sort_key(name) for name in idx])
-    # Clean row names: remove model prefix like 'mnist-custom-cyresnet56-logpolar_'
-
-    # Clean row and column names: remove model prefix like 'mnist-custom-cyresnet56-logpolar_'
     df.index = df.index.str.replace(r'^mnist-custom-[^-]+-[^_]+_', '', regex=True)
     df.columns = df.columns.str.replace(r'^mnist-custom-[^-]+-[^_]+_', '', regex=True)
 
