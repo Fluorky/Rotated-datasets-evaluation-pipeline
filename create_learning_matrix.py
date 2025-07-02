@@ -71,33 +71,6 @@ for group_key, data in results.items():
     sorted_columns = sorted(df.columns, key=extract_sort_key)
     df = df[sorted_columns]
 
-    # sorted_index = sorted(df.index, key=extract_sort_key)
-    # df = df.loc[sorted_index]
-    #
-    # # Optional: clean model names
-    # df.index = df.index.str.replace(r"^mnist-custom-", "", regex=True)
-
-    # Clean and sort row labels (i.e., training datasets)
-
-    # def extract_train_set_name(model_name):
-    #     """
-    #     Extracts the training dataset part from full model name.
-    #     E.g., 'mnist-custom-cyresnet56-logpolar_rotated-90' → 'rotated-90'
-    #     """
-    #     match = re.search(r'_(rotated[^_]*|rotated-\d+-\d+|merged_datasets/[^_]*|dataset_mnist_non_rotated)',
-    #                       model_name)
-    #     return match.group(1) if match else model_name
-
-    #
-    # def sort_key(name):
-    #     """
-    #     Sort key that extracts numeric value from dataset name, e.g., 'rotated-30-60' → 30
-    #     Used to sort by rotation angle.
-    #     """
-    #     match = re.search(r'(\d+)', name)
-    #     return int(match.group(1)) if match else float('inf')
-    #
-    #
     # # Apply name extraction and sorting
     # df.index = df.index.map(extract_train_set_name)
     # df = df.sort_index(key=lambda idx: [sort_key(name) for name in idx])
