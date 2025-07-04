@@ -118,7 +118,6 @@ for group_key, data in results.items():
 
     plt.figure(figsize=figsize)
     # sns.heatmap(df.astype(float), annot=True, fmt=".2f", cmap="viridis", cbar_kws={'label': 'Accuracy [%]'})
-    # sns.heatmap(df.astype(float), annot=True, fmt=".4f", cmap="jet", cbar_kws={'label': 'Accuracy [%]'})
     # sns.heatmap(df.astype(float), annot=True, fmt=".4f", cmap="Purples", cbar_kws={'label': 'Accuracy [%]'}, vmin=0, vmax=100)
     sns.heatmap(df.astype(float), annot=True, fmt=".4f", cmap="Purples", cbar_kws={'label': 'Accuracy [%]'})
     plt.title(f"Accuracy Heatmap – {group_key.replace('_', ' ').title()}")
