@@ -60,7 +60,6 @@ for group_key, data in results.items():
         print(f"⚠️ No data found for: {group_key}")
         continue
 
-    # df = pd.DataFrame(data).T
     df = pd.DataFrame(data).T
 
 
