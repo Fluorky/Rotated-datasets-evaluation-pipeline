@@ -107,14 +107,6 @@ for group_key, data in results.items():
     #         base = 2
     #     else:
     #         base = 3
-    #
-    #     # Extract numeric angle for finer sort
-    #     match = re.search(r'(\d+)', name)
-    #     angle = int(match.group(1)) if match else 9999
-    #     return (base, angle)
-    #
-    #
-    # df = df.sort_index(key=lambda idx: [rotation_sort_key(name) for name in idx])
 
     # Save CSV
     csv_path = output_dir / f"accuracy_matrix_{group_key}.csv"
