@@ -72,7 +72,6 @@ for group_key, data in results.items():
     df.index = df.index.str.replace(r'^mnist-custom-[^-]+-[^_]+_', '', regex=True)
     df.columns = df.columns.str.replace(r'^mnist-custom-[^-]+-[^_]+_', '', regex=True)
 
-
     # Define custom sort key (dataset < merged < rotated, then by first numeric value)
     def rotation_sort_key(name):
         if name.startswith("dataset"):
