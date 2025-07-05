@@ -91,21 +91,6 @@ for group_key, data in results.items():
     df = df.sort_index(key=lambda idx: [rotation_sort_key(name) for name in idx])
     df = df[sorted(df.columns, key=rotation_sort_key)]
 
-    # # Sort rows by rotation angle or type
-    # def rotation_sort_key(name):
-    #     """
-    #     Custom sort key that sorts by type and first angle in name (if applicable).
-    #     """
-    #     # Prioritize: dataset_mnist < merged_datasets < rotated
-    #     if name.startswith("dataset"):
-    #         base = 0
-    #     elif name.startswith("merged"):
-    #         base = 1
-    #     elif name.startswith("rotated"):
-    #         base = 2
-    #     else:
-    #         base = 3
-
     # Save CSV
     csv_path = output_dir / f"accuracy_matrix_{group_key}.csv"
     df.to_csv(csv_path)
