@@ -7,9 +7,10 @@ from pathlib import Path
 from collections import defaultdict
 
 # Base directories
-base_dir = Path("/Users/maciej/PycharmProjects/MasterThesis")
+base_dir = Path.cwd()
+# base_dir = Path("/Users/maciej/PycharmProjects/MasterThesis")
 log_root = base_dir / "log_files_from_slave/logs/json_4/test"
-output_dir = base_dir / "heatmaps_MNIST"
+output_dir = base_dir / "heatmaps/MNIST"
 output_dir.mkdir(parents=True, exist_ok=True)
 
 # Accuracy extraction pattern (match percentage in parentheses)
