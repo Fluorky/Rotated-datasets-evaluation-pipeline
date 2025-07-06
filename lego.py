@@ -43,7 +43,7 @@ def parse_validation_file(txt_path):
     return image_entries, label_map
 
 
-def process_images_to_idx(image_entries, image_folder, output_prefix, img_size=(128, 128)):
+def process_images_to_idx(image_entries, image_folder, output_prefix, img_size=(96, 96)):  # 32,64,96, 128, 224
     images_bin = b""
     labels_bin = b""
 
@@ -86,9 +86,9 @@ if __name__ == "__main__":
     train_entries = entries[:train_split]
     test_entries = entries[train_split:]
 
-    os.makedirs("dataset/LEGO_idx224x224", exist_ok=True)
+    os.makedirs("dataset/LEGO_idx96x96", exist_ok=True)
 
-    process_images_to_idx(train_entries, img_dir, "dataset/LEGO_idx224x224/train")
-    process_images_to_idx(test_entries, img_dir, "dataset/LEGO_idx224x224/test")
+    process_images_to_idx(train_entries, img_dir, "dataset/LEGO_idx96x96/train")
+    process_images_to_idx(test_entries, img_dir, "dataset/LEGO_idx96x96/test")
 
     print(f"🔢 Number of classes: {len(label_map)}")
