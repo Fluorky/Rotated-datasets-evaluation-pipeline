@@ -139,7 +139,7 @@ def create_idx_files(image_dir: str, output_prefix: str):
             for img_path in class_dir.glob("*.png"):
                 try:
                     img = Image.open(img_path).convert("L")
-                    img = img.resize((28, 28))
+                    img = img.resize((32, 32))
                     images.append(np.array(img, dtype=np.uint8))
                     labels.append(label)
                 except Exception as e:
@@ -188,8 +188,8 @@ if __name__ == "__main__":
     print("✅ All preprocessing done.")
 
     # Step 4: Create IDX files
-    create_idx_files("dataset/GTSRB_32x32/train", "dataset/GTSRB/dataset_GTSRB_non_rotated/train")
-    create_idx_files("dataset/GTSRB_32x32/test", "dataset/GTSRB/dataset_GTSRB_non_rotated/t10k")
+    create_idx_files("dataset/GTSRB_32x32/train", "dataset/GTSRB/dataset_GTSRB_non_rotated_32x32/train")
+    create_idx_files("dataset/GTSRB_32x32/test", "dataset/GTSRB/dataset_GTSRB_non_rotated_32x32/test")
 
     # Step 5: Cleanup
     cleanup_temp_dirs(["dataset/GTSRB_raw", "dataset/GTSRB_32x32"])
