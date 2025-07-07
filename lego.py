@@ -86,9 +86,9 @@ if __name__ == "__main__":
     train_entries = entries[:train_split]
     test_entries = entries[train_split:]
 
-    os.makedirs("dataset/LEGO_idx96x96", exist_ok=True)
+    os.makedirs("dataset/LEGO_idx96x96/dataset_LEGO_non_rotated", exist_ok=True)
 
-    process_images_to_idx(train_entries, img_dir, "dataset/LEGO_idx96x96/train")
-    process_images_to_idx(test_entries, img_dir, "dataset/LEGO_idx96x96/test")
+    process_images_to_idx(train_entries, img_dir, "dataset/LEGO_idx96x96/dataset_LEGO_non_rotated/train")
+    process_images_to_idx(test_entries, img_dir, "dataset/LEGO_idx96x96/dataset_LEGO_non_rotated/test")
 
     print(f"🔢 Number of classes: {len(label_map)}")
