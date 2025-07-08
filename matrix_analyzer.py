@@ -283,8 +283,8 @@ def query_best_models(db_path):
 
 # === USAGE ===
 
-confusion_matrices_root_dir = r'\\wsl.localhost\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\logs\json_4\confusion_matrices'
-db_path = 'mnist_logs_final_.db'
+confusion_matrices_root_dir = r'\\wsl.localhost\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\logs\json_MNIST\confusion_matrices'
+db_path = 'mnist_logs_final.db'
 
 # Init training times
 create_training_runs_table(db_path)
