@@ -195,7 +195,6 @@ def insert_training_run(data, db_path='mnist_logs.db', overwrite=False):
     print(f"✅ Inserted training run for: {log_file}")
 
 
-
 def drop_table(table_name, db_path='mnist_logs.db'):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
