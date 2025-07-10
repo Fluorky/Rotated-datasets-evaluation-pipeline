@@ -121,6 +121,7 @@ def clean_up(paths):
         except Exception as e:
             print(f"❌ Failed to remove {path}: {e}")
 
+
 def check_dataset():
     # Dataset directory
     image_root = Path("dataset/GTSRB_raw")
@@ -173,6 +174,7 @@ def check_dataset():
     print(f"📐 Max size:     {max_width} x {max_height} px → {largest_image}")
     print(f"📉 Avg. size:    {avg_width:.2f} x {avg_height:.2f} px")
 
+
 if __name__ == "__main__":
     download_dataset()
     prepare_gtsrb_dataset()
@@ -182,4 +184,3 @@ if __name__ == "__main__":
     clean_up(["dataset/GTSRB_32x32"])
 
     # cleanup_temp_dirs(["dataset/GTSRB_raw", "dataset/GTSRB_32x32"])
-
