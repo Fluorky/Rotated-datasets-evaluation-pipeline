@@ -121,13 +121,65 @@ def clean_up(paths):
         except Exception as e:
             print(f"❌ Failed to remove {path}: {e}")
 
+def check_dataset():
+    # Dataset directory
+    image_root = Path("dataset/GTSRB_raw")
+
+    # Stats
+    min_width = float("inf")
+    min_height = float("inf")
+    max_width = float("-inf")
+    max_height = float("-inf")
+    total_width = 0
+    total_height = 0
+    image_count = 0
+
+    # Keep track of which images are smallest and largest
+    smallest_image = None
+    largest_image = None
+
+    # Supported formats
+    image_extensions = [".png", ".jpg", ".jpeg"]
+
+    for img_path in image_root.rglob("*"):
+        if img_path.suffix.lower() in image_extensions:
+            try:
+                with Image.open(img_path) as img:
+                    width, height = img.size
+                    image_count += 1
+                    total_width += width
+                    total_height += height
+
+                    if width <= min_width and height <= min_height:
+                        min_width = width
+                        min_height = height
+                        smallest_image = img_path
+
+                    if width >= max_width and height >= max_height:
+                        max_width = width
+                        max_height = height
+                        largest_image = img_path
+
+            except Exception as e:
+                print(f"❌ Failed to process {img_path}: {e}")
+
+    # Compute averages
+    avg_width = total_width / image_count if image_count else 0
+    avg_height = total_height / image_count if image_count else 0
+
+    # Output
+    print(f"📊 Total images processed: {image_count}")
+    print(f"📏 Min size:     {min_width} x {min_height} px → {smallest_image}")
+    print(f"📐 Max size:     {max_width} x {max_height} px → {largest_image}")
+    print(f"📉 Avg. size:    {avg_width:.2f} x {avg_height:.2f} px")
 
 if __name__ == "__main__":
     download_dataset()
     prepare_gtsrb_dataset()
+    check_dataset()
     save_as_idx("dataset/GTSRB_32x32/train", "dataset/GTSRB/dataset_GTSRB_non_rotated_32x32/train")
     save_as_idx("dataset/GTSRB_32x32/test", "dataset/GTSRB/dataset_GTSRB_non_rotated_32x32/test")
     clean_up(["dataset/GTSRB_32x32"])
 
     # cleanup_temp_dirs(["dataset/GTSRB_raw", "dataset/GTSRB_32x32"])
-  
+
