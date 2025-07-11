@@ -206,5 +206,3 @@ if __name__ == "__main__":
     save_as_idx("dataset/GTSRB_32x32/train", "dataset/GTSRB/dataset_GTSRB_non_rotated_32x32/train")
     save_as_idx("dataset/GTSRB_32x32/test", "dataset/GTSRB/dataset_GTSRB_non_rotated_32x32/test")
     clean_up(["dataset/GTSRB_32x32"])
-
-    # cleanup_temp_dirs(["dataset/GTSRB_raw", "dataset/GTSRB_32x32"])
