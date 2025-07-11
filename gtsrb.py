@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 from pathlib import Path
+import matplotlib.pyplot as plt
 from kaggle.api.kaggle_api_extended import KaggleApi
 
 
@@ -123,7 +124,6 @@ def clean_up(paths):
 
 
 def check_dataset():
-    # Dataset directory
     image_root = Path("dataset/GTSRB_raw")
 
     # Stats
@@ -134,10 +134,15 @@ def check_dataset():
     total_width = 0
     total_height = 0
     image_count = 0
+    small_count = 0
 
     # Keep track of which images are smallest and largest
     smallest_image = None
     largest_image = None
+
+    # For histograms
+    widths = []
+    heights = []
 
     # Supported formats
     image_extensions = [".png", ".jpg", ".jpeg"]
@@ -150,6 +155,11 @@ def check_dataset():
                     image_count += 1
                     total_width += width
                     total_height += height
+                    widths.append(width)
+                    heights.append(height)
+
+                    if width < 32 or height < 32:
+                        small_count += 1
 
                     if width <= min_width and height <= min_height:
                         min_width = width
@@ -168,11 +178,25 @@ def check_dataset():
     avg_width = total_width / image_count if image_count else 0
     avg_height = total_height / image_count if image_count else 0
 
-    # Output
+    # Output stats
     print(f"📊 Total images processed: {image_count}")
     print(f"📏 Min size:     {min_width} x {min_height} px → {smallest_image}")
     print(f"📐 Max size:     {max_width} x {max_height} px → {largest_image}")
     print(f"📉 Avg. size:    {avg_width:.2f} x {avg_height:.2f} px")
+    print(f"⚠️ Images smaller than 32x32: {small_count}")
+
+    # Plot histogram
+    plt.figure(figsize=(10, 6))
+    plt.hist(widths, bins=30, alpha=0.6, label="Width")
+    plt.hist(heights, bins=30, alpha=0.6, label="Height")
+    plt.axvline(32, color='red', linestyle='--', label="32 px threshold")
+    plt.legend()
+    plt.title("Image Size Distribution")
+    plt.xlabel("Pixels")
+    plt.ylabel("Frequency")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
 
 if __name__ == "__main__":
