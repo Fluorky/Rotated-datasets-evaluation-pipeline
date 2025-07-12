@@ -203,6 +203,6 @@ if __name__ == "__main__":
     download_dataset()
     prepare_gtsrb_dataset()
     check_dataset()
-    save_as_idx("dataset/GTSRB_32x32/train", "dataset/GTSRB/dataset_GTSRB_non_rotated_32x32/train")
-    save_as_idx("dataset/GTSRB_32x32/test", "dataset/GTSRB/dataset_GTSRB_non_rotated_32x32/test")
+    save_as_idx("dataset/GTSRB_32x32/train", "dataset/GTSRB/dataset_GTSRB_non_rotated/train")
+    save_as_idx("dataset/GTSRB_32x32/test", "dataset/GTSRB/dataset_GTSRB_non_rotated/test")
     clean_up(["dataset/GTSRB_32x32"])
