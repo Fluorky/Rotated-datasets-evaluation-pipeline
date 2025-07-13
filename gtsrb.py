@@ -205,4 +205,4 @@ if __name__ == "__main__":
     check_dataset()
     save_as_idx("dataset/GTSRB_32x32/train", "dataset/GTSRB/dataset_GTSRB_non_rotated/train")
     save_as_idx("dataset/GTSRB_32x32/test", "dataset/GTSRB/dataset_GTSRB_non_rotated/test")
-    clean_up(["dataset/GTSRB_32x32"], ["dataset/GTSBR_raw"])
+    clean_up(["dataset/GTSRB_32x32", "dataset/GTSBR_raw"])
