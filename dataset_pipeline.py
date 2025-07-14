@@ -27,7 +27,7 @@ def rotate_angle_ranges(base_dir, dataset_name, ranges, splits):
     """Rotate dataset across a range of angles for all splits."""
     for split in splits:
         input_file = os.path.join(base_dir, dataset_name, f"{split}-images-idx3-ubyte")
-        rotate_and_save_ranges(input_file, base_dir, ranges)
+        rotate_and_save_ranges(input_file, base_dir, ranges, split)
 
 
 def predefined_merges(base_dir, dataset_name, output_dir, angle_ranges):
