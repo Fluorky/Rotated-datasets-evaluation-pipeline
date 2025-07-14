@@ -15,21 +15,27 @@ def merge_ubyte_files(folders, output_folder):
     os.makedirs(output_folder, exist_ok=True)
 
     files_to_merge = [
-        ("train-images-idx3-ubyte", "train-images-idx3-ubyte", 16, ">IIII"),  # magic, num, rows, cols
-        ("train-labels-idx1-ubyte", "train-labels-idx1-ubyte", 8, ">II"),  # magic, num
-        ("t10k-images-idx3-ubyte", "t10k-images-idx3-ubyte", 16, ">IIII"),
-        ("t10k-labels-idx1-ubyte", "t10k-labels-idx1-ubyte", 8, ">II"),
+        (["train-images-idx3-ubyte"], "train-images-idx3-ubyte", 16, ">IIII"),
+        (["train-labels-idx1-ubyte"], "train-labels-idx1-ubyte", 8, ">II"),
+        (["t10k-images-idx3-ubyte", "test-images-idx3-ubyte"], "t10k-images-idx3-ubyte", 16, ">IIII"),
+        (["t10k-labels-idx1-ubyte", "test-labels-idx1-ubyte"], "t10k-labels-idx1-ubyte", 8, ">II"),
     ]
 
-    for filename, output_name, header_size, header_fmt in files_to_merge:
+    for candidate_names, output_name, header_size, header_fmt in files_to_merge:
         merged_body = b""
         total_samples = 0
         header_data = None
 
         for folder in folders:
-            file_path = Path(folder) / filename
-            if not file_path.exists():
-                print(f"Missing: {file_path}")
+            file_path = None
+            for name in candidate_names:
+                path = Path(folder) / name
+                if path.exists():
+                    file_path = path
+                    break
+
+            if not file_path:
+                print(f"Missing: none of {candidate_names} in {folder}")
                 continue
 
             with open(file_path, "rb") as f:
@@ -39,7 +45,7 @@ def merge_ubyte_files(folders, output_folder):
                 if header_data is None:
                     header_data = list(struct.unpack(header_fmt, header))
 
-                if "images" in filename:
+                if "images" in output_name:
                     rows, cols = header_data[-2], header_data[-1]
                     sample_size = rows * cols
                 else:
@@ -50,13 +56,13 @@ def merge_ubyte_files(folders, output_folder):
                 merged_body += body
 
         if header_data is not None:
-            header_data[1] = total_samples  # update sample count
+            header_data[1] = total_samples
             new_header = struct.pack(header_fmt, *header_data)
             output_path = Path(output_folder) / output_name
             with open(output_path, "wb") as f:
                 f.write(new_header)
                 f.write(merged_body)
-            print(f"Merged {filename} → {output_path} (samples: {total_samples})")
+            print(f"Merged {output_name} → {output_path} (samples: {total_samples})")
 
 
 def load_mnist_images(filename: str) -> Tuple[np.ndarray, int, int, int]:
@@ -138,17 +144,19 @@ def rotate_and_save_fixed_angle(input_path: str, output_path: str, angle: float)
     print(f"Rotated {num_images} images by {angle}° and saved to '{full_output_path}'")
 
 
-def rotate_and_save_ranges(input_path: str, output_path: str, angle_ranges: list[tuple[int, int]]):
+def rotate_and_save_ranges(input_path: str, output_base: str, angle_ranges: list[tuple[int, int]], split: str):
     """
     Rotate an MNIST dataset using multiple angle ranges and save results to separate folders.
 
     :param input_path: Path to the original MNIST image file.
     :type input_path: str
     :type output_path: str
+    :param output_base: Path to the output folder
     :param angle_ranges: List of angle ranges (min, max) in degrees.
                          Each range is applied randomly to images.
     :type angle_ranges: list[tuple[int, int]]
-
+    :param split: Name of the dataset split
+    :type split: str
     :return: None
     :rtype: None
     """
@@ -157,7 +165,7 @@ def rotate_and_save_ranges(input_path: str, output_path: str, angle_ranges: list
     for angle_range in angle_ranges:
         print(angle_range)
         range_str = f"{angle_range[0]}-{angle_range[1]}"
-        output_result_path = f"{output_path}/rotated-{range_str}/{os.path.basename(input_path)}"
+        output_result_path = f"{output_base}/rotated-{range_str}/{split}-images-idx3-ubyte"
 
         rotated_images = rotate_images(images, angle_range)
         save_mnist_images(output_result_path, rotated_images, num_images, rows, cols)
