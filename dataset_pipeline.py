@@ -9,32 +9,33 @@ from datasets_handler import (
 )
 
 
-def rotate_fixed_angles(base_dir, dataset_name, angles):
+def get_dataset_splits(dataset_key):
+    """Return dataset split names depending on dataset type."""
+    return ["train", "test"] if dataset_key == "GTSRB" else ["train", "t10k"]
+
+
+def rotate_fixed_angles(base_dir, dataset_name, angles, splits):
+    """Rotate dataset by fixed angles for all splits."""
     for angle in angles:
-        for split in ["train", "t10k"]:
-            input_file = f"{base_dir}/{dataset_name}/{split}-images-idx3-ubyte"
-            output_file = f"{base_dir}/rotated-{angle}/{split}-images-idx3-ubyte"
+        for split in splits:
+            input_file = os.path.join(base_dir, dataset_name, f"{split}-images-idx3-ubyte")
+            output_file = os.path.join(base_dir, f"rotated-{angle}", f"{split}-images-idx3-ubyte")
             rotate_and_save_fixed_angle(input_file, output_file, angle)
 
 
-def rotate_angle_ranges(base_dir, dataset_name, ranges):
-    input_files = [
-        f"{base_dir}/{dataset_name}/train-images-idx3-ubyte",
-        f"{base_dir}/{dataset_name}/t10k-images-idx3-ubyte"
-    ]
-    for file in input_files:
-        rotate_and_save_ranges(file, base_dir, ranges)
+def rotate_angle_ranges(base_dir, dataset_name, ranges, splits):
+    """Rotate dataset across a range of angles for all splits."""
+    for split in splits:
+        input_file = os.path.join(base_dir, dataset_name, f"{split}-images-idx3-ubyte")
+        rotate_and_save_ranges(input_file, base_dir, ranges)
 
 
 def predefined_merges(base_dir, dataset_name, output_dir, angle_ranges):
-    def d(angle):
-        return f"{base_dir}/rotated-{angle}"
+    """Merge rotated datasets into defined presets."""
 
-    def dr(a, b):
-        return f"{base_dir}/rotated-{a}-{b}"
-
-    def base():
-        return f"{base_dir}/{dataset_name}"
+    def d(angle): return os.path.join(base_dir, f"rotated-{angle}")
+    def dr(a, b): return os.path.join(base_dir, f"rotated-{a}-{b}")
+    def base(): return os.path.join(base_dir, dataset_name)
 
     fixed_30 = list(range(30, 360, 30))
     fixed_45 = list(range(45, 360, 45))
@@ -66,18 +67,21 @@ def predefined_merges(base_dir, dataset_name, output_dir, angle_ranges):
         merge_ubyte_files(paths, os.path.join(output_dir, name))
 
 
-def run_pipeline(base_dir: str, dataset_name: str, merged_dir_name="merged_datasets", max_tests=2000):
+def run_pipeline(base_dir: str, dataset_name: str, dataset_key: str,
+                 merged_dir_name: str = "merged_datasets", max_tests: int = 2000):
+    """Run the full rotation and merging pipeline for a given dataset."""
     angle_ranges = [(i, i + 30) for i in range(0, 360, 30)]
-    fixed_angles = sorted(set().union(range(30, 360, 30), range(45, 360, 45)))
+    fixed_angles = sorted(set(range(30, 360, 30)).union(range(45, 360, 45)))
+    splits = get_dataset_splits(dataset_key)
 
     merged_dir = os.path.join(base_dir, merged_dir_name)
     os.makedirs(merged_dir, exist_ok=True)
 
     print("🌀 Rotating fixed angles...")
-    rotate_fixed_angles(base_dir, dataset_name, fixed_angles)
+    rotate_fixed_angles(base_dir, dataset_name, fixed_angles, splits)
 
     print("🌀 Rotating angle ranges...")
-    rotate_angle_ranges(base_dir, dataset_name, angle_ranges)
+    rotate_angle_ranges(base_dir, dataset_name, angle_ranges, splits)
 
     print("🔧 Running predefined merges...")
     predefined_merges(base_dir, dataset_name, merged_dir, angle_ranges)
@@ -100,19 +104,19 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset",
         type=str,
-        choices=["GTSRB", "MNIST_copy"],
+        choices=["GTSRB", "MNIST"],
         required=True,
         help="Name of the dataset directory under ./dataset/"
     )
     args = parser.parse_args()
 
-    # Map dataset name to expected subdir (folder with IDX files)
     dataset_config = {
-        "MNIST_copy": "dataset_mnist_non_rotated",
+        "MNIST": "dataset_mnist_non_rotated",
         "GTSRB": "dataset_GTSRB_non_rotated"
     }
 
     run_pipeline(
-        base_dir=f"dataset/{args.dataset}",
-        dataset_name=dataset_config[args.dataset]
+        base_dir=os.path.join("dataset", args.dataset),
+        dataset_name=dataset_config[args.dataset],
+        dataset_key=args.dataset
     )
