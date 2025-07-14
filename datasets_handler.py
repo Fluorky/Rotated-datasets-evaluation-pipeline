@@ -167,7 +167,7 @@ def rotate_and_save_ranges(input_path: str, output_path: str, angle_ranges: list
         plt.imshow(rotated_images[0], cmap='gray')
         plt.title(f"Rotated (angle ∈ {angle_range}°)")
         plt.axis("off")
-        plt.show()
+        # plt.show()
 
         print(f"Saved {num_images} images rotated in range {angle_range}° to '{output_result_path}'")
 
@@ -182,6 +182,7 @@ def copy_labels_to_folders(source_folder, folder):
     """
     label_files = [
         "train-labels-idx1-ubyte",
+        "test-labels-idx1-ubyte",
         "t10k-labels-idx1-ubyte"
     ]
 
@@ -189,7 +190,7 @@ def copy_labels_to_folders(source_folder, folder):
         source_path = Path(source_folder) / label_file
 
         if not source_path.exists():
-            print(f"⚠️ Label file not found: {source_path}")
+            # print(f"⚠️ Label file not found: {source_path}")
             continue
 
         target_path = Path(folder) / label_file
