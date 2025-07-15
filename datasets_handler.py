@@ -17,8 +17,8 @@ def merge_ubyte_files(folders, output_folder):
     files_to_merge = [
         (["train-images-idx3-ubyte"], "train-images-idx3-ubyte", 16, ">IIII"),
         (["train-labels-idx1-ubyte"], "train-labels-idx1-ubyte", 8, ">II"),
-        (["t10k-images-idx3-ubyte", "test-images-idx3-ubyte"], "t10k-images-idx3-ubyte", 16, ">IIII"),
-        (["t10k-labels-idx1-ubyte", "test-labels-idx1-ubyte"], "t10k-labels-idx1-ubyte", 8, ">II"),
+        (["test-images-idx3-ubyte", "t10k-images-idx3-ubyte"], "test-images-idx3-ubyte", 16, ">IIII"),
+        (["test-labels-idx1-ubyte", "t10k-labels-idx1-ubyte"], "test-labels-idx1-ubyte", 8, ">II"),
     ]
 
     for candidate_names, output_name, header_size, header_fmt in files_to_merge:
@@ -180,32 +180,33 @@ def rotate_and_save_ranges(input_path: str, output_base: str, angle_ranges: list
         print(f"Saved {num_images} images rotated in range {angle_range}° to '{output_result_path}'")
 
 
-def copy_labels_to_folders(source_folder, folder):
+def copy_labels_to_folders(source_folder, target_folder):
     """
     Copy label files (train-labels and t10k-labels) from source_folder to each folder in target_folders.
 
     Args:
         source_folder (str): Path to the folder where label files are located.
-        folder (str): List of target folder paths to copy labels into.
+        target_folder (str): List of target folder paths to copy labels into.
     """
     label_files = [
-        "train-labels-idx1-ubyte",
-        "test-labels-idx1-ubyte",
-        "t10k-labels-idx1-ubyte"
+        ("test-labels-idx1-ubyte",),
+        ("t10k-labels-idx1-ubyte",),
+        ("train-labels-idx1-ubyte",),
     ]
 
-    for label_file in label_files:
-        source_path = Path(source_folder) / label_file
+    for filenames in label_files:
+        for name in filenames:
+            src = Path(source_folder) / name
+            if src.exists():
+                if "t10k" in name:
+                    dst = Path(target_folder) / name.replace("t10k", "test")
+                else:
+                    dst = Path(target_folder) / name
+                os.makedirs(target_folder, exist_ok=True)
+                shutil.copy2(src, dst)
+                print(f"✅ Copied {src.name} → {dst.name}")
+                break
 
-        if not source_path.exists():
-            # print(f"⚠️ Label file not found: {source_path}")
-            continue
-
-        target_path = Path(folder) / label_file
-        os.makedirs(folder, exist_ok=True)  # ensure target folder exists
-
-        shutil.copy2(source_path, target_path)
-        print(f"✅ Copied {label_file} to {target_path}")
 
 
 # Function to make a safe folder name
@@ -217,6 +218,19 @@ def make_merge_name(folders):
         names.append(last)
     return "_".join(names)
 
+def rename_t10k_to_test(dataset_dir: str):
+    """Rename original MNIST t10k files to test equivalents."""
+    mapping = {
+        "t10k-images-idx3-ubyte": "test-images-idx3-ubyte",
+        "t10k-labels-idx1-ubyte": "test-labels-idx1-ubyte"
+    }
+
+    for old_name, new_name in mapping.items():
+        old_path = Path(dataset_dir) / old_name
+        new_path = Path(dataset_dir) / new_name
+        if old_path.exists() and not new_path.exists():
+            old_path.rename(new_path)
+            print(f"🔁 Renamed {old_name} → {new_name}")
 
 def has_data_files(directory):
     """
@@ -225,10 +239,10 @@ def has_data_files(directory):
     required_files = [
         "train-images-idx3-ubyte",
         "train-labels-idx1-ubyte",
-        "t10k-images-idx3-ubyte",
-        "t10k-labels-idx1-ubyte",
+        "test-images-idx3-ubyte",
+        "test-labels-idx1-ubyte",
     ]
-    return all(os.path.exists(os.path.join(directory, f)) for f in required_files)
+    return all((Path(directory) / f).exists() for f in required_files)
 
 
 # Function to create all combinations
