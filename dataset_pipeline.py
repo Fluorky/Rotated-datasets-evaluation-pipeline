@@ -5,14 +5,9 @@ from datasets_handler import (
     rotate_and_save_ranges,
     rotate_and_save_fixed_angle,
     merge_ubyte_files,
-    generate_train_test_scenarios
+    generate_train_test_scenarios,
+    rename_t10k_to_test
 )
-
-
-def get_dataset_splits(dataset_key):
-    """Return dataset split names depending on dataset type."""
-    return ["train", "test"] if dataset_key == "GTSRB" else ["train", "t10k"]
-
 
 def rotate_fixed_angles(base_dir, dataset_name, angles, splits):
     """Rotate dataset by fixed angles for all splits."""
@@ -42,7 +37,7 @@ def predefined_merges(base_dir, dataset_name, output_dir, angle_ranges):
     range_paths = lambda rs: [dr(a, b) for a, b in rs]
 
     merge_configs = {
-        "merged_non_rotated": [base()],
+        # "merged_non_rotated": [base()],
         "merged_fixed_30": [d(a) for a in fixed_30],
         "merged_fixed_45": [d(a) for a in fixed_45],
         "merged_fixed_all": [d(a) for a in sorted(set(fixed_30 + fixed_45))],
@@ -72,10 +67,13 @@ def run_pipeline(base_dir: str, dataset_name: str, dataset_key: str,
     """Run the full rotation and merging pipeline for a given dataset."""
     angle_ranges = [(i, i + 30) for i in range(0, 360, 30)]
     fixed_angles = sorted(set(range(30, 360, 30)).union(range(45, 360, 45)))
-    splits = get_dataset_splits(dataset_key)
+    splits = ["train", "test"]
 
     merged_dir = os.path.join(base_dir, merged_dir_name)
     os.makedirs(merged_dir, exist_ok=True)
+
+    if dataset_key == "MNIST":
+        rename_t10k_to_test(os.path.join(base_dir, dataset_name))
 
     print("🌀 Rotating fixed angles...")
     rotate_fixed_angles(base_dir, dataset_name, fixed_angles, splits)
