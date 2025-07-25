@@ -120,7 +120,7 @@ def plot_metrics(data, file_path=None):
         plt.savefig(save_path)
         print(f"Saved plot to {save_path}")
 
-    plt.close()  # close plot to avoid displaying inline if not needed
+    plt.close()
 
 
 def parse_test_log_file(filepath):
@@ -163,7 +163,7 @@ def collect_log_files(log_path):
     log_files = []
     for root, _, files in os.walk(log_path):
         if "launcher_" in root:
-            continue  # Skip directories with "launcher_"
+            continue
 
         for file in files:
             if file.startswith("launcher_") or not file.endswith('.txt'):
