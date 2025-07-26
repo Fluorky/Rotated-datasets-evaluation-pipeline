@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image
 import random
 import json
-from tqdm import tqdm  # pip install tqdm
+from tqdm import tqdm
 
 RANDOM_SEED = 42
 random.seed(RANDOM_SEED)
@@ -23,12 +23,12 @@ def parse_validation_file(txt_path):
     with open(txt_path, "r", encoding="utf-8") as f:
         lines = [l.strip() for l in f if l.strip()]
 
-    label_map = {}        # class_name -> int
-    image_entries = []    # (relative_path, label_id)
+    label_map = {}
+    image_entries = []
 
     for line in lines:
         parts = line.split()
-        class_name = " ".join(parts[:-1])  # everything except the last token
+        class_name = " ".join(parts[:-1])
         if class_name not in label_map:
             label_map[class_name] = len(label_map)
         label = label_map[class_name]
@@ -103,8 +103,8 @@ def sanity_check_idx(images_path, labels_path):
 
 if __name__ == "__main__":
     validation_txt = "dataset/LEGO_raw/validation.txt"
-    images_root    = "dataset/LEGO_raw/dataset"   # all PNGs live here (flat)
-    out_root       = "dataset/LEGO_idx96x96/dataset_LEGO_non_rotated"
+    images_root    = "dataset/LEGO_raw/dataset"
+    out_root       = "dataset/LEGO/dataset_LEGO_non_rotated"
 
     os.makedirs(out_root, exist_ok=True)
 
@@ -113,20 +113,16 @@ if __name__ == "__main__":
 
     train_entries, test_entries = stratified_split(entries, train_ratio=0.8)
 
-    # Sanity: ensure both splits contain the same set of classes
     train_classes = sorted({l for _, l in train_entries})
     test_classes  = sorted({l for _, l in test_entries})
     assert train_classes == test_classes, "Classes mismatch between train and test!"
     print(f"✅ Same classes in train and test: {len(train_classes)} classes")
 
-    # Write IDX
     write_idx_streaming(train_entries, images_root, f"{out_root}/train", img_size=(96, 96))
     write_idx_streaming(test_entries,  images_root, f"{out_root}/test",  img_size=(96, 96))
 
-    # Save label map
     with open(f"{out_root}/label_map.json", "w", encoding="utf-8") as f:
         json.dump(label_map, f, indent=2, ensure_ascii=False)
 
-    # Final sanity check
     sanity_check_idx(f"{out_root}/train-images-idx3-ubyte", f"{out_root}/train-labels-idx1-ubyte")
     sanity_check_idx(f"{out_root}/test-images-idx3-ubyte",  f"{out_root}/test-labels-idx1-ubyte")
