@@ -1,94 +1,132 @@
 import os
 from pathlib import Path
-from kaggle.api.kaggle_api_extended import KaggleApi
-from PIL import Image
-
+from collections import defaultdict
 import struct
 import numpy as np
+from PIL import Image
+import random
+import json
+from tqdm import tqdm  # pip install tqdm
 
-
-def download_lego_kaggle(output_path="dataset/LEGO_raw"):
-    os.makedirs(output_path, exist_ok=True)
-
-    api = KaggleApi()
-    api.authenticate()
-
-    print("📥 Downloading Lego from Kaggle...")
-    api.dataset_download_files(
-        "joosthazelzet/lego-brick-images",
-        path=output_path,
-        unzip=True
-    )
-    print(f"✅ Download complete → {output_path}")
+RANDOM_SEED = 42
+random.seed(RANDOM_SEED)
 
 
 def parse_validation_file(txt_path):
+    """
+    Each line is a *filename* (relative to the image folder).
+    Class name = everything except the last token (the last token is e.g. "078L.png").
+    Example:
+        "14719 flat tile corner 2x2 078L.png"
+        -> class = "14719 flat tile corner 2x2"
+    """
     with open(txt_path, "r", encoding="utf-8") as f:
-        lines = f.read().splitlines()
+        lines = [l.strip() for l in f if l.strip()]
 
-    label_map = {}   # text class → int
-    image_entries = []
+    label_map = {}        # class_name -> int
+    image_entries = []    # (relative_path, label_id)
 
     for line in lines:
-        parts = line.strip().split()
-        class_name = " ".join(parts[:-1])
-        filename = line.strip()
-
+        parts = line.split()
+        class_name = " ".join(parts[:-1])  # everything except the last token
         if class_name not in label_map:
             label_map[class_name] = len(label_map)
-
         label = label_map[class_name]
-        image_entries.append((filename, label))
+        image_entries.append((line, label))
 
     return image_entries, label_map
 
 
-def process_images_to_idx(image_entries, image_folder, output_prefix, img_size=(96, 96)):  # 32,64,96, 128, 224
-    images_bin = b""
-    labels_bin = b""
+def stratified_split(entries, train_ratio=0.8):
+    """
+    Stratified split per class so train and test contain the same set of classes.
+    """
+    by_label = defaultdict(list)
+    for path, lab in entries:
+        by_label[lab].append(path)
 
-    count = 0
+    train_entries, test_entries = [], []
+    for lab, files in by_label.items():
+        random.shuffle(files)
+        k = int(len(files) * train_ratio)
+        train_entries += [(f, lab) for f in files[:k]]
+        test_entries  += [(f, lab) for f in files[k:]]
 
-    for filename, label in image_entries:
-        img_path = Path(image_folder) / filename
-        if not img_path.exists():
-            print(f"⚠️ Not found: {img_path}")
-            continue
+    # Not required, but nice for determinism/readability
+    train_entries.sort(key=lambda x: (x[1], x[0]))
+    test_entries.sort(key=lambda x: (x[1], x[0]))
+    return train_entries, test_entries
 
-        img = Image.open(img_path).convert("L")  # grayscale
-        img_resized = img.resize(img_size, Image.Resampling.LANCZOS)
-        img_bytes = np.array(img_resized, dtype=np.uint8).tobytes()
 
-        images_bin += img_bytes
-        labels_bin += bytes([label])
-        count += 1
-
+def write_idx_streaming(entries, image_folder, out_prefix, img_size=(96, 96)):
+    """
+    Fast, streaming IDX writer (no bytes concatenation in a loop).
+    """
     rows, cols = img_size
+    n = len(entries)
 
-    with open(f"{output_prefix}-images-idx3-ubyte", "wb") as f:
-        f.write(struct.pack(">IIII", 2051, count, rows, cols))  # magic number for images
-        f.write(images_bin)
+    images_path = f"{out_prefix}-images-idx3-ubyte"
+    labels_path = f"{out_prefix}-labels-idx1-ubyte"
 
-    with open(f"{output_prefix}-labels-idx1-ubyte", "wb") as f:
-        f.write(struct.pack(">II", 2049, count))  # magic number for labels
-        f.write(labels_bin)
+    with open(images_path, "wb") as f_img, open(labels_path, "wb") as f_lab:
+        # IDX headers (MNIST-like)
+        f_img.write(struct.pack(">IIII", 2051, n, rows, cols))
+        f_lab.write(struct.pack(">II", 2049, n))
 
-    print(f"✅ Saved {count} samples to {output_prefix}")
+        for rel, label in tqdm(entries, desc=f"Writing {out_prefix}", unit="img"):
+            img_path = Path(image_folder) / rel
+            if not img_path.exists():
+                print(f"⚠️ Missing file: {img_path}")
+                continue  # skip or raise, your choice
+
+            img = Image.open(img_path).convert("L")
+            img = img.resize((cols, rows), Image.Resampling.LANCZOS)
+            img_np = np.array(img, dtype=np.uint8)
+
+            f_img.write(img_np.tobytes())
+            f_lab.write(struct.pack("B", label))
+
+    print(f"✅ Wrote {n} samples to {out_prefix}")
+
+
+def sanity_check_idx(images_path, labels_path):
+    with open(images_path, "rb") as f:
+        _, num, rows, cols = struct.unpack(">IIII", f.read(16))
+    with open(labels_path, "rb") as f:
+        _, num_l = struct.unpack(">II", f.read(8))
+        labels = np.frombuffer(f.read(), dtype=np.uint8)
+    print(
+        f"{labels_path}: num={num_l}, min={labels.min()}, max={labels.max()}, "
+        f"unique={len(np.unique(labels))}"
+    )
 
 
 if __name__ == "__main__":
-    val_txt = "dataset/LEGO_raw/validation.txt"
-    img_dir = "dataset/LEGO_raw/dataset"
+    validation_txt = "dataset/LEGO_raw/validation.txt"
+    images_root    = "dataset/LEGO_raw/dataset"   # all PNGs live here (flat)
+    out_root       = "dataset/LEGO_idx96x96/dataset_LEGO_non_rotated"
 
-    entries, label_map = parse_validation_file(val_txt)
-    print(len(entries))
-    train_split = int(0.8 * len(entries))
-    train_entries = entries[:train_split]
-    test_entries = entries[train_split:]
+    os.makedirs(out_root, exist_ok=True)
 
-    os.makedirs("dataset/LEGO_idx96x96/dataset_LEGO_non_rotated", exist_ok=True)
+    entries, label_map = parse_validation_file(validation_txt)
+    print("🔢 Total number of classes:", len(label_map))
 
-    process_images_to_idx(train_entries, img_dir, "dataset/LEGO_idx96x96/dataset_LEGO_non_rotated/train")
-    process_images_to_idx(test_entries, img_dir, "dataset/LEGO_idx96x96/dataset_LEGO_non_rotated/test")
+    train_entries, test_entries = stratified_split(entries, train_ratio=0.8)
 
-    print(f"🔢 Number of classes: {len(label_map)}")
+    # Sanity: ensure both splits contain the same set of classes
+    train_classes = sorted({l for _, l in train_entries})
+    test_classes  = sorted({l for _, l in test_entries})
+    assert train_classes == test_classes, "Classes mismatch between train and test!"
+    print(f"✅ Same classes in train and test: {len(train_classes)} classes")
+
+    # Write IDX
+    write_idx_streaming(train_entries, images_root, f"{out_root}/train", img_size=(96, 96))
+    write_idx_streaming(test_entries,  images_root, f"{out_root}/test",  img_size=(96, 96))
+
+    # Save label map
+    with open(f"{out_root}/label_map.json", "w", encoding="utf-8") as f:
+        json.dump(label_map, f, indent=2, ensure_ascii=False)
+
+    # Final sanity check
+    sanity_check_idx(f"{out_root}/train-images-idx3-ubyte", f"{out_root}/train-labels-idx1-ubyte")
+    sanity_check_idx(f"{out_root}/test-images-idx3-ubyte",  f"{out_root}/test-labels-idx1-ubyte")
