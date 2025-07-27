@@ -102,7 +102,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset",
         type=str,
-        choices=["GTSRB", "MNIST"],
+        choices=["GTSRB", "MNIST", "LEGO"],
         required=True,
         help="Name of the dataset directory under ./dataset/"
     )
@@ -110,7 +110,8 @@ if __name__ == "__main__":
 
     dataset_config = {
         "MNIST": "dataset_mnist_non_rotated",
-        "GTSRB": "dataset_GTSRB_non_rotated"
+        "GTSRB": "dataset_GTSRB_non_rotated",
+        "LEGO": "dataset_LEGO_non_rotated"
     }
 
     run_pipeline(
