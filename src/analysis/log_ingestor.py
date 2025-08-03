@@ -1,14 +1,14 @@
+from pathlib import Path
 import os
 import re
-
 import matplotlib.pyplot as plt
 
-from db_handler import init_database, insert_training_logs, insert_test_logs, insert_training_run
-from wsl_handler import sync_wsl_logs
+from src.utils.db_handler import init_database, insert_training_logs, insert_test_logs, insert_training_run
+from src.utils.wsl_handler import sync_wsl_logs
 
 
 def extract_config(line):
-    if line is None or not isinstance(line, str):
+    if not isinstance(line, str):
         return {}
     match = re.search(r"configuration:\s+({.*})", line)
     return eval(match.group(1)) if match else {}
@@ -16,15 +16,10 @@ def extract_config(line):
 
 def parse_filename(filename):
     name = os.path.basename(filename).replace('_train.txt', '').replace('.txt', '')
-
     if "_test_on_" in name:
         train_part, test_part = name.split("_test_on_")
-        dataset = train_part
-        augmentation = test_part
-    else:
-        dataset = name
-        augmentation = ''
-    return dataset, augmentation
+        return train_part, test_part
+    return name, ''
 
 
 def parse_log_file(filepath):
@@ -32,9 +27,7 @@ def parse_log_file(filepath):
         lines = f.readlines()
 
     config_line = next((line for line in lines if line.startswith("configuration:")), None)
-
-    if config_line is None:
-        print(f"⚠️ Warning: No configuration found in file: {filepath}")
+    if not config_line:
         return []
 
     config = extract_config(config_line)
@@ -82,45 +75,10 @@ def parse_log_file(filepath):
                 'elapsed_time': elapsed
             })
 
-    # Attach total training time to each row if needed (or just one row, depending on DB schema)
     for row in rows:
         row['total_train_time'] = total_elapsed_time
 
     return rows
-
-
-def plot_metrics(data, file_path=None):
-    epochs = [d['epoch'] for d in data]
-    train_loss = [d['train_loss'] for d in data]
-    val_loss = [d['val_loss'] for d in data]
-    accuracy = [d['accuracy'] for d in data]
-
-    plt.figure(figsize=(12, 6))
-
-    plt.subplot(2, 1, 1)
-    plt.plot(epochs, train_loss, label='Train Loss')
-    plt.plot(epochs, val_loss, label='Validation Loss')
-    plt.legend()
-    plt.title('Loss over Epochs')
-
-    plt.subplot(2, 1, 2)
-    plt.plot(epochs, accuracy, label='Accuracy (%)')
-    plt.ylabel('Accuracy')
-    plt.xlabel('Epoch')
-    plt.legend()
-    plt.title('Validation Accuracy over Epochs')
-
-    plt.tight_layout()
-
-    # === Save to file if file_path is given ===
-    if file_path:
-        os.makedirs("plots", exist_ok=True)
-        filename = os.path.basename(file_path).replace(".txt", ".png")
-        save_path = os.path.join("plots", filename)
-        plt.savefig(save_path)
-        print(f"Saved plot to {save_path}")
-
-    plt.close()
 
 
 def parse_test_log_file(filepath):
@@ -159,28 +117,63 @@ def parse_test_log_file(filepath):
     }]
 
 
+def plot_metrics(data, file_path=None):
+
+    epochs = [d['epoch'] for d in data]
+    train_loss = [d['train_loss'] for d in data]
+    val_loss = [d['val_loss'] for d in data]
+    accuracy = [d['accuracy'] for d in data]
+
+    plt.figure(figsize=(12, 6))
+    plt.subplot(2, 1, 1)
+    plt.plot(epochs, train_loss, label='Train Loss')
+    plt.plot(epochs, val_loss, label='Validation Loss')
+    plt.legend()
+    plt.title('Loss over Epochs')
+
+    plt.subplot(2, 1, 2)
+    plt.plot(epochs, accuracy, label='Accuracy (%)')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.legend()
+    plt.title('Validation Accuracy over Epochs')
+
+    plt.tight_layout()
+    if file_path:
+        out_dir = Path("results/plots")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        filename = Path(file_path).with_suffix(".png").name
+        save_path = out_dir / filename
+        plt.savefig(save_path)
+        print(f"🖼️ Saved plot to: {save_path}")
+    plt.close()
+
+
 def collect_log_files(log_path):
-    log_files = []
-    for root, _, files in os.walk(log_path):
-        if "launcher_" in root:
-            continue
-
-        for file in files:
-            if file.startswith("launcher_") or not file.endswith('.txt'):
-                continue
-            log_files.append(os.path.join(root, file))
-    return log_files
+    return [
+        os.path.join(root, file)
+        for root, _, files in os.walk(log_path)
+        if "launcher_" not in root
+        for file in files
+        if file.endswith(".txt") and not file.startswith("launcher_")
+    ]
 
 
-def main():
+def ingest_logs(
+    wsl_source: str,
+    local_logs_path: str,
+    db_path: str,
+    overwrite_logs=False,
+    overwrite_db=False
+):
     print("🔄 Syncing logs from WSL...")
-    sync_wsl_logs(wsl_logs_source, local_logs_folder, overwrite=overwrite_logs)
+    sync_wsl_logs(wsl_source, local_logs_path, overwrite=overwrite_logs)
 
-    if not os.path.exists(db_file):
+    if not os.path.exists(db_path):
         print("🗂️ Creating database...")
-        init_database(db_file)
+        init_database(db_path)
 
-    log_files = collect_log_files(local_logs_folder)
+    log_files = collect_log_files(local_logs_path)
 
     for file_path in log_files:
         print(f"\n📂 Processing: {file_path}")
@@ -188,23 +181,11 @@ def main():
 
         if parsed_data:
             plot_metrics(parsed_data, file_path)
-            insert_training_logs(parsed_data, db_file, overwrite=overwrite_existing)
-            insert_training_run(parsed_data, db_file, overwrite=overwrite_existing)
+            insert_training_logs(parsed_data, db_path, overwrite=overwrite_db)
+            insert_training_run(parsed_data, db_path, overwrite=overwrite_db)
         else:
             test_data = parse_test_log_file(file_path)
             if test_data:
-                insert_test_logs(test_data, db_file, overwrite=overwrite_existing)
+                insert_test_logs(test_data, db_path, overwrite=overwrite_db)
             else:
                 print("⚠️ No data found in file.")
-
-
-if __name__ == "__main__":
-    # === Config ===
-    wsl_logs_source = r'\\wsl.localhost\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\logs'
-    local_logs_folder = 'log_files_from_slave/logs'
-    db_file = 'mnist_logs_final.db'
-
-    overwrite_logs = False  # Whether to overwrite files during WSL sync
-    overwrite_existing = False  # Whether to overwrite existing DB entries
-
-    main()
