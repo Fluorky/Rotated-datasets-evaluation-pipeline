@@ -53,10 +53,3 @@ def check_test_logs(test_dir: Path, success_mark: str = "Confusion Matrix saved 
             print(f" - {log}")
     else:
         print("All test log files completed successfully.")
-
-
-train_path = Path(r"\\wsl$\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\logs\json_4\train")
-test_path = Path(r"\\wsl$\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\logs\json_4\test")
-
-check_training_logs(train_path)
-check_test_logs(test_path)
