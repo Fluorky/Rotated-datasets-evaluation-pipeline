@@ -118,7 +118,6 @@ def parse_test_log_file(filepath):
 
 
 def plot_metrics(data, file_path=None):
-
     epochs = [d['epoch'] for d in data]
     train_loss = [d['train_loss'] for d in data]
     val_loss = [d['val_loss'] for d in data]
@@ -139,13 +138,16 @@ def plot_metrics(data, file_path=None):
     plt.title('Validation Accuracy over Epochs')
 
     plt.tight_layout()
+
     if file_path:
-        out_dir = Path("results/plots")
-        out_dir.mkdir(parents=True, exist_ok=True)
         filename = Path(file_path).with_suffix(".png").name
+        dataset_prefix = filename.split("-")[0].lower()  # e.g., "mnist" from "mnist-custom-..."
+        out_dir = Path("results/plots") / dataset_prefix
+        out_dir.mkdir(parents=True, exist_ok=True)
         save_path = out_dir / filename
         plt.savefig(save_path)
         print(f"🖼️ Saved plot to: {save_path}")
+
     plt.close()
 
 
