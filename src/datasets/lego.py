@@ -101,7 +101,8 @@ def sanity_check_idx(images_path, labels_path):
     )
 
 
-if __name__ == "__main__":
+
+def main():
     validation_txt = "dataset/LEGO_raw/validation.txt"
     images_root    = "dataset/LEGO_raw/dataset"
     out_root       = "dataset/LEGO/dataset_LEGO_non_rotated"
