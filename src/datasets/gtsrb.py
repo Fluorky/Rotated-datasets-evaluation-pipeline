@@ -199,7 +199,7 @@ def check_dataset():
     plt.show()
 
 
-if __name__ == "__main__":
+def main():
     download_dataset()
     prepare_gtsrb_dataset()
     check_dataset()
