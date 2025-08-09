@@ -51,7 +51,7 @@ def save_as_idx(image_dir, output_prefix):
 
 
 
-if __name__ == "__main__":
+def main():
     download_dataset()
     prepare_gtsrb_dataset()
     check_dataset()
