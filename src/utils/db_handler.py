@@ -2,7 +2,7 @@ import pandas as pd
 import sqlite3
 
 
-def add_test_logs_table(db_path='mnist_logs.db'):
+def add_test_logs_table(db_path='confusion_results.db'):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -74,13 +74,13 @@ def add_training_runs_table(db_path):
     print("✅ Table `training_runs` added or already existed.")
 
 
-def init_database(db_path='mnist_logs.db'):
+def init_database(db_path='confusion_results.db'):
     add_test_logs_table(db_path)
     add_training_logs_table(db_path)
     add_training_runs_table(db_path)
 
 
-def insert_training_logs(data, db_path='mnist_logs.db', overwrite=False):
+def insert_training_logs(data, db_path='confusion_results.db', overwrite=False):
     if not data:
         print("⚠️ No training data to insert.")
         return
@@ -119,7 +119,7 @@ def insert_training_logs(data, db_path='mnist_logs.db', overwrite=False):
     print(f"✅ Inserted {len(data)} row(s) to training_logs for: {log_file}")
 
 
-def insert_test_logs(data, db_path='mnist_logs.db', overwrite=False):
+def insert_test_logs(data, db_path='confusion_results.db', overwrite=False):
     if not data:
         print("⚠️ No test data to insert.")
         return
@@ -156,7 +156,7 @@ def insert_test_logs(data, db_path='mnist_logs.db', overwrite=False):
     print(f"✅ Inserted test log for: {log_file}")
 
 
-def insert_training_run(data, db_path='mnist_logs.db', overwrite=False):
+def insert_training_run(data, db_path='confusion_results.db', overwrite=False):
     if not data:
         print("⚠️ No training run data to insert.")
         return
@@ -195,7 +195,7 @@ def insert_training_run(data, db_path='mnist_logs.db', overwrite=False):
     print(f"✅ Inserted training run for: {log_file}")
 
 
-def drop_table(table_name, db_path='mnist_logs.db'):
+def drop_table(table_name, db_path='confusion_results.db'):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute(f'DROP TABLE IF EXISTS {table_name}')
@@ -204,7 +204,7 @@ def drop_table(table_name, db_path='mnist_logs.db'):
     print(f"🗑️ Dropped table `{table_name}` (if it existed).")
 
 
-def show_table(table_name='training_logs', db_path='mnist_logs.db'):
+def show_table(table_name='training_logs', db_path='confusion_results.db'):
     try:
         pd.set_option('display.max_rows', None)
         pd.set_option('display.width', 0)
