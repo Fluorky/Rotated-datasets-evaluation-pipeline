@@ -1,7 +1,7 @@
 import argparse
 import os
 
-from datasets_handler import (
+from src.utils.handler import (
     rotate_and_save_ranges,
     rotate_and_save_fixed_angle,
     merge_ubyte_files,
@@ -85,7 +85,7 @@ def run_pipeline(base_dir: str, dataset_name: str, dataset_key: str,
     predefined_merges(base_dir, dataset_name, merged_dir, angle_ranges)
 
     json_out_name = f"train_test_scenarios_{dataset_name.replace('dataset_', '')}.json"
-    output_json_path = os.path.join(".", json_out_name)
+    output_json_path = os.path.join("../..", json_out_name)
 
     print("🧪 Generating train-test JSON...")
     generate_train_test_scenarios(
@@ -115,7 +115,7 @@ if __name__ == "__main__":
     }
 
     run_pipeline(
-        base_dir=os.path.join("dataset", args.dataset),
+        base_dir=os.path.join("../../dataset", args.dataset),
         dataset_name=dataset_config[args.dataset],
         dataset_key=args.dataset
     )
