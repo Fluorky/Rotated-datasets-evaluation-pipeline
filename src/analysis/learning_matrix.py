@@ -1,4 +1,3 @@
-import os
 import re
 import pandas as pd
 import seaborn as sns
@@ -6,21 +5,14 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from collections import defaultdict
 
-# === CONFIGURATION ===
-DATASETS = ["MNIST"]
-BASE_DIR = Path.cwd()
-LOGS_BASE_PATH = BASE_DIR / "log_files_from_slave" / "logs"
-OUTPUT_BASE_PATH = BASE_DIR / "heatmaps"
-
-# Pattern to extract accuracy percentage from log files
-ACCURACY_PATTERN = re.compile(r"\(\s*([0-9]+(?:\.[0-9]+)?)%\s*\)")
-
 MODEL_KEYS = [
     "cyresnet56_logpolar",
     "cyresnet56_linearpolar",
     "cyvgg19_logpolar",
     "cyvgg19_linearpolar"
 ]
+
+ACCURACY_PATTERN = re.compile(r"\(\s*([0-9]+(?:\.[0-9]+)?)%\s*\)")
 
 def determine_group_key(model_name: str):
     for key in MODEL_KEYS:
@@ -46,9 +38,9 @@ def extract_sort_key(col_name: str):
     match = re.search(r"(\d+)", col_name)
     return int(match.group(1)) if match else float('inf')
 
-def process_dataset(dataset_name: str):
-    log_path = LOGS_BASE_PATH / f"json_{dataset_name}" / "test"
-    output_path = OUTPUT_BASE_PATH / dataset_name
+def process_dataset(dataset_name: str, logs_base: Path, output_base: Path):
+    log_path = logs_base / f"json_{dataset_name}" / "test"
+    output_path = output_base / dataset_name
     output_path.mkdir(parents=True, exist_ok=True)
 
     results = {key: defaultdict(dict) for key in MODEL_KEYS}
@@ -79,9 +71,7 @@ def process_dataset(dataset_name: str):
             continue
 
         df = pd.DataFrame(data).T
-        sorted_columns = sorted(df.columns, key=extract_sort_key)
-        df = df[sorted_columns]
-
+        df = df[sorted(df.columns, key=extract_sort_key)]
         df.index = df.index.str.replace(r'^.+?-[^-]+-[^_]+_', '', regex=True)
         df.columns = df.columns.str.replace(r'^.+?-[^-]+-[^_]+_', '', regex=True)
 
@@ -112,8 +102,3 @@ def process_dataset(dataset_name: str):
         print(f"🖼️ Saved heatmap: {heatmap_path}")
 
     print(f"✅ Finished dataset: {dataset_name}")
-
-if __name__ == "__main__":
-    for dataset in DATASETS:
-        process_dataset(dataset)
-    print("🏁 All datasets processed.")
