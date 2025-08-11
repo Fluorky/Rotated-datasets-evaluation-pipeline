@@ -279,23 +279,3 @@ def query_best_models(db_path):
         print(f"\n🥇 Best model (by speed-efficiency): {ranked[0][0]} with {ranked[0][1]} acc/sec")
 
     conn.close()
-
-
-# === USAGE ===
-
-confusion_matrices_root_dir = r'\\wsl.localhost\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\logs\json_MNIST\confusion_matrices'
-db_path = 'mnist_logs_final.db'
-
-# Init training times
-create_training_runs_table(db_path)
-compute_training_times(db_path)
-
-# Collect evaluations (confusion matrix results)
-collect_and_store_results(confusion_matrices_root_dir, db_path)
-
-# Create summaries
-create_model_summary_table(db_path)
-compute_and_insert_model_summaries(db_path)
-
-# Report
-query_best_models(db_path)
