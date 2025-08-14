@@ -54,53 +54,46 @@ w Katedrze Systemów Inteligentnych, WFiIS UŁ
 # Wstęp
 
 Obrazy otaczają nas z każdej strony: od zdjęć ze smartfonów, przez
-monitoring miejski, zdjęcia produktów w bazach danych, systemy rozpoznawania jakości 
-produktów na liniach produkcyjnych, po systemy wspomagania jazdy. Choć współczesne
-modele rozpoznawania obrazu radzą sobie znakomicie w wielu zadaniach, w
-praktyce często okazują się wrażliwe na pozornie drobne zmiany - jak
-obrócenie obiektu o kilkanaście stopni czy nieznaczny przechył kamery.
-To, co dla człowieka jest natychmiast rozpoznawalne (znak drogowy
-widziany pod kątem, cyfra obrócona na kartce), dla klasycznej
-konwolucyjnej sieci neuronowej bywa wyzwaniem. Kluczowy problem
-sprowadza się do braku naturalnej inwariantności względem rotacji:
-standardowe CNN-y „z definicji” lepiej radzą sobie z przesunięciami w
-obrazie niż z obrotami.
+monitoring miejski, katalogi produktów i systemy kontroli jakości na
+liniach produkcyjnych, po systemy wspomagania jazdy. Choć współczesne
+modele rozpoznawania obrazu radzą sobie bardzo dobrze, w praktyce
+bywają wrażliwe na pozornie drobne zmiany takie jak obrócenie obiektu o
+kilkanaście stopni czy niewielki przechył kamery. To, co dla człowieka
+jest naturalne i natychmiast rozpoznawalne (znak drogowy pod kątem, cyfra obrócona
+na kartce), dla klasycznej konwolucyjnej sieci neuronowej bywa
+problemem. Rdzeń trudności to brak naturalnej inwariantności względem
+rotacji: standardowe CNN-y „z definicji” lepiej radzą sobie z
+przesunięciami niż z obrotami.
 
-W ostatnich latach zaproponowano szereg podejść, które mają tę lukę
-wypełnić. Z jednej strony stosuje się rozszerzanie danych o zrotowane
-przykłady, co poprawia odporność modeli kosztem dłuższego treningu i nie
-zawsze gwarantuje uogólnienie na wszystkie kąty. Z drugiej strony
-rozwijane są architektury, które wbudowują własności geometryczne w samą
-sieć: od rozwiązań grupowo równoważnych (G-CNN, E(2)-equivariant),
-przez sieci cykliczne operujące na wielu orientacjach, po
-przekształcenia do układów polarnych (linear- oraz log-polar), które
-„prostują” rotacje do przesunięć. Wspólnym mianownikiem jest dążenie do
-tego, by model rozpoznawał „to samo” niezależnie od orientacji obiektu -
-bez nadmiernego dublowania przykładów w zbiorze uczącym.
+W ostatnich latach pojawiło się kilka dróg domknięcia tej luki. Jedna to
+poszerzanie danych o zrotowane przykłady - poprawia odporność, ale
+wydłuża trening i nie gwarantuje uogólnienia na wszystkie kąty. Druga to
+architektury z wbudowaną geometrią: sieci grupowo równoważne (G-CNN,
+E(2)-equivariant), sieci cykliczne operujące na wielu orientacjach oraz
+przekształcenia do układów polarnych (linear-polar i log-polar), które
+„prostują” rotacje do przesunięć. Cel jest wspólny: by model rozpoznawał
+„to samo” niezależnie od orientacji, bez agresywnego dublowania danych.
 
-Niniejsza praca skupia się na praktycznej weryfikacji skuteczności
-takich podejść. Przygotowano zbiory danych obejmujące m.in. odręczne
-litery/cyfry, znaki drogowe (w kolorze i w odcieniach szarości) oraz
-syntetyczne obiekty 3D rzutowane na 2D (np. klocki LEGO), a następnie
-rozszerzono je o kontrolowane rotacje. Zaimplementowano i porównano
-wybrane architektury rotacyjnie inwariantne oraz ich warianty bazowe w
-**PyTorchu**, mierząc wpływ transformacji (linear-polar vs log-polar), wyboru
-architektury modelu i zakresu kątów na jakość predykcji. Obliczenia realizowano
-na kartach graficznych **NVIDIA GeForce RTX 3060 12 GB**, co pozwoliło skrócić czas
-trenowania i przeprowadzić szeroki przegląd eksperymentów; środowisko
-uruchomieniowe ustandaryzowano w oparciu o **Dockera**, aby zapewnić
-powtarzalność wyników.
+Niniejsza praca skupia się na praktycznej weryfikacji tych podejść.
+Przygotowano zbiory obejmujące m.in. odręczne litery/cyfry, znaki
+drogowe (w kolorze i w odcieniach szarości) oraz syntetyczne obiekty 3D
+rzutowane na 2D (np. klocki LEGO), a następnie rozszerzono je o
+kontrolowane rotacje. Zaimplementowano i porównano wybrane architektury
+rotacyjnie inwariantne i ich warianty bazowe w **PyTorchu**, mierząc
+wpływ transformacji (linear-polar vs. log-polar), wyboru architektury i
+zakresu kątów na jakość predykcji. Obliczenia realizowano na kartach
+**NVIDIA GeForce RTX 3060 12 GB**, co skróciło czas trenowania i
+umożliwiło szeroki przegląd eksperymentów; środowisko uruchomieniowe
+ustandaryzowano z użyciem **Dockera** dla powtarzalności.
 
-Celem pracy jest więc nie tylko pokazanie, że "da się" uzyskać
-odporność na rotacje, ale przede wszystkim wskazanie, **kiedy** i
-**jakim kosztem** ją osiągamy: które techniki dają największy zysk
-względem klasycznych CNN-ów, jak wpływa to na stabilność i szybkość
-uczenia oraz które konfiguracje są najpraktyczniejsze w realnych
-zastosowaniach (OCR, rozpoznawanie znaków, analiza obiektów
-technicznych). W kolejnych rozdziałach przedstawiono podstawy
-teoretyczne, opis danych i augmentacji, architektury modeli, środowisko
-eksperymentalne, protokoły ewaluacji oraz wyniki wraz z analizą i
-wnioskami.
+Celem pracy jest nie tylko pokazanie, że „da się” uzyskać odporność na
+rotacje, ale przede wszystkim wskazanie, **kiedy** i **jakim kosztem**
+ją osiągamy oraz które techniki przynoszą największy zysk względem
+klasycznych CNN-ów, jak wpływają na stabilność i szybkość uczenia, a także
+które konfiguracje są najpraktyczniejsze w realnych zastosowaniach
+(OCR, rozpoznawanie znaków, analiza obiektów technicznych). W dalszej części pracy
+przedstawiono podstawy, dane i augmentację, architektury, środowisko
+eksperymentalne, protokoły ewaluacji oraz wyniki z analizą i wnioskami.
 
 ## Cel i motywacja pracy
 
@@ -178,7 +171,7 @@ W realizacji projektu zastosowano następujące rozwiązania technologiczne:
 
 ## GTSRB RGB (znaki drogowe)
 
-## LEGO (obiekty 3d rzutowane na 2s)
+## LEGO (obiekty 3d rzutowane na 2d)
 
 ## Sposób augmentacji danych: zakresy rotacji, łączenie zbiorów
 
