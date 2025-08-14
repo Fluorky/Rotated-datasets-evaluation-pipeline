@@ -57,7 +57,7 @@ Obrazy otaczają nas z każdej strony: od zdjęć ze smartfonów, przez
 monitoring miejski, zdjęcia produktów w bazach danych, systemy rozpoznawania jakości 
 produktów na liniach produkcyjnych, po systemy wspomagania jazdy. Choć współczesne
 modele rozpoznawania obrazu radzą sobie znakomicie w wielu zadaniach, w
-praktyce często okazują się wrażliwe na pozornie drobne zmiany — jak
+praktyce często okazują się wrażliwe na pozornie drobne zmiany - jak
 obrócenie obiektu o kilkanaście stopni czy nieznaczny przechył kamery.
 To, co dla człowieka jest natychmiast rozpoznawalne (znak drogowy
 widziany pod kątem, cyfra obrócona na kartce), dla klasycznej
@@ -75,7 +75,7 @@ sieć: od rozwiązań grupowo równoważnych (G-CNN, E(2)-equivariant),
 przez sieci cykliczne operujące na wielu orientacjach, po
 przekształcenia do układów polarnych (linear- oraz log-polar), które
 „prostują” rotacje do przesunięć. Wspólnym mianownikiem jest dążenie do
-tego, by model rozpoznawał „to samo” niezależnie od orientacji obiektu —
+tego, by model rozpoznawał „to samo” niezależnie od orientacji obiektu -
 bez nadmiernego dublowania przykładów w zbiorze uczącym.
 
 Niniejsza praca skupia się na praktycznej weryfikacji skuteczności
@@ -91,7 +91,7 @@ trenowania i przeprowadzić szeroki przegląd eksperymentów; środowisko
 uruchomieniowe ustandaryzowano w oparciu o **Dockera**, aby zapewnić
 powtarzalność wyników.
 
-Celem pracy jest więc nie tylko pokazanie, że „da się” uzyskać
+Celem pracy jest więc nie tylko pokazanie, że "da się" uzyskać
 odporność na rotacje, ale przede wszystkim wskazanie, **kiedy** i
 **jakim kosztem** ją osiągamy: które techniki dają największy zysk
 względem klasycznych CNN-ów, jak wpływa to na stabilność i szybkość
