@@ -5,10 +5,12 @@ import shutil
 import struct
 import itertools
 import matplotlib.pyplot as plt
-import numpy as np
 from pathlib import Path
 from PIL import Image
-from typing import Tuple
+from typing import List, Tuple
+
+import numpy as np
+import cv2
 
 
 def merge_ubyte_files(folders, output_folder):
@@ -313,3 +315,168 @@ def generate_train_test_scenarios(
     with open(output_json_path, "w") as f:
         json.dump(result, f, indent=2)
     print(f"✅ Train-test scenarios saved to {output_json_path}")
+
+
+def npy_paths(base_dir: str, dataset_name: str, split: str) -> Tuple[str, str]:
+    """Return (images.npy, labels.npy) for a split."""
+    images = os.path.join(base_dir, dataset_name, f"{split}_images.npy")
+    labels = os.path.join(base_dir, dataset_name, f"{split}_labels.npy")
+    return images, labels
+
+def _npy_out_paths(root_out: str, split: str) -> Tuple[str, str]:
+    """Return output (images.npy, labels.npy) under a given directory."""
+    os.makedirs(root_out, exist_ok=True)
+    return (os.path.join(root_out, f"{split}_images.npy"),
+            os.path.join(root_out, f"{split}_labels.npy"))
+
+def _load_npy_pair(images_path: str, labels_path: str) -> Tuple[np.ndarray, np.ndarray]:
+    X = np.load(images_path, mmap_mode=None)
+    y = np.load(labels_path, mmap_mode=None)
+    return X, y
+
+def _save_npy_pair(images_out: str, labels_out: str, X: np.ndarray, y: np.ndarray) -> None:
+    np.save(images_out, X)
+    np.save(labels_out, y)
+
+def _ensure_chw(X: np.ndarray) -> np.ndarray:
+    """
+    Accept HxW, HxWxC, or NxHxW(/C). Return NxCxHxW for rotation with OpenCV.
+    """
+    X = np.asarray(X)
+    if X.ndim == 2:  # H, W -> 1 image
+        X = X[None, None, :, :]
+    elif X.ndim == 3:
+        # Either N,H,W or H,W,C
+        if X.shape[-1] in (1, 3):          # H,W,C  -> N=1
+            X = np.transpose(X, (2, 0, 1))[None, ...]  # 1,C,H,W
+        else:                                # N,H,W  (grayscale)
+            X = X[:, None, :, :]             # N,1,H,W
+    elif X.ndim == 4:
+        # N,H,W,C or N,C,H,W
+        if X.shape[-1] in (1, 3):
+            X = np.transpose(X, (0, 3, 1, 2))  # N,C,H,W
+        # else assume already N,C,H,W
+    else:
+        raise ValueError(f"Unsupported image array shape: {X.shape}")
+    return X
+
+def _rotate_image_cv(img_hw_or_hwc: np.ndarray, angle_deg: float) -> np.ndarray:
+    """
+    Rotate a single image (H,W) or (H,W,C) by angle (degrees, center rotation, keep size).
+    Uses BORDER_CONSTANT (black) like common preprocessing.
+    """
+    if img_hw_or_hwc.ndim == 2:
+        H, W = img_hw_or_hwc.shape
+        C = None
+    else:
+        H, W, C = img_hw_or_hwc.shape
+
+    M = cv2.getRotationMatrix2D((W / 2.0, H / 2.0), angle_deg, 1.0)
+    border = cv2.BORDER_CONSTANT
+    if C is None:
+        return cv2.warpAffine(img_hw_or_hwc, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=border)
+    else:
+        # rotate each channel then stack
+        chans = [cv2.warpAffine(img_hw_or_hwc[..., c], M, (W, H), flags=cv2.INTER_LINEAR, borderMode=border)
+                 for c in range(C)]
+        return np.stack(chans, axis=-1)
+
+def _rotate_batch_nchw(X: np.ndarray, angle_deg: float) -> np.ndarray:
+    """
+    Rotate a batch in NCHW and return NCHW. Internally converts per-image to HWC/HW.
+    """
+    N, C, H, W = X.shape
+    out = np.empty_like(X)
+    for i in range(N):
+        xi = X[i]
+        if C == 1:
+            img = xi[0]                          # H,W
+            rot = _rotate_image_cv(img, angle_deg)
+            out[i, 0] = rot
+        else:
+            img = np.transpose(xi, (1, 2, 0))    # H,W,C
+            rot = _rotate_image_cv(img, angle_deg)
+            out[i] = np.transpose(rot, (2, 0, 1))
+    return out
+
+def rotate_and_save_fixed_angle_npy(
+    images_in: str, labels_in: str, out_dir: str, split: str, angle: float
+) -> None:
+    """
+    NPY: rotate all images by a fixed angle, write split_{images,labels}.npy.
+    """
+    images_out, labels_out = _npy_out_paths(out_dir, split)
+    if os.path.exists(images_out) and os.path.exists(labels_out):
+        print(f"⏩ Skipping existing: {out_dir}/{split} (angle {angle}°)")
+        return
+    X, y = _load_npy_pair(images_in, labels_in)
+    X = _ensure_chw(X)  # N,C,H,W
+    Xr = _rotate_batch_nchw(X, angle)
+    # back to original “NPY convention”: default to NHW (grayscale) / NHWC (color)
+    if Xr.shape[1] == 1:
+        Xr_save = Xr[:, 0, :, :]                # N,H,W
+    else:
+        Xr_save = np.transpose(Xr, (0, 2, 3, 1)) # N,H,W,C
+    images_out, labels_out = _npy_out_paths(out_dir, split)
+    _save_npy_pair(images_out, labels_out, Xr_save, y)
+
+def rotate_and_save_ranges_npy(
+    images_in: str, labels_in: str, base_out: str, split: str, ranges: List[Tuple[int, int]], seed: int = 1337
+) -> None:
+    """
+    NPY: for each range [a,b), create folder rotated-a-b and rotate each sample by
+    one random angle uniformly drawn from that range. Deterministic via seed.
+    """
+
+    rng = np.random.default_rng(seed)
+    X, y = _load_npy_pair(images_in, labels_in)
+    X = _ensure_chw(X)  # N,C,H,W
+
+    for (a, b) in ranges:
+        out_dir = os.path.join(base_out, f"rotated-{a}-{b}")
+        images_out, labels_out = _npy_out_paths(out_dir, split)
+
+        if os.path.exists(images_out) and os.path.exists(labels_out):
+            print(f"⏩ Skipping existing range {a}-{b}° for {split}")
+            continue
+        os.makedirs(out_dir, exist_ok=True)
+        # draw per-image angle
+        angles = rng.uniform(low=a, high=b, size=(X.shape[0],)).astype(np.float32)
+        # rotate one by one (keeps memory bounded)
+        Xr = np.empty_like(X)
+        for i in range(X.shape[0]):
+            Xr[i] = _rotate_batch_nchw(X[i:i+1], float(angles[i]))[0]
+        # save back in NHW/NHWC style
+        if Xr.shape[1] == 1:
+            Xr_save = Xr[:, 0, :, :]
+        else:
+            Xr_save = np.transpose(Xr, (0, 2, 3, 1))
+        images_out, labels_out = _npy_out_paths(out_dir, split)
+        _save_npy_pair(images_out, labels_out, Xr_save, y)
+
+def merge_npy_dirs(input_dirs: List[str], out_dir: str, splits: List[str]) -> None:
+    """
+    Concatenate NPY (images, labels) across multiple source dirs for each split.
+    Expects each dir to contain split_images.npy and split_labels.npy.
+    """
+    if os.path.exists(out_dir):
+        print(f"⏩ Skipping merge: {out_dir} already exists.")
+        return
+    os.makedirs(out_dir, exist_ok=True)
+    for split in splits:
+        xs, ys = [], []
+        for d in input_dirs:
+            xi = os.path.join(d, f"{split}_images.npy")
+            yi = os.path.join(d, f"{split}_labels.npy")
+            if not (os.path.isfile(xi) and os.path.isfile(yi)):
+                # silently skip missing dirs (mirrors IDX merging tolerance)
+                continue
+            X, y = _load_npy_pair(xi, yi)
+            xs.append(X)
+            ys.append(y)
+        if not xs:
+            continue
+        X_cat = np.concatenate(xs, axis=0)
+        y_cat = np.concatenate(ys, axis=0)
+        np.save(os.path.join(out_dir, f"{split}_images.npy"), X_cat)
+        np.save(os.path.join(out_dir, f"{split}_labels.npy"), y_cat)
