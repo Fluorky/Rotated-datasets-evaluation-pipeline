@@ -232,17 +232,25 @@ def rename_t10k_to_test(dataset_dir: str):
             old_path.rename(new_path)
             print(f"🔁 Renamed {old_name} → {new_name}")
 
-def has_data_files(directory):
+def has_data_files(directory: str) -> bool:
     """
-    Check if the given directory contains all the required data files.
+    Check if the directory contains required train/test data files in .npy or IDX format.
     """
-    required_files = [
-        "train-images-idx3-ubyte",
-        "train-labels-idx1-ubyte",
-        "test-images-idx3-ubyte",
-        "test-labels-idx1-ubyte",
+    path = Path(directory)
+    # Check for .npy files
+    npy_files = [
+        "train_images.npy", "train_labels.npy",
+        "test_images.npy", "test_labels.npy",
     ]
-    return all((Path(directory) / f).exists() for f in required_files)
+    if all((path / f).exists() for f in npy_files):
+        return True
+
+    # Fallback: check for IDX format
+    idx_files = [
+        "train-images-idx3-ubyte", "train-labels-idx1-ubyte",
+        "test-images-idx3-ubyte", "test-labels-idx1-ubyte",
+    ]
+    return all((path / f).exists() for f in idx_files)
 
 
 # Function to create all combinations
