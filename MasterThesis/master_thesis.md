@@ -77,7 +77,7 @@ przekształcenia do układów polarnych (linear-polar i log-polar), które
 Niniejsza praca skupia się na praktycznej weryfikacji tych podejść.
 Przygotowano zbiory obejmujące m.in. odręczne litery/cyfry, znaki
 drogowe (w kolorze i w odcieniach szarości) oraz syntetyczne obiekty 3D
-rzutowane na 2D (np. klocki LEGO), a następnie rozszerzono je o
+rzutowane na 2D (klocki LEGO), a następnie rozszerzono je o
 kontrolowane rotacje. Zaimplementowano i porównano wybrane architektury
 rotacyjnie inwariantne i ich warianty bazowe w **PyTorchu**, mierząc
 wpływ transformacji (linear-polar vs. log-polar), wyboru architektury i
@@ -105,8 +105,8 @@ ukierunkowanych na zapewnienie odporności modeli na rotację danych wejściowyc
 W ramach pracy zostały przygotowane wzbogacone zbiory danych, obejmujące m.in. zdjęcia odręcznie napisanych liter, 
 znaków drogowych (zarówno w kolorze, jak i w odcieniach szarości) oraz obiektów 3D rzutowanych na przestrzeń 2D (klocki LEGO), 
 rozszerzone o różnorodne rotacje obrazów.
-
-Na podstawie tych zbiorów danych przeprowadzono implementację i ewaluacja wybranych architektur rotacyjnie inwariantnych
+\newpage
+Na podstawie tych zbiorów danych przeprowadzono implementację i ewaluację wybranych architektur rotacyjnie inwariantnych
 z wykorzystaniem biblioteki PyTorch. Obliczenia zostały przeprowadzone przy użyciu kart graficznych NVIDIA GeForce RTX 3060 12GB, 
 umożliwiających przyspieszenie procesów trenowania modeli. Otrzymane wyniki zostały porównane z rezultatami klasycznych 
 sieci konwolucyjnych, w celu oceny realnych korzyści wynikających z zastosowania rozwiązań inwariantnych względem rotacji.
@@ -117,32 +117,40 @@ Praca magisterska wykorzystuje zaawansowane technologie i narzędzia wspierając
 neuronowymi oraz ich zastosowaniem w przetwarzaniu obrazów. 
 W realizacji projektu zastosowano następujące rozwiązania technologiczne:
 
--   Język programowania Python – podstawowe narzędzie do implementacji algorytmów
+-   **Język programowania Python** – podstawowe narzędzie do implementacji algorytmów
     oraz obsługi frameworków uczenia maszynowego, dzięki swojej wszechstronności 
     i bogatemu ekosystemowi bibliotek, takich jak PyTorch i TensorFlow.
 
--   Frameworki uczenia maszynowego:
+     Frameworki uczenia maszynowego:
 
 <!-- -->
 
--   PyTorch -- elastyczny framework umożliwiający szybkie prototypowanie
+*   **PyTorch** – elastyczny framework umożliwiający szybkie prototypowanie
     oraz trenowanie sieci neuronowych.
 
--   TensorFlow -- kompleksowe narzędzie do budowy, trenowania i
+*   **TensorFlow** – kompleksowe narzędzie do budowy, trenowania i
     wdrażania modeli uczenia maszynowego.
 
--   Rotacyjnie inwariantne architektury sieci neuronowych -- analiza
-    nowych rozwiązań badanych w literaturze naukowej, takich jak ta
-    opisana w publikacji „General E(2)-Equivariant Steerable CNNs".
-
 <!-- -->
+-   **Modele cykliczne (CyCNN).** W pracy zostało przyjęte podejście, w
+    którym obraz został przemapowany do współrzędnych $(\rho,\varphi)$.
+    Dzięki temu obrót $R_\alpha$ staje się przesunięciem o $\alpha$ po osi
+    $\varphi$. Konwolucje zostały zastąpione warstwami cylindrycznymi
+    (CyConv) z cyklicznym paddingiem w $\varphi$. Dla każdego filtra zostało
+    przygotowanych $n$ orientacji; odpowiedzi zostały złożone z dodatkową
+    osią „orientacja”. Obrót wejścia powoduje cykliczny shift po tej osi, a
+    pooling po orientacjach daje inwariancję względem rotacji.
+    Został ustawiony stały środek układu polarnych,
+    stała siatka próbkowania oraz biliniarna interpolacja; padding w
+    $\varphi$ został ustawiony na cykliczny. Implementacja została wykonana
+    w **PyTorchu**.
 
--   Wykorzystanie akceleracji GPU (NVIDIA) - obliczenia zostały znacząco przyspieszone dzięki użyciu kart graficznych 
-    NVIDIA GeForce RTX 3060 12GB, które zapewniają wydajne środowisko dla operacji obliczeniowo intensywnych. 
+-   **Wykorzystanie akceleracji GPU (NVIDIA)** - obliczenia zostały znacząco przyspieszone dzięki użyciu kart graficznych 
+    NVIDIA GeForce RTX 3060 12GB, które zapewniają wydajne środowisko dla operacji intensywnych obliczeniowo. 
     Frameworki takie jak PyTorch i TensorFlow wspierają technologie CUDA oraz Tensor, umożliwiając efektywne 
     wykorzystanie zasobów GPU.
 
--   Konteneryzacja za pomocą Dockera – narzędzie do tworzenia odizolowanych środowisk 
+-   **Konteneryzacja za pomocą Dockera** – narzędzie do tworzenia odizolowanych środowisk 
     uruchomieniowych, które zapewniło łatwość replikacji środowiska oraz współdzielenia projektu, 
     także w konfiguracjach z obsługą GPU.
 
@@ -151,7 +159,90 @@ W realizacji projektu zastosowano następujące rozwiązania technologiczne:
 
 ## Zakres tematyczny
 
-## Organizacja pracy
+Niniejsza praca dotyczy odporności modeli klasyfikacji obrazów na rotacje
+w płaszczyźnie. Skupiono się na porównaniu klasycznych architektur z ich
+wersjami rotacyjnie inwariantnymi oraz na wpływie przekształceń polarnych
+na jakość predykcji. Badania zostały przeprowadzone na obrazach 2D i
+rotacjach planarnych.
+
+### Ujęte w zakresie
+
+- **Architektury modeli:** zostały zaimplementowane i porównane warianty
+  bazowe **VGG** oraz **ResNet**, a także ich wersje cykliczne **CyVGG**
+  i **CyResNet** (modele rotacyjnie inwariantne).
+
+- **Przekształcenia polarne:** została oceniona użyteczność mapowania
+  **linear-polar** oraz **log-polar** jako etapów wstępnego
+  przetwarzania służących „prostowaniu” rotacji do przesunięć.
+
+- **Zbiory danych:** zostały wykorzystane następujące zbiory:
+  **MNIST** (odręczne cyfry, 28x28 przeskalowane do 32x32, grayscale),
+  **LEGO** (syntetyczne obiekty 3D rzutowane na 2D, 96x96, grayscale),
+  **GTSRB** (znaki drogowe, 32x32, grayscale) oraz **GTSRB_RGB**
+  (wersja kolorowa). Zbiory zostały rozszerzone o kontrolowane rotacje;
+  przygotowane zostały spójne podziały train/val/test.
+
+- **Augmentacja i protokół:** zostały zdefiniowane zakresy kątów,
+  liczba powtórzeń i podział na zbiory train/val/test (uczący/walidacyjny/testowy),
+  z możliwością powtórzeń trenowań dla różnych losowych ziaren.
+
+- **Środowisko i implementacja:** zostało wykorzystane **PyTorch** z
+  akceleracją **CUDA** na kartach **NVIDIA GeForce RTX 3060 12 GB**.
+  Środowisko uruchomieniowe zostało ustandaryzowane z użyciem
+  **Dockera**. Przygotowane zostały skrypty w Pythonie do trenowania,
+  testowania i ewaluacji.
+
+- **Metryki i analiza:** została przeprowadzona ocena jakości (accuracy,
+  macierze pomyłek), analiza stabilności (średnia/mediana/odchylenie
+  standardowe), wpływ kąta rotacji na skuteczność oraz koszt
+  obliczeniowy (czas trenowania, rozmiar modelu).
+
+- **Wyniki końcowe:** zostały przygotowane rankingi modeli oraz
+  porównania **VGG/ResNet** vs **CyVGG/CyResNet**, wraz z wnioskami
+  praktycznymi dotyczącymi doboru architektury i przetwarzania.
+
+### Poza zakresem
+- Detekcja obiektów i segmentacja - w pracy rozpatrywana jest wyłącznie
+  klasyfikacja.
+
+- Inwariancja względem skali, ścinania i pełnych przekształceń afinicznych -
+  analizowana jest tylko rotacja w płaszczyźnie.
+
+- Rotacje w geometrii 3D oraz zagadnienia widzenia stereo - pozostają
+  poza zakresem.
+
+- Trening na bardzo dużych korpusach z pre-treningiem self-supervised oraz
+  szerokim AutoML/hyper-search - nie został realizowany.
+
+- Odporność na silne zakłócenia (szum, okluzje) - poza zakresem; skupiono
+  się wyłącznie na rotacji.
+
+
+### Artefakty pracy
+
+- Repozytorium z kodem, skryptami i plikami konfiguracyjnymi (PyTorch).
+- Pliki z konfiguracjami eksperymentów i opisem danych.
+- Wytrenowane wagi modeli (wybrane checkpointy) oraz raporty z ewaluacji.
+- Tekst pracy z dokumentacją eksperymentów i wnioskami.
+
+### Organizacja pracy
+
+Struktura pracy została ułożona tak, by od podstaw przejść do wyników.
+W rozdziale **Podstawy teoretyczne** zostały zebrane pojęcia i narzędzia:
+CNN, inwariancja/ekwawariancja, przekształcenia polarne oraz prace
+pokrewne (G-CNN, CyCNN). W **Opisie zbiorów danych** zostały
+przedstawione MNIST, LEGO, GTSRB (gray) i GTSRB_RGB oraz sposób
+augmentacji (rotacje, podziały train/val/test). W **Architekturach
+modeli** zostały opisane warianty bazowe **VGG/ResNet** oraz wersje
+cykliczne **CyVGG/CyResNet**, wraz z transformacjami linear-polar /
+log-polar. Rozdział **Implementacja i środowisko** zawiera szczegóły
+techniczne: **PyTorch**, **CUDA** (RTX 3060 12 GB), **Docker**, strukturę
+projektu i skrypty. W **Eksperymentach** zostały zdefiniowane scenariusze,
+metryki i sposób ewaluacji. Dalej, w **Porównaniu wyników**, zostały
+zestawione modele (VGG vs CyVGG, ResNet vs CyResNet, wpływ transformacji)
+i omówiona stabilność/czas. Na końcu **Wnioski** zbierają najważniejsze
+observacje i wskazują kierunki dalszych badań; **Aneks** zawiera kody i
+dodatkowe wykresy.
 
 # Podstawy teoretyczne
 
