@@ -8,9 +8,9 @@ from src.analysis.log_checker import check_test_logs, check_training_logs
 from src.analysis import matrix_analyzer as ma
 from src.pipelines.rotation_pipeline import run_pipeline
 import typer
-# import src.datasets.gtsrb as gtsrb
-# import src.datasets.gtsrb_rgb as gtsrb_rgb
-# import src.datasets.lego as lego
+import src.datasets.gtsrb as gtsrb
+import src.datasets.gtsrb_rgb as gtsrb_rgb
+import src.datasets.lego as lego
 import os
 
 from pathlib import Path
@@ -124,9 +124,7 @@ def preprocess_cmd(
         print(f"❌ Unsupported dataset: {dataset}")
         raise typer.Exit(code=1)
 
-    # Select base dataset path depending on format
     if file_format.lower() == "npy":
-        # Replace base name to RGB variant if not already
         if not dataset.endswith("_RGB"):
             dataset_key = dataset + "_RGB"
             dataset_name = dataset_config.get(dataset_key, dataset_config[dataset])
