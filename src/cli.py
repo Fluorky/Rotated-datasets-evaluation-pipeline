@@ -107,7 +107,8 @@ def preprocess_cmd(
     dataset: str = typer.Option(..., "--dataset", "-d", help="Dataset name: MNIST, GTSRB, LEGO"),
     base_dir: Path = typer.Option(Path("dataset"), help="Base directory containing datasets"),
     merged_dir_name: str = typer.Option("merged_datasets", help="Name of the merged output subdirectory"),
-    max_tests: int = typer.Option(2000, help="Maximum number of generated test scenarios")
+    max_tests: int = typer.Option(2000, help="Maximum number of generated test scenarios"),
+    file_format: str = typer.Option("ubyte", "--format", "-f", help="File format: ubyte or npy")
 ):
     """
     Preprocess dataset: rotate images, merge datasets, generate scenarios.
@@ -123,13 +124,26 @@ def preprocess_cmd(
         print(f"❌ Unsupported dataset: {dataset}")
         raise typer.Exit(code=1)
 
+    if file_format.lower() == "npy":
+        if not dataset.endswith("_RGB"):
+            dataset_key = dataset + "_RGB"
+            dataset_name = dataset_config.get(dataset_key, dataset_config[dataset])
+        else:
+            dataset_key = dataset
+            dataset_name = dataset_config[dataset]
+    else:
+        dataset_key = dataset
+        dataset_name = dataset_config[dataset]
+
     run_pipeline(
-        base_dir=os.path.join(base_dir, dataset),
-        dataset_name=dataset_config[dataset],
-        dataset_key=dataset,
+        base_dir=os.path.join(base_dir, dataset_key),
+        dataset_name=dataset_name,
+        dataset_key=dataset_key,
         merged_dir_name=merged_dir_name,
-        max_tests=max_tests
+        max_tests=max_tests,
+        file_format=file_format.lower()
     )
+
 
 @app.command()
 def prepare_dataset(
