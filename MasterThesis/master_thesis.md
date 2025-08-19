@@ -53,7 +53,7 @@ w Katedrze Systemów Inteligentnych, WFiIS UŁ
 
 # Wstęp
 
-Obrazy otaczają nas z każdej strony: od zdjęć ze smartfonów, przez
+Obrazy otaczają nas z każdej strony: od zdjęć ze smartfonów, zdjęcia satelitarne, przez
 monitoring miejski, katalogi produktów i systemy kontroli jakości na
 liniach produkcyjnych, po systemy wspomagania jazdy. Choć współczesne
 modele rozpoznawania obrazu radzą sobie bardzo dobrze, w praktyce
@@ -69,13 +69,14 @@ W ostatnich latach pojawiło się kilka dróg domknięcia tej luki. Jedna to
 poszerzanie danych o zrotowane przykłady - poprawia odporność, ale
 wydłuża trening i nie gwarantuje uogólnienia na wszystkie kąty. Druga to
 architektury z wbudowaną geometrią: sieci grupowo równoważne (G-CNN,
-E(2)-equivariant), sieci cykliczne operujące na wielu orientacjach oraz
-przekształcenia do układów polarnych (linear-polar i log-polar), które
-„prostują” rotacje do przesunięć. Cel jest wspólny: by model rozpoznawał
-„to samo” niezależnie od orientacji, bez agresywnego dublowania danych.
+E(2)-equivariant), sieci cykliczne (CyCNN; w szczególności **CyVGG** i
+**CyResNet**) operujące na wielu orientacjach oraz przekształcenia do 
+układów polarnych (linear-polar i log-polar), które „prostują” rotacje do przesunięć. 
+Cel jest wspólny: by model rozpoznawał „to samo” niezależnie od orientacji, 
+bez agresywnego dublowania danych.
 
 Niniejsza praca skupia się na praktycznej weryfikacji tych podejść.
-Przygotowano zbiory obejmujące m.in. odręczne litery/cyfry, znaki
+Przygotowano zbiory obejmujące m.in. odręcznie napisane cyfry, znaki
 drogowe (w kolorze i w odcieniach szarości) oraz syntetyczne obiekty 3D
 rzutowane na 2D (klocki LEGO), a następnie rozszerzono je o
 kontrolowane rotacje. Zaimplementowano i porównano wybrane architektury
