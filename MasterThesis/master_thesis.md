@@ -12,7 +12,7 @@ header-includes:
 \centering
 
 
-\includegraphics[width=0.7 \textwidth]{media/image.png}
+\includegraphics[width=0.7 \textwidth]{media/ul_logo.png}
 
 \vspace{1cm}
 
