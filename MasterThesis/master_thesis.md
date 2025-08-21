@@ -82,7 +82,8 @@ rzutowane na 2D (klocki LEGO), a następnie rozszerzono je o
 kontrolowane rotacje. Zaimplementowano i porównano wybrane architektury
 rotacyjnie inwariantne i ich warianty bazowe w **PyTorchu**, mierząc
 wpływ transformacji (linear-polar vs. log-polar), wyboru architektury i
-zakresu kątów na jakość predykcji. Obliczenia realizowano na kartach
+zakresu kątów na jakość predykcji. Obliczenia realizowano na kartach: 
+**NVIDIA GeForce RTX 3070TI 8GB** oraz
 **NVIDIA GeForce RTX 3060 12 GB**, co skróciło czas trenowania i
 umożliwiło szeroki przegląd eksperymentów; środowisko uruchomieniowe
 ustandaryzowano z użyciem **Dockera** dla powtarzalności.
@@ -108,7 +109,8 @@ znaków drogowych (zarówno w kolorze, jak i w odcieniach szarości) oraz obiekt
 rozszerzone o różnorodne rotacje obrazów.
 \newpage
 Na podstawie tych zbiorów danych przeprowadzono implementację i ewaluację wybranych architektur rotacyjnie inwariantnych
-z wykorzystaniem biblioteki PyTorch. Obliczenia zostały przeprowadzone przy użyciu kart graficznych NVIDIA GeForce RTX 3060 12GB, 
+z wykorzystaniem biblioteki PyTorch. Obliczenia zostały przeprowadzone przy użyciu kart graficznych NVIDIA GeForce RTX 3070TI 8GB oraz
+NVIDIA GeForce RTX 3060 12GB, 
 umożliwiających przyspieszenie procesów trenowania modeli. Otrzymane wyniki zostały porównane z rezultatami klasycznych 
 sieci konwolucyjnych, w celu oceny realnych korzyści wynikających z zastosowania rozwiązań inwariantnych względem rotacji.
 
@@ -147,7 +149,7 @@ W realizacji projektu zastosowano następujące rozwiązania technologiczne:
     w **PyTorchu**.
 
 -   **Wykorzystanie akceleracji GPU (NVIDIA)** - obliczenia zostały znacząco przyspieszone dzięki użyciu kart graficznych 
-    NVIDIA GeForce RTX 3060 12GB, które zapewniają wydajne środowisko dla operacji intensywnych obliczeniowo. 
+    NVIDIA GeForce RTX 3070TI 8GB oraz NVIDIA GeForce RTX 3060 12GB, które zapewniają wydajne środowisko dla operacji intensywnych obliczeniowo. 
     Frameworki takie jak PyTorch i TensorFlow wspierają technologie CUDA oraz Tensor, umożliwiając efektywne 
     wykorzystanie zasobów GPU.
 
@@ -188,7 +190,7 @@ rotacjach planarnych.
   z możliwością powtórzeń trenowań dla różnych losowych ziaren.
 
 - **Środowisko i implementacja:** zostało wykorzystane **PyTorch** z
-  akceleracją **CUDA** na kartach **NVIDIA GeForce RTX 3060 12 GB**.
+  akceleracją **CUDA** na kartach **NVIDIA GeForce RTX 3070TI 8GB** oraz **NVIDIA GeForce RTX 3060 12 GB**.
   Środowisko uruchomieniowe zostało ustandaryzowane z użyciem
   **Dockera**. Przygotowane zostały skrypty w Pythonie do trenowania,
   testowania i ewaluacji.
@@ -237,7 +239,7 @@ augmentacji (rotacje, podziały train/val/test). W **Architekturach
 modeli** zostały opisane warianty bazowe **VGG/ResNet** oraz wersje
 cykliczne **CyVGG/CyResNet**, wraz z transformacjami linear-polar /
 log-polar. Rozdział **Implementacja i środowisko** zawiera szczegóły
-techniczne: **PyTorch**, **CUDA** (RTX 3060 12 GB), **Docker**, strukturę
+techniczne: **PyTorch**, **CUDA oraz Tensor** (RTX 3070TI 8GB, RTX 3060 12 GB), **Docker**, strukturę
 projektu i skrypty. W **Eksperymentach** zostały zdefiniowane scenariusze,
 metryki i sposób ewaluacji. Dalej, w **Porównaniu wyników**, zostały
 zestawione modele (VGG vs CyVGG, ResNet vs CyResNet, wpływ transformacji)
