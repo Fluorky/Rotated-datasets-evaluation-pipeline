@@ -84,7 +84,7 @@ rotacyjnie inwariantne i ich warianty bazowe w **PyTorchu**, mierząc
 wpływ transformacji (linear-polar vs. log-polar), wyboru architektury i
 zakresu kątów na jakość predykcji. Obliczenia realizowano na kartach: 
 **NVIDIA GeForce RTX 3070TI 8GB** oraz
-**NVIDIA GeForce RTX 3060 12 GB**, co skróciło czas trenowania i
+**RTX 3060 12 GB**, co skróciło czas trenowania i
 umożliwiło szeroki przegląd eksperymentów; środowisko uruchomieniowe
 ustandaryzowano z użyciem **Dockera** dla powtarzalności.
 
@@ -109,9 +109,7 @@ znaków drogowych (zarówno w kolorze, jak i w odcieniach szarości) oraz obiekt
 rozszerzone o różnorodne rotacje obrazów.
 \newpage
 Na podstawie tych zbiorów danych przeprowadzono implementację i ewaluację wybranych architektur rotacyjnie inwariantnych
-z wykorzystaniem biblioteki PyTorch. Obliczenia zostały przeprowadzone przy użyciu kart graficznych NVIDIA GeForce RTX 3070TI 8GB oraz
-NVIDIA GeForce RTX 3060 12GB, 
-umożliwiających przyspieszenie procesów trenowania modeli. Otrzymane wyniki zostały porównane z rezultatami klasycznych 
+z wykorzystaniem biblioteki PyTorch. Obliczenia zostały przeprowadzone przy użyciu kart graficznych NVIDIA GeForce RTX 3070TI 8GB oraz NVIDIA GeForce RTX 3060 12GB, umożliwiających przyspieszenie procesów trenowania modeli. Otrzymane wyniki zostały porównane z rezultatami klasycznych 
 sieci konwolucyjnych, w celu oceny realnych korzyści wynikających z zastosowania rozwiązań inwariantnych względem rotacji.
 
 ## Opis pracy
@@ -251,11 +249,62 @@ dodatkowe wykresy.
 
 ## Wprowadzenie do sieci konwolucyjnych (CNN)
 
+CNN zostały zaprojektowane do obrazów: lokalne filtry, współdzielenie
+wag, pooling/stride. Dla przesunięcia $\mathcal T_t$ i jądra $K$ mamy
+ekwawariancję translacyjną:
+
+$$
+\mathcal T_t(X) * K \;=\; \mathcal T_t\!\big(X * K\big).
+$$
+
+Inwariancja na przesunięcia zwykle jest osiągana przez pooling (lokalny /
+globalny) lub striding.
+
 ## Inwariancja translacyjna i rotacyjna
+
+Niech $\mathcal R_\alpha$ oznacza obrót o kąt $\alpha$, a $\Phi$ — mapę
+cech.
+
+**Ekwawariancja:**
+$$
+\Phi(\mathcal R_\alpha X) \;=\; \Pi_\alpha \,\Phi(X)
+$$
+
+**Inwariancja:**
+$$
+\Phi(\mathcal R_\alpha X) \;=\; \Phi(X)
+$$
+
+W praktyce inwariancja rotacyjna została uzyskiwana przez: (a)
+augmentację rotacją, (b) architekturę śledzącą orientacje (oś „kąt”),
+(c) przemapowanie do polarnych, gdzie obrót staje się przesunięciem po
+osi $\varphi$.
 
 ## Problemy z rotacyjną inwariancją w klasycznych CNN
 
-## Przegląd literatury (np. E(2)-Equivariant CNNs, CyCNN)
+- Filtry są kierunkowe — jeden kernel nie pokrywa wielu orientacji.
+- Sama augmentacja rotacją wydłuża trening i zostawia „dziury” między
+  kątami.
+- Interpolacja przy rotacjach generuje aliasing i artefakty na brzegach.
+- Padding zero/same łamie symetrię przy krawędziach.
+- Brakuje jawnej osi „orientacja” (sieć nie „wie”, pod jakim kątem
+  aktywacja została wykryta).
+
+## Przegląd literatury (E(2)-Equivariant CNNs, CyCNN)
+
+**CyCNN (użyte w pracy).** Zostało przyjęte mapowanie $(x,y)\mapsto
+(\rho,\varphi)$ i warstwy cylindryczne (CyConv) z cyklicznym paddingiem
+po osi $\varphi$. Dla każdego filtra zostało przygotowanych $n$ wariantów
+obróconych o $\theta_k=2\pi k/n$ (grupa $C_n$); odpowiedzi zostały
+złożone z dodatkową osią „orientacja”. Obrót wejścia $R_k\in C_n$ daje
+cykliczny shift po tej osi (**ekwawariancja**), a pooling po orientacjach
+daje **inwariancję**. W pracy zostały użyte **CyVGG** i **CyResNet**.
+
+**E(2)-equivariant / steerable CNNs (kontekst).** W literaturze zostały
+opisane sploty grupowe i steerowalne jądra zapewniające ekwawariancję
+względem translacji i rotacji w $\mathrm{E}(2)$ (ciągłe kąty). Wymagają
+projektowania jąder z użyciem reprezentacji grupy i zwykle wyższego
+kosztu obliczeń. W tej pracy traktowane jako tło teoretyczne.
 
 # Opis zbiorów danych
 
