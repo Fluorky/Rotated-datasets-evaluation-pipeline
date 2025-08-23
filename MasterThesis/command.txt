@@ -1,7 +1,11 @@
  pandoc master_thesis.md -o master_thesis.pdf \
   --pdf-engine=xelatex \
   --citeproc \
+  --bibliography=sources.bib \
+  --csl=ieee.csl \
   -V mainfont="Times New Roman" \
   -V fontsize=12pt \
   -V lang=pl-PL \
-  -V geometry=margin=2.5cm
+  -V geometry=margin=2.5cm \
+  -M link-citations=true \
+  -M reference-section-title=Bibliograf
