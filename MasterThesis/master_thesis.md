@@ -53,108 +53,117 @@ w Katedrze Systemów Inteligentnych, WFiIS UŁ
 
 # Wstęp
 
-Obrazy otaczają nas z każdej strony: od zdjęć ze smartfonów, zdjęcia satelitarne, przez
-monitoring miejski, katalogi produktów i systemy kontroli jakości na
-liniach produkcyjnych, po systemy wspomagania jazdy. Choć współczesne
-modele rozpoznawania obrazu radzą sobie bardzo dobrze, w praktyce
-bywają wrażliwe na pozornie drobne zmiany takie jak obrócenie obiektu o
-kilkanaście stopni czy niewielki przechył kamery. To, co dla człowieka
-jest naturalne i natychmiast rozpoznawalne (znak drogowy pod kątem, cyfra obrócona
-na kartce), dla klasycznej konwolucyjnej sieci neuronowej bywa
-problemem. Rdzeń trudności to brak naturalnej inwariantności względem
-rotacji: standardowe CNN-y „z definicji” lepiej radzą sobie z
-przesunięciami niż z obrotami.
+Obrazy otaczają nas z każdej strony: od zdjęć ze smartfonów, zdjęcia
+satelitarne, przez monitoring miejski, katalogi produktów i systemy
+kontroli jakości na liniach produkcyjnych, po systemy wspomagania jazdy.
+Choć współczesne modele rozpoznawania obrazu radzą sobie bardzo dobrze,
+w praktyce bywają wrażliwe na pozornie drobne zmiany takie jak
+obrócenie obiektu o kilkanaście stopni czy niewielki przechył kamery.
+To, co dla człowieka jest naturalne i natychmiast rozpoznawalne (znak
+drogowy pod kątem, cyfra obrócona na kartce), dla klasycznej
+konwolucyjnej sieci neuronowej bywa problemem. Rdzeń trudności to brak
+naturalnej inwariantności względem rotacji: standardowe CNN-y „z
+definicji” lepiej radzą sobie z przesunięciami niż z obrotami
+[@goodfellow2016deep; @dumoulin2016guide].
 
 W ostatnich latach pojawiło się kilka dróg domknięcia tej luki. Jedna to
 poszerzanie danych o zrotowane przykłady - poprawia odporność, ale
 wydłuża trening i nie gwarantuje uogólnienia na wszystkie kąty. Druga to
 architektury z wbudowaną geometrią: sieci grupowo równoważne (G-CNN,
-E(2)-equivariant), sieci cykliczne (CyCNN; w szczególności **CyVGG** i
-**CyResNet**) operujące na wielu orientacjach oraz przekształcenia do 
-układów polarnych (linear-polar i log-polar), które „prostują” rotacje do przesunięć. 
-Cel jest wspólny: by model rozpoznawał „to samo” niezależnie od orientacji, 
-bez agresywnego dublowania danych.
+E(2)-equivariant) [@cohen2016group; @kim2020cycnn], sieci cykliczne
+(CyCNN; w szczególności **CyVGG** i **CyResNet**) operujące na wielu
+orientacjach oraz przekształcenia do układów polarnych (linear-polar i
+log-polar), które „prostują” rotacje do przesunięć. Cel jest wspólny: by
+model rozpoznawał „to samo” niezależnie od orientacji, bez agresywnego
+dublowania danych.
 
 Niniejsza praca skupia się na praktycznej weryfikacji tych podejść.
 Przygotowano zbiory obejmujące m.in. odręcznie napisane cyfry, znaki
 drogowe (w kolorze i w odcieniach szarości) oraz syntetyczne obiekty 3D
-rzutowane na 2D (klocki LEGO), a następnie rozszerzono je o
-kontrolowane rotacje. Zaimplementowano i porównano wybrane architektury
-rotacyjnie inwariantne i ich warianty bazowe w **PyTorchu**, mierząc
-wpływ transformacji (linear-polar vs. log-polar), wyboru architektury i
-zakresu kątów na jakość predykcji. Obliczenia realizowano na kartach: 
-**NVIDIA GeForce RTX 3070TI 8GB** oraz
-**RTX 3060 12 GB**, co skróciło czas trenowania i
-umożliwiło szeroki przegląd eksperymentów; środowisko uruchomieniowe
-ustandaryzowano z użyciem **Dockera** dla powtarzalności.
+rzutowane na 2D (klocki LEGO), a następnie rozszerzono je o kontrolowane
+rotacje. Zaimplementowano i porównano wybrane architektury rotacyjnie
+inwariantne i ich warianty bazowe w **PyTorchu** [@paszke2019pytorch],
+mierząc wpływ transformacji (linear-polar vs. log-polar), wyboru
+architektury i zakresu kątów na jakość predykcji. Obliczenia realizowano
+na kartach: **NVIDIA GeForce RTX 3070 Ti 8 GB** oraz **RTX 3060 12 GB**,
+co skróciło czas trenowania i umożliwiło szeroki przegląd eksperymentów;
+środowisko uruchomieniowe ustandaryzowano z użyciem **Dockera** dla
+powtarzalności.
 
 Celem pracy jest nie tylko pokazanie, że „da się” uzyskać odporność na
 rotacje, ale przede wszystkim wskazanie, **kiedy** i **jakim kosztem**
 ją osiągamy oraz które techniki przynoszą największy zysk względem
-klasycznych CNN-ów, jak wpływają na stabilność i szybkość uczenia, a także
-które konfiguracje są najpraktyczniejsze w realnych zastosowaniach
-(OCR, rozpoznawanie znaków, analiza obiektów technicznych). W dalszej części pracy
-przedstawiono podstawy, dane i augmentację, architektury, środowisko
-eksperymentalne, protokoły ewaluacji oraz wyniki z analizą i wnioskami.
+klasycznych CNN-ów, jak wpływają na stabilność i szybkość uczenia, a
+także które konfiguracje są najpraktyczniejsze w realnych
+zastosowaniach (OCR, rozpoznawanie znaków, analiza obiektów technicznych).
+W dalszej części pracy przedstawiono podstawy, dane i augmentację,
+architektury, środowisko eksperymentalne, protokoły ewaluacji oraz
+wyniki z analizą i wnioskami.
+
 
 ## Cel i motywacja pracy
 
-Konwolucyjne sieci neuronowe (CNN) charakteryzują się zdolnością do analizy obrazów z zachowaniem 
-niezmienniczości względem translacji. Jednak wciąż brakuje powszechnie uznanych architektur, które zapewniałyby 
-inwariantność względem rotacji.
-Celem niniejszej pracy jest analiza skuteczności nowych rozwiązań zaproponowanych w literaturze, 
-ukierunkowanych na zapewnienie odporności modeli na rotację danych wejściowych (np. https://arxiv.org/pdf/2007.10588.pdf). 
-W ramach pracy zostały przygotowane wzbogacone zbiory danych, obejmujące m.in. zdjęcia odręcznie napisanych liter, 
-znaków drogowych (zarówno w kolorze, jak i w odcieniach szarości) oraz obiektów 3D rzutowanych na przestrzeń 2D (klocki LEGO), 
-rozszerzone o różnorodne rotacje obrazów.
-\newpage
-Na podstawie tych zbiorów danych przeprowadzono implementację i ewaluację wybranych architektur rotacyjnie inwariantnych
-z wykorzystaniem biblioteki PyTorch. Obliczenia zostały przeprowadzone przy użyciu kart graficznych NVIDIA GeForce RTX 3070TI 8GB oraz NVIDIA GeForce RTX 3060 12GB, umożliwiających przyspieszenie procesów trenowania modeli. Otrzymane wyniki zostały porównane z rezultatami klasycznych 
-sieci konwolucyjnych, w celu oceny realnych korzyści wynikających z zastosowania rozwiązań inwariantnych względem rotacji.
+Konwolucyjne sieci neuronowe (CNN) charakteryzują się zdolnością do
+analizy obrazów z zachowaniem niezmienniczości względem translacji.
+Jednak wciąż brakuje powszechnie uznanych architektur, które
+zapewniałyby inwariantność względem rotacji. Celem niniejszej pracy
+jest analiza skuteczności rozwiązań zaproponowanych w literaturze,
+ukierunkowanych na odporność modeli na rotację danych wejściowych
+(np. CyCNN [@kim2020cycnn]).
+
+W ramach pracy zostały przygotowane wzbogacone zbiory danych,
+obejmujące m.in. zdjęcia odręcznie napisanych liter, znaki drogowe
+(zarówno w kolorze, jak i w odcieniach szarości) oraz obiekty 3D
+rzutowane na 2D (klocki LEGO), rozszerzone o kontrolowane rotacje
+obrazów.
+
+Na podstawie tych zbiorów została przeprowadzona implementacja i
+ewaluacja wybranych architektur rotacyjnie inwariantnych z wykorzystaniem
+**PyTorch**. Obliczenia zostały wykonane przy użyciu kart graficznych
+**NVIDIA GeForce RTX 3070 Ti 8 GB** oraz **RTX 3060 12 GB**, co
+umożliwiło przyspieszenie trenowania. Otrzymane wyniki zostały
+porównane z rezultatami klasycznych sieci konwolucyjnych w celu oceny
+realnych korzyści z rozwiązań inwariantnych względem rotacji.
 
 ## Opis pracy
 
-Praca magisterska wykorzystuje zaawansowane technologie i narzędzia wspierające badania nad rotacyjnie inwariantnymi sieciami 
-neuronowymi oraz ich zastosowaniem w przetwarzaniu obrazów. 
-W realizacji projektu zastosowano następujące rozwiązania technologiczne:
+Praca magisterska wykorzystuje zaawansowane technologie i narzędzia
+wspierające badania nad rotacyjnie inwariantnymi sieciami neuronowymi
+oraz ich zastosowaniem w przetwarzaniu obrazów. W realizacji projektu
+zastosowano następujące rozwiązania technologiczne:
 
--   **Język programowania Python** – podstawowe narzędzie do implementacji algorytmów
-    oraz obsługi frameworków uczenia maszynowego, dzięki swojej wszechstronności 
-    i bogatemu ekosystemowi bibliotek, takich jak PyTorch i TensorFlow.
+- **Język programowania Python** - podstawowe narzędzie do implementacji
+  algorytmów oraz obsługi frameworków uczenia maszynowego, dzięki
+  wszechstronności i ekosystemowi bibliotek [@python-docs].
 
-     Frameworki uczenia maszynowego:
+  **Frameworki uczenia maszynowego:**
+  - **PyTorch** - elastyczny framework do szybkiego prototypowania i
+    trenowania modeli [@pytorch-docs].
+  - **TensorFlow** - narzędzie do budowy, trenowania i wdrażania modeli
+    ML/DL [@tensorflow-docs].
 
-<!-- -->
+- **Modele cykliczne (CyCNN).** W pracy zostało przyjęte podejście, w
+  którym obraz został przemapowany do współrzędnych $(\rho,\varphi)$.
+  Dzięki temu obrót $R_\alpha$ staje się przesunięciem o $\alpha$ po osi
+  $\varphi$. Konwolucje zostały zastąpione warstwami cylindrycznymi
+  (CyConv) z cyklicznym paddingiem po $\varphi$. Dla każdego filtra
+  zostało przygotowanych $n$ orientacji; odpowiedzi zostały złożone z
+  dodatkową osią „orientacja”. Obrót wejścia powoduje cykliczny shift
+  po tej osi, a pooling po orientacjach daje inwariancję względem
+  rotacji. Został ustawiony stały środek układu polarnych, stała siatka
+  próbkowania oraz biliniarna interpolacja; padding po $\varphi$ został
+  ustawiony na cykliczny. Implementacja została wykonana w **PyTorchu**
+  (punkt odniesienia: CyCNN [@kim2020cycnn]).
 
-*   **PyTorch** – elastyczny framework umożliwiający szybkie prototypowanie
-    oraz trenowanie sieci neuronowych.
+- **Wykorzystanie akceleracji GPU (NVIDIA)** - obliczenia zostały
+  znacząco przyspieszone dzięki użyciu kart **RTX 3070 Ti 8 GB** oraz
+  **RTX 3060 12 GB**. Frameworki wspierają **CUDA** oraz **cuDNN**, co
+  umożliwia efektywne wykorzystanie zasobów GPU
+  [@cuda-docs; @cudnn-docs].
 
-*   **TensorFlow** – kompleksowe narzędzie do budowy, trenowania i
-    wdrażania modeli uczenia maszynowego.
-
-<!-- -->
--   **Modele cykliczne (CyCNN).** W pracy zostało przyjęte podejście, w
-    którym obraz został przemapowany do współrzędnych $(\rho,\varphi)$.
-    Dzięki temu obrót $R_\alpha$ staje się przesunięciem o $\alpha$ po osi
-    $\varphi$. Konwolucje zostały zastąpione warstwami cylindrycznymi
-    (CyConv) z cyklicznym paddingiem w $\varphi$. Dla każdego filtra zostało
-    przygotowanych $n$ orientacji; odpowiedzi zostały złożone z dodatkową
-    osią „orientacja”. Obrót wejścia powoduje cykliczny shift po tej osi, a
-    pooling po orientacjach daje inwariancję względem rotacji.
-    Został ustawiony stały środek układu polarnych,
-    stała siatka próbkowania oraz biliniarna interpolacja; padding w
-    $\varphi$ został ustawiony na cykliczny. Implementacja została wykonana
-    w **PyTorchu**.
-
--   **Wykorzystanie akceleracji GPU (NVIDIA)** - obliczenia zostały znacząco przyspieszone dzięki użyciu kart graficznych 
-    NVIDIA GeForce RTX 3070TI 8GB oraz NVIDIA GeForce RTX 3060 12GB, które zapewniają wydajne środowisko dla operacji intensywnych obliczeniowo. 
-    Frameworki takie jak PyTorch i TensorFlow wspierają technologie CUDA oraz Tensor, umożliwiając efektywne 
-    wykorzystanie zasobów GPU.
-
--   **Konteneryzacja za pomocą Dockera** – narzędzie do tworzenia odizolowanych środowisk 
-    uruchomieniowych, które zapewniło łatwość replikacji środowiska oraz współdzielenia projektu, 
-    także w konfiguracjach z obsługą GPU.
-
+- **Konteneryzacja za pomocą Dockera** - odizolowane środowiska
+  uruchomieniowe ułatwiły replikację i współdzielenie projektu, także
+  z obsługą GPU [@docker-docs].
 
 \newpage
 
@@ -164,65 +173,71 @@ Niniejsza praca dotyczy odporności modeli klasyfikacji obrazów na rotacje
 w płaszczyźnie. Skupiono się na porównaniu klasycznych architektur z ich
 wersjami rotacyjnie inwariantnymi oraz na wpływie przekształceń polarnych
 na jakość predykcji. Badania zostały przeprowadzone na obrazach 2D i
-rotacjach planarnych.
+rotacjach planarnych. W szczególności zostały porównane warianty bazowe
+**VGG/ResNet** z wersjami cyklicznymi **CyVGG/CyResNet**, a także wpływ
+mapowania **linear-polar** i **log-polar**. Eksperymenty zostały wykonane
+na zbiorach **MNIST**, **GTSRB_gray**, **GTSRB_RGB** i **LEGO** z
+kontrolowanymi rotacjami.
 
 ### Ujęte w zakresie
 
 - **Architektury modeli:** zostały zaimplementowane i porównane warianty
-  bazowe **VGG** oraz **ResNet**, a także ich wersje cykliczne **CyVGG**
-  i **CyResNet** (modele rotacyjnie inwariantne).
+  bazowe **VGG** oraz **ResNet** [@simonyan2014vgg; @he2016resnet], a także
+  ich wersje cykliczne **CyVGG** i **CyResNet** (modele rotacyjnie
+  inwariantne) [@kim2020cycnn].
 
 - **Przekształcenia polarne:** została oceniona użyteczność mapowania
   **linear-polar** oraz **log-polar** jako etapów wstępnego
-  przetwarzania służących „prostowaniu” rotacji do przesunięć.
+  przetwarzania służących „prostowaniu” rotacji do przesunięć
+  [@reddy1996logpolar; @kim2020cycnn].
 
 - **Zbiory danych:** zostały wykorzystane następujące zbiory:
-  **MNIST** (odręczne cyfry, 28x28 przeskalowane do 32x32, grayscale),
+  **MNIST** (odręczne cyfry, 28x28 → 32x32, grayscale) [@lecun1998mnist],
   **LEGO** (syntetyczne obiekty 3D rzutowane na 2D, 96x96, grayscale),
   **GTSRB** (znaki drogowe, 32x32, grayscale) oraz **GTSRB_RGB**
-  (wersja kolorowa). Zbiory zostały rozszerzone o kontrolowane rotacje;
-  przygotowane zostały spójne podziały train/val/test.
+  (wersja kolorowa) [@stallkamp2011gtsrb]. Zbiory zostały rozszerzone
+  o kontrolowane rotacje oraz zostały przygotowane spójne podziały zbiorów na
+  train/val/test.
 
 - **Augmentacja i protokół:** zostały zdefiniowane zakresy kątów,
-  liczba powtórzeń i podział na zbiory train/val/test (uczący/walidacyjny/testowy),
-  z możliwością powtórzeń trenowań dla różnych losowych ziaren.
+  liczba powtórzeń i podział na zbiory train/val/test (uczący/
+  walidacyjny/testowy), z możliwością powtórzeń trenowań.
 
-- **Środowisko i implementacja:** zostało wykorzystane **PyTorch** z
-  akceleracją **CUDA** na kartach **NVIDIA GeForce RTX 3070TI 8GB** oraz **NVIDIA GeForce RTX 3060 12 GB**.
-  Środowisko uruchomieniowe zostało ustandaryzowane z użyciem
-  **Dockera**. Przygotowane zostały skrypty w Pythonie do trenowania,
-  testowania i ewaluacji.
+- **Środowisko i implementacja:** został wykorzystany **PyTorch** z
+  akceleracją **CUDA/cuDNN** na kartach **NVIDIA GeForce RTX 3070 Ti 8 GB**
+  oraz **NVIDIA GeForce RTX 3060 12 GB** [@pytorch-docs; @cuda-docs;
+  @cudnn-docs]. Przygotowane zostały skrypty w
+  Pythonie do trenowania, testowania i ewaluacji [@python-docs].
+  Środowisko uruchomieniowe zostało ustandaryzowane z
+  użyciem **Dockera** [@docker-docs]. 
 
 - **Metryki i analiza:** została przeprowadzona ocena jakości (accuracy,
   macierze pomyłek), analiza stabilności (średnia/mediana/odchylenie
   standardowe), wpływ kąta rotacji na skuteczność oraz koszt
   obliczeniowy (czas trenowania, rozmiar modelu).
 
-- **Wyniki końcowe:** zostały przygotowane rankingi modeli oraz
-  porównania **VGG/ResNet** vs **CyVGG/CyResNet**, wraz z wnioskami
-  praktycznymi dotyczącymi doboru architektury i przetwarzania.
-
 ### Poza zakresem
-- Detekcja obiektów i segmentacja - w pracy rozpatrywana jest wyłącznie
-  klasyfikacja.
+- Detekcja obiektów i segmentacja — w pracy rozpatrywana jest wyłącznie
+  klasyfikacja [@he2017mask; @ronneberger2015unet].
 
-- Inwariancja względem skali, ścinania i pełnych przekształceń afinicznych -
-  analizowana jest tylko rotacja w płaszczyźnie.
+- Inwariancja względem skali, ścinania i pełnych przekształceń afinicznych —
+  analizowana jest tylko rotacja w płaszczyźnie [@lowe2004sift; @jaderberg2015stn].
 
-- Rotacje w geometrii 3D oraz zagadnienia widzenia stereo - pozostają
-  poza zakresem.
+- Rotacje w geometrii 3D oraz zagadnienia widzenia stereo — pozostają
+  poza zakresem [@esteves2018spherical; @hartley2004mv].
 
 - Trening na bardzo dużych korpusach z pre-treningiem self-supervised oraz
-  szerokim AutoML/hyper-search - nie został realizowany.
+  szerokim AutoML/hyper-search — nie został realizowany
+  [@chen2020simclr; @he2020moco; @li2018hyperband].
 
-- Odporność na silne zakłócenia (szum, okluzje) - poza zakresem; skupiono
-  się wyłącznie na rotacji.
+- Odporność na silne zakłócenia (szum, okluzje) — poza zakresem; skupiono
+  się wyłącznie na rotacji [@hendrycks2019imagenetc; @devries2017cutout].
 
 
 ### Artefakty pracy
 
-- Repozytorium z kodem, skryptami i plikami konfiguracyjnymi (PyTorch).
-- Pliki z konfiguracjami eksperymentów i opisem danych.
+- Repozytoria z kodem, skryptami i plikami konfiguracyjnymi (PyTorch).
+- Pliki konfiguracyjne eksperymentów i opis danych.
 - Wytrenowane wagi modeli (wybrane checkpointy) oraz raporty z ewaluacji.
 - Tekst pracy z dokumentacją eksperymentów i wnioskami.
 
@@ -231,38 +246,141 @@ rotacjach planarnych.
 Struktura pracy została ułożona tak, by od podstaw przejść do wyników.
 W rozdziale **Podstawy teoretyczne** zostały zebrane pojęcia i narzędzia:
 CNN, inwariancja/ekwawariancja, przekształcenia polarne oraz prace
-pokrewne (G-CNN, CyCNN). W **Opisie zbiorów danych** zostały
-przedstawione MNIST, LEGO, GTSRB (gray) i GTSRB_RGB oraz sposób
-augmentacji (rotacje, podziały train/val/test). W **Architekturach
-modeli** zostały opisane warianty bazowe **VGG/ResNet** oraz wersje
-cykliczne **CyVGG/CyResNet**, wraz z transformacjami linear-polar /
-log-polar. Rozdział **Implementacja i środowisko** zawiera szczegóły
-techniczne: **PyTorch**, **CUDA oraz Tensor** (RTX 3070TI 8GB, RTX 3060 12 GB), **Docker**, strukturę
-projektu i skrypty. W **Eksperymentach** zostały zdefiniowane scenariusze,
-metryki i sposób ewaluacji. Dalej, w **Porównaniu wyników**, zostały
-zestawione modele (VGG vs CyVGG, ResNet vs CyResNet, wpływ transformacji)
-i omówiona stabilność/czas. Na końcu **Wnioski** zbierają najważniejsze
-observacje i wskazują kierunki dalszych badań; **Aneks** zawiera kody i
-dodatkowe wykresy.
+pokrewne (G-CNN, E(2)-equivariant, CyCNN). W **Opisie zbiorów danych**
+zostały przedstawione MNIST, LEGO, **GTSRB_gray** i **GTSRB_RGB** oraz
+sposób augmentacji (rotacje, podziały train/val/test). W
+**Architekturach modeli** zostały opisane warianty bazowe
+**VGG/ResNet** oraz wersje cykliczne **CyVGG/CyResNet**, wraz z
+transformacjami linear-polar / log-polar. Rozdział **Implementacja i
+środowisko** zawiera szczegóły techniczne: **PyTorch**, **CUDA i cuDNN**
+(RTX 3070 Ti 8 GB, RTX 3060 12 GB), **Docker**, strukturę projektu i
+skrypty. W **Eksperymentach** zostały zdefiniowane scenariusze, metryki
+i sposób ewaluacji. Dalej, w **Porównaniu wyników**, zostały zestawione
+modele (VGG vs. CyVGG, ResNet vs. CyResNet, wpływ transformacji) i
+omówiona stabilność/czas. Na końcu **Wnioski** zbierają najważniejsze
+**obserwacje** i wskazują kierunki dalszych badań; **Aneks** zawiera kody
+i dodatkowe wykresy.
+
+\newpage
 
 # Podstawy teoretyczne
 
 ## Wprowadzenie do sieci konwolucyjnych (CNN)
 
-CNN zostały zaprojektowane do obrazów: lokalne filtry, współdzielenie
-wag, pooling/stride. Dla przesunięcia $\mathcal T_t$ i jądra $K$ mamy
+CNN zostały zaprojektowane pod dane siatkowe (obrazy 2D). Kluczowe cechy
+to **lokalne receptywne pola**, **współdzielenie wag** oraz **splot**,
+co daje skalowalność na duże obrazy i lepsze uogólnianie niż pełne
+połączenia.
+Zamiast patrzeć na cały kadr naraz,
+ten sam filtr „przesuwa się” po lokalnych oknach
+i uczy detektorów krawędzi, tekstur i kształtów,
+a wyżej - bardziej złożonych cech. [@lecun1998gradient; @goodfellow2016deep]
+Dla przesunięcia $\mathcal T_t$ i jądra $K$ mamy
 ekwawariancję translacyjną:
 
 $$
 \mathcal T_t(X) * K \;=\; \mathcal T_t\!\big(X * K\big).
 $$
 
-Inwariancja na przesunięcia zwykle jest osiągana przez pooling (lokalny /
-globalny) lub striding.
+Czyli: jak przesuniemy obraz,
+to mapa cech również przesuwa się o ten sam wektor.
+Inwariancję na przesunięcia „domyka się” w praktyce
+poolingiem (lokalnym/globalnym) albo stride’em -
+rzadsze próbkowanie sprawia,
+że decyzja nie zależy od dokładnej pozycji obiektu. [@dumoulin2016guide; @goodfellow2016deep]
+
+### Operacja splotu
+
+Dla wejścia $X\in\mathbb R^{C_{\text{in}}\times H\times W}$ i filtra
+$K\in\mathbb R^{C_{\text{in}}\times k\times k}$ wyjście kanału $c$ jest
+definiowane jako:
+$$
+Y_c(u,v)=\sum_{i=1}^{C_{\text{in}}}\sum_{a,b} K_{c,i}(a,b)\,
+X_i(u-a,\;v-b).
+$$
+W praktyce stosowany jest **cross-correlation** (bez odwrócenia kernela),
+ale nazwa „conv” została.
+
+Parametry warstwy nie zależą od $(u,v)$ → **współdzielenie wag**.
+Lokalny zasięg $k\times k$ → **złożoność nie rośnie** z wysokością/szerokością
+obrazu jak w warstwach w pełni połączonych.
+
+#### Stride, padding, rozmiary
+
+Dla wysokości:
+$$
+H_{\text{out}}=\Big\lfloor \frac{H+2p-k}{s}\Big\rfloor+1,
+\quad
+W_{\text{out}}=\Big\lfloor \frac{W+2p-k}{s}\Big\rfloor+1.
+$$
+- **padding $p$** - kontroluje utratę informacji na brzegach (same/valid),
+- **stride $s$** - realizuje podsamp­lowanie wprost w splotach,
+- **dilacja** - powiększa efektywne pole widzenia bez zwiększania liczby
+  parametrów.
+
+### Receptywne pole
+
+Efektywne receptywne pole rośnie z głębokością. Dla warstw z kernelami
+$k_\ell$ i stride’ami $s_\ell$:
+$$
+R_1 = k_1,\quad
+R_\ell = R_{\ell-1} + (k_\ell-1)\prod_{j<\ell}s_j.
+$$
+Projekt architektury został dobrany tak, by $R_\ell$ obejmowało obiekty
+istotne dla klasyfikacji.
+
+### Nieliniowości i normalizacja
+
+- **Aktywacje**: zostały użyte funkcje typu ReLU/LeakyReLU (nieliniowość,
+  brak problemu zaniku dla dodatnich wartości).
+- **Batch Normalization**: stabilizuje statystyki w mini-batchu,
+  przyspiesza uczenie:
+  $$
+  \hat{x}=\frac{x-\mu_B}{\sqrt{\sigma_B^2+\epsilon}},\qquad
+  y=\gamma\hat{x}+\beta.
+  $$
+- Alternatywnie **Layer/GroupNorm** - niezależne od rozmiaru batcha.
+
+### Pooling i głowa klasyfikacyjna
+
+- **Max/avg-pooling** zostały użyte do redukcji rozmiaru i uzyskania
+  częściowej inwariancji translacyjnej.
+- **Global Average Pooling (GAP)** agreguje mapy cech do wektora
+  (mniej parametrów niż pełne połączenia).
+- Ostatnia warstwa to **softmax**; dla klasy $c$:
+  $$
+  p(c|x)=\frac{e^{z_c}}{\sum_j e^{z_j}},\quad
+  \mathcal L = -\log p(y|x)\;\;(\text{cross-entropy}).
+  $$
+
+### Regularizacja i trening
+
+- **Weight decay (L2)**, **dropout** (tam gdzie zasadne) oraz **augmentacja**
+  danych zostały użyte do ograniczenia przeuczenia.
+- Optymalizacja: **SGD/Adam** z harmonogramem uczenia; ziarna losowe
+  zostały ustawione dla powtarzalności.
+
+### Triki architektoniczne
+
+- **1×1 conv** (bottleneck) - mieszanie kanałów, redukcja kosztu.
+- **Głębokie stosy** z **residualami** (jak w ResNet) ułatwiają przepływ
+  gradientu.
+- **Depthwise separable conv** (opcjonalnie) - rozdzielenie splotu po
+  kanałach i miksowanie punktowe dla redukcji FLOPs.
+
+### Ekwawariancja translacyjna (kontrast do rotacyjnej)
+
+Dla operatora przesunięcia $\mathcal T_t$ i splotu „conv” zachodzi:
+$$
+\mathcal T_t(X) * K \;=\; \mathcal T_t(X*K),
+$$
+co wyjaśnia, dlaczego klasyczne CNN dobrze radzą sobie z przesunięciami.
+Brak analogicznego, wbudowanego mechanizmu dla rotacji motywuje użycie
+przekształceń polarnych i/lub modeli cyklicznych w dalszych rozdziałach.
 
 ## Inwariancja translacyjna i rotacyjna
 
-Niech $\mathcal R_\alpha$ oznacza obrót o kąt $\alpha$, a $\Phi$ — mapę
+Niech $\mathcal R_\alpha$ oznacza obrót o kąt $\alpha$, a $\Phi$ - mapę
 cech.
 
 **Ekwawariancja:**
@@ -282,7 +400,7 @@ osi $\varphi$.
 
 ## Problemy z rotacyjną inwariancją w klasycznych CNN
 
-- Filtry są kierunkowe — jeden kernel nie pokrywa wielu orientacji.
+- Filtry są kierunkowe - jeden kernel nie pokrywa wielu orientacji.
 - Sama augmentacja rotacją wydłuża trening i zostawia „dziury” między
   kątami.
 - Interpolacja przy rotacjach generuje aliasing i artefakty na brzegach.
@@ -362,9 +480,9 @@ kosztu obliczeń. W tej pracy traktowane jako tło teoretyczne.
 ## CyVGG vs CyResNet
 
 [...] cyresnet56 uczył się dłużej niż cyvgg19, ale dawał bardziej stabilne wyniki, w szczególności w przypadku funkcji aktywacji typu logpolar. 
-I jak to się mówi – nie można zjeść ciastka i mieć go też[21].
+I jak to się mówi - nie można zjeść ciastka i mieć go też (ang. „You can’t eat your
+cake and have it too” [@kaczynski1995wp]).
 
-[21]: T.J. Kaczynski, *Industrial Society and Its Future*, 1995.
 
 ## Wpływ transformacji (linearpolar vs logpolar)
 
@@ -378,10 +496,10 @@ I jak to się mówi – nie można zjeść ciastka i mieć go też[21].
 
 ## Propozycje dalszych badań
 
-# Bibliografia
-
 # Aneks
 
 ## Listingi kodów
 
 ## Dodatkowe wykresy, tablice wyników
+
+\newpage
