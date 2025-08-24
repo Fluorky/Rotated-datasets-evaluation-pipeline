@@ -267,56 +267,69 @@ i dodatkowe wykresy.
 
 ## Wprowadzenie do sieci konwolucyjnych (CNN)
 
-CNN zostały zaprojektowane pod dane siatkowe (obrazy 2D). Kluczowe cechy
-to **lokalne receptywne pola**, **współdzielenie wag** oraz **splot**,
-co daje skalowalność na duże obrazy i lepsze uogólnianie niż pełne
-połączenia.
-Zamiast patrzeć na cały kadr naraz,
-ten sam filtr „przesuwa się” po lokalnych oknach
-i uczy detektorów krawędzi, tekstur i kształtów,
-a wyżej - bardziej złożonych cech. [@lecun1998gradient; @goodfellow2016deep]
-Dla przesunięcia $\mathcal T_t$ i jądra $K$ mamy
-ekwawariancję translacyjną:
+Sieci konwolucyjne (CNN) zostały zaprojektowane do pracy na danych o strukturze
+siatkowej lub macierzowej, takich jak obrazy dwuwymiarowe (2D). Ich kluczowe cechy to
+**lokalne receptywne pola**, **współdzielone wagi** oraz **operacja splotu**. Dzięki
+temu możliwe jest skalowanie modeli na duże obrazy oraz lepsze uogólnianie niż w
+przypadku sieci posiadającej pełne połączenia.
 
+Zamiast analizować cały obraz jednocześnie, CNN wykorzystują mały filtr, który
+przesuwa się po lokalnych fragmentach danych. W ten sposób uczą się prostych
+detektorów (np. krawędzi, tekstur, kształtów), a w wyższych warstwach -
+bardziej złożonych cech [@lecun1998gradient; @goodfellow2016deep].
+
+Dla przesunięcia $\mathcal T_t$ oraz jądra $K$ zachodzi własność
+**ekwiwariancji translacyjnej**:
 $$
 \mathcal T_t(X) * K \;=\; \mathcal T_t\!\big(X * K\big).
 $$
 
-Czyli: jak przesuniemy obraz,
-to mapa cech również przesuwa się o ten sam wektor.
-Inwariancję na przesunięcia „domyka się” w praktyce
-poolingiem (lokalnym/globalnym) albo stride’em -
-rzadsze próbkowanie sprawia,
-że decyzja nie zależy od dokładnej pozycji obiektu. [@dumoulin2016guide; @goodfellow2016deep]
+Intuicyjnie oznacza to, że jeśli obraz zostanie przesunięty, to odpowiadająca
+mu mapa cech również przesunie się o ten sam wektor.  
+**Inwariancja na przesunięcia** osiągana jest w praktyce poprzez pooling
+(lokalny lub globalny) bądź zwiększenie kroku (stride). Rzadsze próbkowanie
+powoduje, że wynik klasyfikacji nie zależy od dokładnej pozycji obiektu
+[@dumoulin2016guide; @goodfellow2016deep].
 
 ### Operacja splotu
 
-Intuicyjnie: ten sam mały filtr „przesuwa się” po obrazie i liczy sumę ważoną pikseli. 
-Dzięki temu zostało osiągnięte współdzielenie wag
-(liczba parametrów nie zależy od $H,W$) oraz lokalność tych obliczeń
+Intuicyjnie ten sam mały filtr „przesuwa się” po obrazie i oblicza ważoną sumę
+pikseli. Dzięki temu uzyskuje się **współdzielenie wag** (liczba parametrów nie
+rośnie wraz z $H,W$) oraz **lokalność obliczeń**
 [@dumoulin2016guide; @goodfellow2016deep].
 
-**Kształty.**\
-Wejście: $X \in \mathbb{R}^{C_{\text{in}}\times H\times W}$.
-Zestaw jąder: $K \in \mathbb{R}^{C_{\text{out}}\times C_{\text{in}}\times k\times k}$.
+**Kształty.**  
+Wejście: $X \in \mathbb{R}^{C_{\text{in}}\times H\times W}$.  
+Zestaw jąder: $K \in \mathbb{R}^{C_{\text{out}}\times C_{\text{in}}\times k\times k}$.  
 Wyjście: $Y \in \mathbb{R}^{C_{\text{out}}\times H'\times W'}$.
 
-**Definicja (pojedynczy kanał wyjściowy $c$).**
+**Definicja (pojedynczy kanał wyjściowy $c$):**
 $$
 Y_c(u,v)=\sum_{i=1}^{C_{\text{in}}}\sum_{a,b}
 K_{c,i}(a,b)\,X_i(u-a,\;v-b).
 $$
 
-W praktyce frameworki liczą **korelację krzyżową** (bez odwracania
-jądra), ale w API funkcja nazywa się `conv` [@dumoulin2016guide].
-Przyczym jest to bez znaczenia dla trenowania, bo sieć i tak nauczy się właściwych wag.
+W praktyce większość frameworków oblicza **korelację krzyżową** (bez
+odwracania jądra), mimo że w API funkcja nazywana jest `conv`
+[@dumoulin2016guide].  
+Nie ma to jednak znaczenia dla procesu uczenia - sieć i tak dobierze
+właściwe wagi.
 
 #### Stride, padding, rozmiary
-\
-Parametry „geometrii” warstwy:\
-- **padding $p$** - ile pikseli dopisujemy na brzegach,\
-- **stride $s$** - co ile pikseli przesuwamy okno,\
-- **dilacja $d$** - „rozciąga” jądro (dziurki między próbkami).
+
+Parametry „geometrii” warstwy:
+
+- **padding** $p$ - ile pikseli dopisujemy na brzegach;
+- **stride** $s$ - co ile pikseli przesuwamy okno;
+- **dylacja** $d$ - „rozciąga” jądro (przerwy między próbkami).
+
+#### Uwaga o „same/valid/stride” a ekwiwariancji\
+
+Dokładna ekwiwariancja translacyjna zachodzi dla splotu bez zmian
+rozmiaru. W praktyce **padding „same”**, **stride > 1** i **pooling**
+wprowadzają drobne odchylenia (aliasing na siatce próbkowania), co
+obniża „idealność” ekwiwariancji — efekt jest znany i opisywany
+w literaturze [@dumoulin2016guide; @azulay2019small].
 
 **Rozmiar wyjścia** (dla jądra $k\times k$):
 $$
@@ -324,30 +337,39 @@ H'=\Big\lfloor \frac{H+2p-d\,(k-1)-1}{s}\Big\rfloor+1,\qquad
 W'=\Big\lfloor \frac{W+2p-d\,(k-1)-1}{s}\Big\rfloor+1.
 $$
 
-**Typowe ustawienia.**\
-- *valid*: $p=0$ - mapy cech maleją.\
-- *same* (dla $s=1$): $p=\lfloor k/2\rfloor$ - wyjście ma $H'=H$, $W'=W$.\
-- *stride $>1$*: wbudowane „podsamp­lowanie” (mniej obliczeń, mniejsza
-  rozdzielczość).\
-- *dilacja $>1$*: większe **efektywne** pole widzenia bez nowych
-  parametrów (użyteczne w detekcji/segmentacji) [@dumoulin2016guide].
+**Typowe ustawienia.**  
+- *valid*: $p=0$ - mapy cech maleją;  
+- *same* (dla $s=1$): $p=\lfloor k/2\rfloor$ - $H'=H$, $W'=W$;  
+- *stride $>1$*: wbudowane **podpróbkowanie** (mniej obliczeń, mniejsza rozdzielczość);  
+- *dylacja $>1$*: większe **efektywne** pole widzenia bez nowych parametrów
+  (częste w detekcji/segmentacji) [@dumoulin2016guide].
 
 ### Receptywne pole
 
-Receptywne pole to fragment obrazu, który „widzi” dana aktywacja. Teoretycznie
-rośnie ono z głębokością; dla kerneli $k_\ell$ i kroków $s_\ell$:
+Receptywne pole to fragment obrazu, który „widzi” dana aktywacja.
+Teoretycznie rośnie ono z głębokością; dla kerneli $k_\ell$ i kroków $s_\ell$:
 $$
 R_1 = k_1,\qquad
 R_\ell = R_{\ell-1} + (k_\ell-1)\!\!\prod_{j<\ell}s_j.
 $$
 
-W praktyce **efektywne** receptywne pole ma największy wpływ w centrum i
-słabnie ku brzegom (rozkład zbliżony do Gaussa) - dlatego w bazowych
+W praktyce **efektywne** receptywne pole ma największy wpływ w centrum
+i słabnie ku brzegom (rozkład zbliżony do Gaussa) - dlatego w bazowych
 VGG/ResNet zostały dobrane głębokości tak, by objąć cały obiekt przy
-rozdzielczościach użytych w eksperymentach. W wersjach **CyCNN** po
+rozdzielczościach użytych w eksperymentach. W wariantach **CyCNN** po
 mapowaniu do $(\rho,\varphi)$ i z **cyklicznym paddingiem** po $\varphi$
 sieć „widzi” pełny zakres orientacji bez artefaktów na brzegach
 [@luo2016erf; @kim2020cycnn].
+
+#### Receptywne pole w układzie polarnym
+
+Po mapowaniu $(x,y)\!\to\!(\rho,\varphi)$ receptywne pole staje się
+„wąskim paskiem” wzdłuż $\rho$ i stabilnym po $\varphi$. Dzięki temu
+obrót $R_\alpha$ jest równoważny **przesunięciu** o $\alpha$ po osi
+$\varphi$ (warstwy `CyConv` z **cyklicznym paddingiem** po $\varphi$ nie
+„tną” informacji na brzegach), co wzmacnia ekwiwariancję rotacyjną
+[@kim2020cycnn].
+
 
 ### Nieliniowości i normalizacja
 
@@ -355,63 +377,86 @@ Blok konwolucyjny został utrzymany **identyczny we wszystkich wariantach**
 (bazowych i cyklicznych), bo celem porównania jest wpływ **rotacji**, a
 nie doboru aktywacji. Normalizacja została zastosowana standardowo, aby
 stabilizować uczenie; w wariantach **CyCNN** statystyki były liczone
-łącznie po osi **orientacji**, tak żeby **nie faworyzować żadnego kąta**
+łącznie po osi **orientacji**, tak aby **nie faworyzować żadnego kąta**
+[@ioffe2015batchnorm; @kim2020cycnn].
+W miejscach, gdzie stosowana jest normalizacja, statystyki są liczone
+**wspólnie po osi orientacji**, tak żeby nie faworyzować żadnego kąta 
 [@ioffe2015batchnorm; @kim2020cycnn].
 
-### Pooling i głowa klasyfikacyjna
+### Pooling i część klasyfikacyjna
 
-W modelach **CyCNN** inwariancja względem rotacji została uzyskana przez
-**pooling po orientacjach** (agregacja cech po osi kątów). Dalej, dla
-wszystkich modeli, zastosowany został **global average pooling** (GAP) i
-pojedyncza warstwa liniowa w klasyfikatorze. Głowa została celowo
-utrzymana taka sama w bazowych i cyklicznych wariantach, żeby izolować
-wpływ części „rotacyjnej” [@lin2014network; @kim2020cycnn].
+W modelach **CyCNN** inwariancja względem rotacji została osiągnięta
+przez **agregację po orientacjach** (pooling po osi kątów). Dalej, dla
+wszystkich modeli, zastosowano **global average pooling (GAP)** oraz
+pojedynczą warstwę liniową w klasyfikatorze. Część klasyfikacyjna została
+celowo taka sama w bazowych i cyklicznych wariantach, by izolować wpływ
+części „rotacyjnej” [@lin2014network; @kim2020cycnn].
+
+#### Pooling po orientacjach - szczegóły praktyczne
+
+Agregacja po osi *orientacja* (avg lub max) realizuje **inwariancję**
+rotacyjną. Wpływ na wynik ma liczba orientacji **n**:
+większe **n** = dokładniejsza rozdzielczość kątowa (mniejszy błąd
+zaokrąglenia $2\pi/n$), ale wyższy koszt obliczeń i pamięci.
+W eksperymentach utrzymano identyczny klasyfikator za poolingiem, żeby
+izolować wpływ części „rotacyjnej” [@kim2020cycnn].
 
 ### Regularizacja i trening
 
-Protokół trenowania został **zamrożony** między wariantami (te same: liczba
-epok, rozmiar batcha, budżet obliczeń, wczesne zatrzymanie lub brak - zgodnie
-z planem eksperymentu). Augmentacje ograniczono do tych **niezależnych od
-rotacji** w testach „czysto architektonicznych”; augmentacja rotacją była
-używana tylko w eksperymentach kontrolnych, żeby pokazać różnicę między
-„augmentacją” a „architekturą” (szczegóły w rozdziale z protokołem).
+Protokół trenowania został **zamrożony** między wariantami (te same:
+liczba epok, rozmiar batcha, budżet obliczeń, ewentualne wczesne
+zatrzymanie - zgodnie z planem eksperymentu). Augmentacje ograniczono do
+tych **niezależnych od rotacji** w testach „czysto architektonicznych”.
+Augmentacja rotacją była używana tylko w eksperymentach kontrolnych
+- żeby pokazać różnicę między „augmentacją” a „architekturą”.
 
 ### Triki architektoniczne (co faktycznie zmieniano)
 
-- **Bazy:** VGG-19 (bloki 3×3) i ResNet-56 (wariant CIFAR, bloki 3×3).
+- **Bazy:** VGG-19 (bloki $3{\times}3$) i ResNet-56 (wariant CIFAR, bloki $3{\times}3$).  
 - **Wersje cykliczne:** podmiana `Conv` → `CyConv`, dodanie osi
   **orientacja** i **cykliczny padding** po $\varphi$; pozostałe elementy
-  (głębokość, liczba kanałów) zostały dobrane tak, by utrzymać *porównywalny
-  budżet parametrów/FLOPs* względem baz.  
-- **Bez innych tricków**: nie wprowadzano zmian niezwiązanych z
-  rotacją, żeby nie mieszać efektów [@kim2020cycnn].
+  (głębokość, liczba kanałów) zostały dobrane tak, by utrzymać
+  *porównywalny budżet parametrów/FLOPs* względem baz.  
+- **Bez innych trików:** nie wprowadzano zmian niezwiązanych z rotacją,
+  żeby nie mieszać efektów [@kim2020cycnn].
 
 ### Ekwawariancja translacyjna (kontrast do rotacyjnej)
 
 Dla przesunięcia $\mathcal T_t$ i splotu zachodzi:
-
 $$
 \mathcal T_t(X) * K \;=\; \mathcal T_t\!\big(X*K\big),
 $$
-
 co tłumaczy, dlaczego klasyczne CNN dobrze radzą sobie z translacją
 [@dumoulin2016guide]. Brak analogicznego mechanizmu dla rotacji
 motywuje przekształcenia polarne i/lub modele cykliczne dalej.
+
+#### Ekwiwariancja rotacyjna w dyskretnej grupie $C_n$
+
+Dla indeksu orientacji $k\in\{0,\dots,n-1\}$ i kąta $\theta_k=\tfrac{2\pi k}{n}$
+ekwiwariancję można zapisać jako
+
+$$
+\Phi\!\big(\mathcal{R}_{\theta_k} X\big)[\cdot,\;m]
+\;=\; \Phi(X)[\cdot,\;m\!+\!k \bmod n],
+$$
+
+czyli **obrót wejścia = cykliczne przesunięcie po osi orientacji**. Następnie
+pooling po tej osi znosi zależność od kąta (inwariancja) [@kim2020cycnn].
 
 
 ## Inwariancja translacyjna i rotacyjna
 
 Niech $\mathcal T_t$ oznacza przesunięcie o wektor $t$, $\mathcal R_\alpha$
-obrót o kąt $\alpha$, a $\Phi$ - mapę cech/model.
+- obrót o kąt $\alpha$, a $\Phi$ - mapę cech/model.
 
-**Ekwawariancja** (przewidywalna zmiana reprezentacji):
+**Ekwiwariancja** (przewidywalna zmiana reprezentacji):
 $$
 \Phi(\mathcal T_t X)=\Pi_t\,\Phi(X),\qquad
 \Phi(\mathcal R_\alpha X)=\Pi_\alpha\,\Phi(X),
 $$
-gdzie $\Pi$ to „działanie” grupy na cechach (dla translacji - przesunięcie
-map cech, dla rotacji - np. cykliczny shift po osi „orientacja”).
-[@goodfellow2016deep; @bronstein2021gdl]
+gdzie $\Pi$ to działanie grupy na cechach (dla translacji - przesunięcie
+map, dla rotacji - np. **cykliczny shift** po osi „orientacja”)
+[@goodfellow2016deep; @bronstein2021gdl].
 
 **Inwariancja** (wynik nie zależy od transformacji):
 $$
@@ -419,27 +464,39 @@ $$
 \Phi(\mathcal R_\alpha X)=\Phi(X).
 $$
 
-W praktyce inwariancja jest uzyskiwana przez:
-- *translacja:* uśrednianie/próbkowanie rzadkie (GAP, stride),  
-- *rotacja:* (a) augmentację o obroty, (b) architekturę, która śledzi
-  orientacje (oś „kąt”, potem pooling po orientacjach), (c) mapowanie do
+W praktyce:  
+- **translacja:** uśrednianie/podpróbkowanie (GAP, stride);  
+- **rotacja:** (a) augmentacja o obroty, (b) architektura ze śledzeniem
+  orientacji (oś „kąt” + pooling po orientacjach), (c) mapowanie do
   współrzędnych polarnych, gdzie obrót staje się przesunięciem po osi
   $\varphi$ [@dumoulin2016guide; @reddy1996logpolar; @kim2020cycnn].
 
+### Linear-polar vs. log-polar (skrót)
+
+- **Linear-polar**: równy przyrost w pikselach po $\rho$ i $\varphi$.
+  Stabilne kąty, prosta implementacja; dobra pod **inwariancję rotacyjną**.
+- **Log-polar**: skala rośnie logarytmicznie po $\rho$ — przesunięcia
+  w skali stają się przesunięciami po osi promienia. Dobre pod **rotacje i skale**,
+  ale bliżej środka pojawia się większa gęstość próbkowania i wrażliwość
+  na wybór środka [@reddy1996logpolar].
+- **Praktyka:** interpolacja biliniarna + **cykliczny padding po $\varphi$**,
+  stały środek; blisko $\rho{=}0$ warto wygładzić/wykluczyć kilka próbek,
+  żeby uniknąć „osobliwości” środka [@kim2020cycnn].
+- 
 ## Problemy z rotacyjną inwariancją w klasycznych CNN
 
-- **Kierunkowość filtrów.** Jeden kernel wykrywa wzorzec głównie w jednej
-  orientacji - bez dodatkowych mechanizmów sieć „gubi” obroty.
+- **Kierunkowość filtrów.** Pojedynczy kernel jest wrażliwy na jedną
+  orientację - bez dodatkowych mechanizmów sieć „gubi” obroty.  
 - **Augmentacja nie domyka całości.** Rotacje pomagają, ale wydłużają
-  trening i zostawiają „dziury” między kątami (zwłaszcza przy małych
-  krokach i ograniczonym budżecie).
+  trening i zostawiają „dziury” między kątami (przy małym kroku i
+  ograniczonym budżecie).  
 - **Aliasing/interpolacja.** Obracanie dyskretnych obrazów wprowadza
-  artefakty, co degraduje sygnał [@azulay2019small].
-- **Krawędzie i padding.** „same/zero” łamie symetrie przy brzegach -
-  odpowiedzi nie są idealnie ekwawariantne.
-- **Brak osi orientacji.** Standardowe CNN nie przechowują informacji
-  „pod jakim kątem” aktywacja została wykryta - trudniej potem to
-  „zwinąć” do wariantu niezależnego od kąta.
+  artefakty i szum [@azulay2019small].  
+- **Krawędzie i padding.** „same/zero” łamie symetrię przy brzegach -
+  odpowiedzi nie są idealnie ekwiwariantne.  
+- **Brak osi orientacji.** Standardowe CNN nie przechowują informacji,
+  „pod jakim kątem” aktywacja została wykryta - trudno to później
+  zwinąć do rozpoznawania niezależnego od kąta.
 
 ## Przegląd literatury (E(2)-equivariant, CyCNN)
 
@@ -447,15 +504,15 @@ W praktyce inwariancja jest uzyskiwana przez:
 $(\rho,\varphi)$ i przetwarzany warstwami cylindrycznymi (**CyConv**) z
 **cyklicznym paddingiem** po osi $\varphi$. Dla każdego filtra użyto
 $n$ orientacji (grupa $C_n$). Obrót wejścia z $C_n$ wywołuje **cykliczny
-shift** po osi orientacji (**ekwawariancja**), a **pooling po
-orientacjach** daje **inwariancję**. W badaniach zostały użyte
-**CyVGG** i **CyResNet** [@kim2020cycnn].
+shift** po osi orientacji (**ekwiwariancja**), a **pooling po orientacjach**
+daje **inwariancję**. W badaniach zostały użyte **CyVGG** i **CyResNet**
+[@kim2020cycnn].
 
 **E(2)-equivariant / steerable CNNs (kontekst).** Sploty grupowe i
-steerowalne jądra umożliwiają ekwawariancję względem translacji i rotacji
+steerowalne jądra umożliwiają ekwiwariancję względem translacji i rotacji
 (nawet dla ciągłych kątów) w grupie $\mathrm{E}(2)$. Wymagają projektu
-jąder zgodnie z reprezentacjami grupy i zwykle większego kosztu obliczeń.
-Traktowane są tu jako tło teoretyczne
+jąder zgodnie z reprezentacjami grupy i zwykle większego kosztu
+obliczeń. Taktowane są tu jako tło teoretyczne
 [@cohen2016group; @weiler2019general; @cohen2019homogeneous].
 
 
@@ -515,7 +572,7 @@ Zakończenie: GAP → **warstwa liniowa** `64→C`.
 
 - **Conv → CyConv.** Każdą `Conv2d` zastąpiono **`CyConv2d`**
   (warstwa cylindryczna; interfejs jak `Conv2d`: 3×3, `padding=1`,
-  obsługa stride/dilacji).  
+  obsługa stride/dylacji).  
 
 - **Oś orientacji.** Odpowiedzi składają się z dodatkową osią
   *orientacja* (liczba orientacji **n** z konfiguracji). Obrót wejścia
