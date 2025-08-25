@@ -137,10 +137,8 @@ zastosowano następujące rozwiązania technologiczne:
   wszechstronności i ekosystemowi bibliotek [@python-docs].
 
   **Frameworki uczenia maszynowego:**
-  - **PyTorch** - elastyczny framework do szybkiego prototypowania i
-    trenowania modeli [@pytorch-docs].
-  - **TensorFlow** - narzędzie do budowy, trenowania i wdrażania modeli
-    ML/DL [@tensorflow-docs].
+  - **PyTorch** - elastyczny framework do budowy, trenowania i wdrażania modeli
+    ML/DL [@pytorch-docs].
 
 - **Modele cykliczne (CyCNN).** W pracy zostało przyjęte podejście, w
   którym obraz został przemapowany do współrzędnych $(\rho,\varphi)$.
