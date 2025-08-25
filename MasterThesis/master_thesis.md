@@ -155,7 +155,7 @@ zastosowano następujące rozwiązania technologiczne:
 
 - **Wykorzystanie akceleracji GPU (NVIDIA)** - obliczenia zostały
   znacząco przyspieszone dzięki użyciu kart **RTX 3070 Ti 8 GB** oraz
-  **RTX 3060 12 GB**. Frameworki wspierają **CUDA** oraz **cuDNN**, co
+  **RTX 3060 12 GB**. Frameworki takie jak wspierają PyTorch **CUDA**, **Tensor** oraz **cuDNN**, co
   umożliwia efektywne wykorzystanie zasobów GPU
   [@cuda-docs; @cudnn-docs].
 
@@ -168,7 +168,7 @@ zastosowano następujące rozwiązania technologiczne:
 ## Zakres tematyczny
 
 Niniejsza praca dotyczy odporności modeli klasyfikacji obrazów na rotacje
-w płaszczyźnie. Skupiono się na porównaniu klasycznych architektur z ich
+w płaszczyźnie 2d. Skupiono się na porównaniu klasycznych architektur z ich
 wersjami rotacyjnie inwariantnymi oraz na wpływie przekształceń polarnych
 na jakość predykcji. Badania zostały przeprowadzone na obrazach 2D i
 rotacjach planarnych. W szczególności zostały porównane warianty bazowe
@@ -199,7 +199,7 @@ kontrolowanymi rotacjami.
 
 - **Augmentacja i protokół:** zostały zdefiniowane zakresy kątów,
   liczba powtórzeń i podział na zbiory train/val/test (uczący/
-  walidacyjny/testowy), z możliwością powtórzeń trenowań.
+  walidacyjny/testowy), z możliwością powtórzenia trenowań.
 
 - **Środowisko i implementacja:** został wykorzystany **PyTorch** z
   akceleracją **CUDA/cuDNN** na kartach **NVIDIA GeForce RTX 3070 Ti 8 GB**
@@ -255,8 +255,8 @@ transformacjami linear-polar / log-polar. Rozdział **Implementacja i
 skrypty. W **Eksperymentach** zostały zdefiniowane scenariusze, metryki
 i sposób ewaluacji. Dalej, w **Porównaniu wyników**, zostały zestawione
 modele (VGG vs. CyVGG, ResNet vs. CyResNet, wpływ transformacji) i
-omówiona stabilność/czas. Na końcu **Wnioski** zbierają najważniejsze
-**obserwacje** i wskazują kierunki dalszych badań; **Aneks** zawiera kody
+omówiona stabilność/czas. Na końcu sekcja **Wnioski** zbieraja najważniejsze
+**obserwacje** i wskazuje kierunki dalszych badań; **Aneks** zawiera kody
 i dodatkowe wykresy.
 
 \newpage
@@ -272,7 +272,7 @@ temu możliwe jest skalowanie modeli na duże obrazy oraz lepsze uogólnianie ni
 przypadku sieci posiadającej pełne połączenia.
 
 Zamiast analizować cały obraz jednocześnie, CNN wykorzystują mały filtr, który
-przesuwa się po lokalnych fragmentach danych. W ten sposób uczą się prostych
+przesuwa się po lokalnych fragmentach obrazów. W ten sposób uczą się prostych
 detektorów (np. krawędzi, tekstur, kształtów), a w wyższych warstwach -
 bardziej złożonych cech [@lecun1998gradient; @goodfellow2016deep].
 
@@ -326,7 +326,7 @@ Parametry „geometrii” warstwy:
 Dokładna ekwiwariancja translacyjna zachodzi przy splocie bez zmiany rozmiaru.
 W praktyce **padding „same”**, **stride $>1$** i **pooling** wprowadzają drobne
 odchylenia (aliasing na siatce próbkowania), co obniża „idealność”
-ekwiwariancji - efekt znany i opisywany w literaturze
+ekwiwariancji - efekt ten jest znany i opisywany w literaturze
 [@dumoulin2016guide; @azulay2019small].
 
 **Rozmiar wyjścia** (dla jądra $k\times k$):
@@ -356,7 +356,7 @@ $$
 
 W praktyce nie wszystkie piksele w obrębie tego pola mają taki sam wpływ. Największy
 wpływ ma obszar centralny, a znaczenie maleje ku brzegom - rozkład wpływu
-przypomina Gaussa. Z tego powodu w bazowych architekturach VGG i ResNet dobiera się
+przypomina rozkład Gaussa. Z tego powodu w bazowych architekturach VGG i ResNet dobiera się
 głębokość tak, aby przy stosowanej rozdzielczości objąć cały obiekt bez utraty
 istotnego kontekstu [@luo2016erf].
 
@@ -372,8 +372,7 @@ Po mapowaniu $(x,y)\!\to\!(\rho,\varphi)$ receptywne pole staje się „wąskim 
 wzdłuż promienia $\rho$ i stabilnym po kącie $\varphi$. Dzięki temu obrót
 $\mathcal{R}_\alpha$ na wejściu jest równoważny **przesunięciu** o $\alpha$ po osi
 $\varphi$. Warstwy typu `CyConv` z **cyklicznym paddingiem** wzdłuż $\varphi$ nie
-„tną” informacji na brzegach, co wzmacnia ekwiwariancję rotacyjną
-[@kim2020cycnn].
+„tną” informacji na brzegach, co wzmacnia ekwiwariancję rotacyjną [@kim2020cycnn].
 
 
 ### Nieliniowości i normalizacja
@@ -408,13 +407,13 @@ poolingiem, aby jednoznacznie mierzyć wpływ części „rotacyjnej”
 ### Regularizacja i trening
 
 Protokół trenowania został **zamrożony** między wariantami (te same: liczba epok,
-rozmiar batcha, budżet obliczeń, ewentualne wczesne zatrzymanie - zgodnie z
+rozmiar batcha, budżet obliczeń, wczesne zatrzymanie - wsyzstko zgodnie z
 planem eksperymentu). Augmentacje ograniczono do tych **niezależnych od rotacji**
 w testach „czysto architektonicznych”. Augmentację rotacją stosowano wyłącznie w
 eksperymentach kontrolnych - aby pokazać różnicę między „augmentacją” a
 „architekturą”.
 
-### Triki architektoniczne (co faktycznie zmieniano)
+### Triki architektoniczne
 
 - **Bazy:** VGG-19 (bloki $3{\times}3$) i ResNet-56 (wariant CIFAR, bloki $3{\times}3$).
 - **Wersje cykliczne:** podmiana `Conv` → `CyConv`, dodanie osi **orientacja** i
@@ -447,11 +446,6 @@ $$
 czyli **obrót wejścia = cykliczne przesunięcie po osi orientacji**. Następnie
 pooling po tej osi znosi zależność od kąta (inwariancja) [@kim2020cycnn].
 
-## Inwariancja translacyjna i rotacyjna
-
-Niech $\mathcal{T}_t$ oznacza przesunięcie o wektor $t$, $\mathcal{R}_\alpha$ -
-obrót o kąt $\alpha$, a $\Phi$ - mapę cech / model.
-
 **Ekwiwariancja** (przewidywalna zmiana reprezentacji):
 $$
 \Phi(\mathcal{T}_t X)=\Pi_t\,\Phi(X),\qquad
@@ -460,6 +454,12 @@ $$
 gdzie $\Pi$ to działanie grupy na cechach (dla translacji - przesunięcie map,
 dla rotacji - np. **cykliczny shift** po osi „orientacja”)
 [@goodfellow2016deep; @bronstein2021gdl].
+
+## Inwariancja translacyjna i rotacyjna
+
+Niech $\mathcal{T}_t$ oznacza przesunięcie o wektor $t$, $\mathcal{R}_\alpha$ -
+obrót o kąt $\alpha$, a $\Phi$ - mapę cech / model.
+
 
 **Inwariancja** (wynik nie zależy od transformacji):
 $$
@@ -474,16 +474,16 @@ W praktyce:
   współrzędnych polarnych, gdzie obrót staje się przesunięciem po osi
   $\varphi$ [@dumoulin2016guide; @reddy1996logpolar; @kim2020cycnn].
 
-### Linear-polar vs. log-polar (skrót)
+### Linear-polar vs. log-polar
 
 - **Linear-polar:** równy przyrost w pikselach po $\rho$ i $\varphi$. Stabilne kąty,
   prosta implementacja; dobre pod **inwariancję rotacyjną**.
 - **Log-polar:** skala rośnie logarytmicznie po $\rho$ - zmiany skali stają się
-  przesunięciami po osi promienia. Dobre pod **rotacje i skale**, ale bliżej środka
-  rośnie gęstość próbkowania i wrażliwość na wybór środka [@reddy1996logpolar].
-- **Praktyka:** interpolacja biliniarna + **cykliczny padding po $\varphi$**, stały
-  środek; blisko $\rho{=}0$ warto wygładzić / wykluczyć kilka próbek, aby uniknąć
-  „osobliwości” środka [@kim2020cycnn].
+  przesunięciami po osi promienia. Jest to idealne rozwiązanie pod **rotacje i skale**, 
+  ale bliżej środka rośnie gęstość próbkowania i wrażliwość na wybór środka [@reddy1996logpolar].
+
+W praktyce stosowana jest interpolacja biliniarna + **cykliczny padding po $\varphi$**, stały
+środek. Blisko $\rho{=}0$ warto wygładzić / wykluczyć kilka próbek, aby uniknąć „osobliwości” środka [@kim2020cycnn].
 
 ## Problemy z rotacyjną inwariancją w klasycznych CNN
 
@@ -513,7 +513,7 @@ badaniach użyto **CyVGG** i **CyResNet** [@kim2020cycnn].
 sterowalne umożliwiają ekwiwariancję względem translacji i rotacji (również dla
 ciągłych kątów) w grupie $\mathrm{E}(2)$. Wymaga to projektowania jąder zgodnie
 z reprezentacjami grupy i zwykle wiąże się z większym kosztem obliczeń. W tej
-pracy traktujemy je jako tło teoretyczne
+pracy traktujemy temat ten jako tło teoretyczne
 [@cohen2016group; @weiler2019general; @cohen2019homogeneous].
 
 \newpage
@@ -535,7 +535,7 @@ pracy traktujemy je jako tło teoretyczne
 (VGG-E, ResNet-56, CyCNN)
 
 **Przegląd.** Wykorzystane są bazy **VGG** (wariant **E**) i **ResNet** (wariant
-**56**) w ustawieniu „cifarowym” (obrazy 32×32). Konwolucje to głównie `3×3` z
+**56**) w ustawieniu „cifar” (obrazy 32×32). Konwolucje to głównie `3×3` z
 `padding=1`; w VGG pojawia się okresowy `MaxPool2d(2)`, a w ResNet zmniejszanie
 rozdzielczości odbywa się przez `stride=2`. Po części konwolucyjnej stosowany
 jest **global average pooling (GAP)** oraz **klasyfikator**. W VGG użyto wersji
@@ -656,7 +656,7 @@ geometrii. Moduł `CyConv2d` trzyma wagi o kształcie `[C_out, C_in, k, k]`
 **Bufor roboczy.** `CyConv2d.workspace` to prealokowany tensor `float32` na
 GPU o rozmiarze `1024*1024*1024` elementów (~4 GiB), opisany jako
 „Workspace for Cy-Winograd algorithm”. To może powodować **OOM** na kartach
-z mniejszą pamięcią.
+z mniejszą pamięcią VRAM.
 
 **Integracja z modelami.** Wszystkie `nn.Conv2d` w wariantach **CyVGG** i
 **CyResNet** są zastąpione `CyConv2d` (m.in. `conv1` oraz konwolucje w
@@ -664,7 +664,7 @@ blokach). Topologia, BN/ReLU, GAP i klasyfikator są zachowane 1:1 względem
 bazowych wersji.
 
 **Uwaga merytoryczna.** W kodzie modeli nie widać **jawnej osi
-„orientacja”** ani osobnego **poolingu po orientacjach**; z poziomu PyTorch
+„orientacji”** ani osobnego **poolingu po orientacjach**; z poziomu PyTorch
 wagi mają klasyczny kształt `[C_out, C_in, k, k]`. Jeśli własności rotacyjne
 występują, to są **enkapsulowane w jądrze CUDA** (`cycnn_cuda.cu`)
 wywoływanym przez bindingi.
