@@ -134,11 +134,12 @@ zastosowano następujące rozwiązania technologiczne:
 
 - **Język programowania Python** - podstawowe narzędzie do implementacji
   algorytmów oraz obsługi frameworków uczenia maszynowego, dzięki
-  wszechstronności i ekosystemowi bibliotek [@python-docs].
+  wszechstronności i ekosystemowi bibliotek [@python-docs] 
+  Środowiska były izolowane dzięki użyciu `venv`.
 
   **Frameworki uczenia maszynowego:**
   - **PyTorch** - elastyczny framework do budowy, trenowania i wdrażania modeli
-    ML/DL [@pytorch-docs].
+    ML/DL (w tym własnych warstw, jak `CyConv`) [@pytorch-docs].
 
 - **Modele cykliczne (CyCNN).** W pracy zostało przyjęte podejście, w
   którym obraz został przemapowany do współrzędnych $(\rho,\varphi)$.
@@ -157,7 +158,26 @@ zastosowano następujące rozwiązania technologiczne:
   znacząco przyspieszone dzięki użyciu kart **RTX 3070 Ti 8 GB** oraz
   **RTX 3060 12 GB**. Frameworki takie jak wspierają PyTorch **CUDA**, **Tensor** oraz **cuDNN**, co
   umożliwia efektywne wykorzystanie zasobów GPU
-  [@cuda-docs; @cudnn-docs].
+  [@cuda-docs; @cudnn-docs]. Monitorowanie i diagnostyka zostały wykonane z użyciem narzędzia `nvidia-smi`.
+
+- **Tensor Cores (Ampere).** Zastosowane karty RTX (3070 Ti, 3060) mają
+  rdzenie Tensor, które sprzętowo przyspieszają operacje macierzowe
+  (konwolucje/matmul). Biblioteki **cuDNN/cuBLAS** na architekturze
+  **Ampere** domyślnie mogą używać trybu **TF32** dla obciążeń FP32,
+  co daje dodatkowe przyspieszenie bez zmian w modelu.
+  Dodatkowo, w **PyTorchu** możliwe jest włączenie **mieszanej precyzji**
+  (FP16/BF16) przez **AMP** w miejscach, gdzie to bezpieczne, przy 
+  włączeniu tego feature, zwykle przyspiesza to trening przy
+  porównywalnej jakości (szczegóły w dokumentacji).
+  [@nvidia_tensorcores; @nvidia_tf32; @micikevicius2018mixed; @pytorch_amp]
+
+- **System operacyjny: Linux (Ubuntu LTS).** Główne środowisko uruchomieniowe stanowił system operacyjny 
+  **Ubuntu** (dystrybucja LTS) posiadający stabilne
+  jądro, pakiety z APT, łatwa integrację ze sterownikami NVIDIA i CUDA.
+  Treningi uruchamiane były **lokalnie** na maszynach z GPU NVIDII. 
+  [@ubuntu_docs]. Dla zgodności ze środowiskami Windows używano też
+  wariantu **WSL2** (ten sam obraz Dockera i ta sama konfiguracja)
+  [@wsl_docs].
 
 - **Konteneryzacja za pomocą Dockera** - odizolowane środowiska
   uruchomieniowe ułatwiły replikację i współdzielenie projektu, także
@@ -366,7 +386,7 @@ artefaktów brzegowych, co ułatwia stabilne uczenie cech niezależnych od kąta
 [@kim2020cycnn].
 
 
-#### Receptywne pole w układzie polarnym
+#### Receptywne pole w układzie polarnym\
 
 Po mapowaniu $(x,y)\!\to\!(\rho,\varphi)$ receptywne pole staje się „wąskim paskiem”
 wzdłuż promienia $\rho$ i stabilnym po kącie $\varphi$. Dzięki temu obrót
@@ -395,7 +415,7 @@ od położenia w obrębie map cech [@lin2014network]. Część klasyfikacyjna po
 taka sama w wariantach bazowych i cyklicznych, aby izolować wpływ części
 „rotacyjnej” [@kim2020cycnn].
 
-#### Pooling po orientacjach - szczegóły praktyczne
+#### Pooling po orientacjach - szczegóły praktyczne\
 
 Agregacja po osi *orientacja* (avg lub max) realizuje **inwariancję rotacyjną**.
 Na wynik wpływa liczba orientacji **n**: większe **n** oznacza dokładniejszą
@@ -433,7 +453,7 @@ co tłumaczy, dlaczego klasyczne CNN dobrze radzą sobie z translacją
 [@dumoulin2016guide]. Brak analogicznego mechanizmu dla rotacji motywuje
 użycie przekształceń polarnych i/lub modeli cyklicznych w dalszej części.
 
-#### Ekwiwariancja rotacyjna w dyskretnej grupie $C_n$
+#### Ekwiwariancja rotacyjna w dyskretnej grupie $C_n$\
 
 Dla indeksu orientacji $k\in\{0,\dots,n-1\}$ i kąta
 $\theta_k=\tfrac{2\pi k}{n}$ ekwiwariancję można zapisać jako
@@ -518,7 +538,6 @@ pracy traktujemy temat ten jako tło teoretyczne
 
 \newpage
 
-
 # Opis zbiorów danych
 
 ## MNIST (cyfry odręczne)
@@ -531,6 +550,7 @@ pracy traktujemy temat ten jako tło teoretyczne
 
 ## Sposób augmentacji danych: zakresy rotacji, łączenie zbiorów
 
+\newpage
 # Architektury modeli
 (VGG-E, ResNet-56, CyCNN)
 
