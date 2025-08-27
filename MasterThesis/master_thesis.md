@@ -67,8 +67,8 @@ definicji” lepiej radzą sobie z przesunięciami niż z obrotami
 [@goodfellow2016deep; @dumoulin2016guide].
 
 W ostatnich latach pojawiło się kilka dróg domknięcia tej luki. Jedna to
-poszerzanie danych o zrotowane przykłady - poprawia odporność, ale
-wydłuża trening i nie gwarantuje uogólnienia na wszystkie kąty. Druga to
+poszerzanie danych o zrotowane przykłady, które poprawiają odporność, ale
+wydłużają trening i nie gwarantują uogólnienia na wszystkie kąty. Druga to
 architektury z wbudowaną geometrią: sieci grupowo równoważne (G-CNN,
 E(2)-equivariant) [@cohen2016group; @kim2020cycnn], sieci cykliczne
 (CyCNN; w szczególności **CyVGG** i **CyResNet**) operujące na wielu
@@ -85,7 +85,7 @@ rotacje. Zaimplementowano i porównano wybrane architektury rotacyjnie
 inwariantne i ich warianty bazowe w **PyTorchu** [@paszke2019pytorch],
 mierząc wpływ transformacji (linear-polar vs. log-polar), wyboru
 architektury i zakresu kątów na jakość predykcji. Obliczenia realizowano
-na kartach: **NVIDIA GeForce RTX 3070 Ti 8 GB** oraz **RTX 3060 12 GB**,
+na kartach graficznych: **NVIDIA GeForce RTX 3070 Ti 8 GB** oraz **RTX 3060 12 GB**,
 co skróciło czas trenowania i umożliwiło szeroki przegląd eksperymentów;
 środowisko uruchomieniowe ustandaryzowano z użyciem **Dockera** dla
 powtarzalności.
@@ -93,7 +93,7 @@ powtarzalności.
 Celem pracy jest nie tylko pokazanie, że „da się” uzyskać odporność na
 rotacje, ale przede wszystkim wskazanie, **kiedy** i **jakim kosztem**
 ją osiągamy oraz które techniki przynoszą największy zysk względem
-klasycznych CNN-ów, jak wpływają na stabilność i szybkość uczenia, a
+klasycznych CNN-ów, ich wpływ na stabilność i szybkość uczenia, a
 także które konfiguracje są najpraktyczniejsze w realnych
 zastosowaniach (OCR, rozpoznawanie znaków, analiza obiektów technicznych).
 W dalszej części pracy przedstawiono podstawy, dane i augmentację,
@@ -104,7 +104,7 @@ wyniki z analizą i wnioskami.
 ## Cel i motywacja pracy
 
 Konwolucyjne sieci neuronowe (CNN) charakteryzują się zdolnością do
-analizy obrazów z zachowaniem niezmienniczości względem translacji.
+analizy obrazów z zachowaniem niezmieności względem translacji.
 Jednak wciąż brakuje powszechnie uznanych architektur, które
 zapewniałyby inwariantność względem rotacji. Celem niniejszej pracy
 jest analiza skuteczności rozwiązań zaproponowanych w literaturze,
@@ -121,9 +121,9 @@ Na podstawie tych zbiorów została przeprowadzona implementacja i
 ewaluacja wybranych architektur rotacyjnie inwariantnych z wykorzystaniem
 **PyTorch**. Obliczenia zostały wykonane przy użyciu kart graficznych
 **NVIDIA GeForce RTX 3070 Ti 8 GB** oraz **RTX 3060 12 GB**, co
-umożliwiło przyspieszenie trenowania. Otrzymane wyniki zostały
+umożliwiło przyspieszenie trenowania i testowania. Otrzymane wyniki zostały
 porównane z rezultatami klasycznych sieci konwolucyjnych w celu oceny
-realnych korzyści z rozwiązań inwariantnych względem rotacji.
+realnych korzyści z użycia rozwiązań inwariantnych do zbiorów z rotacją.
 
 ## Opis pracy
 
@@ -149,14 +149,14 @@ zastosowano następujące rozwiązania technologiczne:
   zostało przygotowanych $n$ orientacji; odpowiedzi zostały złożone z
   dodatkową osią „orientacja”. Obrót wejścia powoduje cykliczny shift
   po tej osi, a pooling po orientacjach daje inwariancję względem
-  rotacji. Został ustawiony stały środek układu polarnych, stała siatka
-  próbkowania oraz biliniarna interpolacja; padding po $\varphi$ został
-  ustawiony na cykliczny. Implementacja została wykonana w **PyTorchu**
-  (punkt odniesienia: CyCNN [@kim2020cycnn]).
+  rotacji. Został ustawione takie parametry jak stały środek układu polarnych, 
+  stała siatka próbkowania oraz biliniarna interpolacja. Padding po 
+  $\varphi$ został ustawiony na cykliczny. Implementacja została wykonana 
+  w **PyTorchu** (punkt odniesienia: CyCNN [@kim2020cycnn]).
 
 - **Wykorzystanie akceleracji GPU (NVIDIA)** - obliczenia zostały
   znacząco przyspieszone dzięki użyciu kart **RTX 3070 Ti 8 GB** oraz
-  **RTX 3060 12 GB**. Frameworki takie jak wspierają PyTorch **CUDA**, **Tensor** oraz **cuDNN**, co
+  **RTX 3060 12 GB**. Frameworki takie jak PyTorch wspierają **CUDA**, **Tensor** oraz **cuDNN**, co
   umożliwia efektywne wykorzystanie zasobów GPU
   [@cuda-docs; @cudnn-docs]. Monitorowanie i diagnostyka zostały wykonane z użyciem narzędzia `nvidia-smi`.
 
@@ -190,7 +190,7 @@ zastosowano następujące rozwiązania technologiczne:
 Niniejsza praca dotyczy odporności modeli klasyfikacji obrazów na rotacje
 w płaszczyźnie 2d. Skupiono się na porównaniu klasycznych architektur z ich
 wersjami rotacyjnie inwariantnymi oraz na wpływie przekształceń polarnych
-na jakość predykcji. Badania zostały przeprowadzone na obrazach 2D i
+na jakość predykcji. Badania zostały przeprowadzone na obrazach 2D i ich
 rotacjach planarnych. W szczególności zostały porównane warianty bazowe
 **VGG/ResNet** z wersjami cyklicznymi **CyVGG/CyResNet**, a także wpływ
 mapowania **linear-polar** i **log-polar**. Eksperymenty zostały wykonane
@@ -268,7 +268,7 @@ pokrewne (G-CNN, E(2)-equivariant, CyCNN). W **Opisie zbiorów danych**
 zostały przedstawione MNIST, LEGO, **GTSRB_gray** i **GTSRB_RGB** oraz
 sposób augmentacji (rotacje, podziały train/val/test). W
 **Architekturach modeli** zostały opisane warianty bazowe
-**VGG/ResNet** oraz wersje cykliczne **CyVGG/CyResNet**, wraz z
+**VGG/ResNet** oraz ich wersje cykliczne **CyVGG/CyResNet**, wraz z
 transformacjami linear-polar / log-polar. Rozdział **Implementacja i
 środowisko** zawiera szczegóły techniczne: **PyTorch**, **CUDA i cuDNN**
 (RTX 3070 Ti 8 GB, RTX 3060 12 GB), **Docker**, strukturę projektu i
@@ -276,7 +276,7 @@ skrypty. W **Eksperymentach** zostały zdefiniowane scenariusze, metryki
 i sposób ewaluacji. Dalej, w **Porównaniu wyników**, zostały zestawione
 modele (VGG vs. CyVGG, ResNet vs. CyResNet, wpływ transformacji) i
 omówiona stabilność/czas. Na końcu sekcja **Wnioski** zbieraja najważniejsze
-**obserwacje** i wskazuje kierunki dalszych badań; **Aneks** zawiera kody
+**obserwacje** i wskazuje kierunki dalszych badań. Sekcja **Aneks** zawiera kody
 i dodatkowe wykresy.
 
 \newpage
@@ -306,7 +306,7 @@ Intuicyjnie oznacza to, że jeśli obraz zostanie przesunięty, to odpowiadając
 mu mapa cech również przesunie się o ten sam wektor.  
 **Inwariancja na przesunięcia** osiągana jest w praktyce poprzez pooling
 (lokalny lub globalny) bądź zwiększenie kroku (stride). Rzadsze próbkowanie
-powoduje, że wynik klasyfikacji nie zależy od dokładnej pozycji obiektu
+powoduje, że wynik klasyfikacji nie jest zależny od dokładnej pozycji obiektu
 [@dumoulin2016guide; @goodfellow2016deep].
 
 ### Operacja splotu
@@ -328,9 +328,8 @@ K_{c,i}(a,b)\,X_i(u-a,\;v-b).
 $$
 
 W praktyce większość frameworków oblicza **korelację krzyżową** (bez
-odwracania jądra), mimo że w API funkcja nazywana jest `conv`
-[@dumoulin2016guide].  
-Nie ma to jednak znaczenia dla procesu uczenia - sieć i tak dobierze
+odwracania jądra), mimo że w API funkcja nazywana jest `conv` [@dumoulin2016guide].  
+Nie ma to jednak znaczenia dla procesu uczenia, bo sieć i tak dobierze
 właściwe wagi.
 
 #### Stride, padding, rozmiary
@@ -375,7 +374,7 @@ R_\ell = R_{\ell-1} + (k_\ell-1)\!\!\prod_{j<\ell}s_j.
 $$
 
 W praktyce nie wszystkie piksele w obrębie tego pola mają taki sam wpływ. Największy
-wpływ ma obszar centralny, a znaczenie maleje ku brzegom - rozkład wpływu
+wpływ ma obszar centralny, a znaczenie maleje ku brzegom, a rozkład wpływu
 przypomina rozkład Gaussa. Z tego powodu w bazowych architekturach VGG i ResNet dobiera się
 głębokość tak, aby przy stosowanej rozdzielczości objąć cały obiekt bez utraty
 istotnego kontekstu [@luo2016erf].
@@ -424,13 +423,13 @@ obliczeń i pamięci. W eksperymentach utrzymano identyczny klasyfikator za
 poolingiem, aby jednoznacznie mierzyć wpływ części „rotacyjnej”
 [@kim2020cycnn].
 
-### Regularizacja i trening
+### Trening
 
 Protokół trenowania został **zamrożony** między wariantami (te same: liczba epok,
 rozmiar batcha, budżet obliczeń, wczesne zatrzymanie - wsyzstko zgodnie z
 planem eksperymentu). Augmentacje ograniczono do tych **niezależnych od rotacji**
 w testach „czysto architektonicznych”. Augmentację rotacją stosowano wyłącznie w
-eksperymentach kontrolnych - aby pokazać różnicę między „augmentacją” a
+eksperymentach kontrolnych, tak aby pokazać różnicę między „augmentacją” a
 „architekturą”.
 
 ### Triki architektoniczne
@@ -497,13 +496,13 @@ W praktyce:
 ### Linear-polar vs. log-polar
 
 - **Linear-polar:** równy przyrost w pikselach po $\rho$ i $\varphi$. Stabilne kąty,
-  prosta implementacja; dobre pod **inwariancję rotacyjną**.
+  prosta implementacja. Rozwiązanie to jest dobre pod **inwariancję rotacyjną**.
 - **Log-polar:** skala rośnie logarytmicznie po $\rho$ - zmiany skali stają się
   przesunięciami po osi promienia. Jest to idealne rozwiązanie pod **rotacje i skale**, 
   ale bliżej środka rośnie gęstość próbkowania i wrażliwość na wybór środka [@reddy1996logpolar].
 
-W praktyce stosowana jest interpolacja biliniarna + **cykliczny padding po $\varphi$**, stały
-środek. Blisko $\rho{=}0$ warto wygładzić / wykluczyć kilka próbek, aby uniknąć „osobliwości” środka [@kim2020cycnn].
+W praktyce stosowana jest interpolacja biliniarna wraz z **cyklicznym paddingiem po $\varphi$**, oraz stałym
+środkiem. Blisko $\rho{=}0$ warto wygładzić / wykluczyć kilka próbek, aby uniknąć „osobliwości” środka [@kim2020cycnn].
 
 ## Problemy z rotacyjną inwariancją w klasycznych CNN
 
@@ -513,27 +512,28 @@ W praktyce stosowana jest interpolacja biliniarna + **cykliczny padding po $\var
   zostawiają „dziury” między kątami (przy małym kroku i ograniczonym budżecie).
 - **Aliasing / interpolacja.** Obracanie dyskretnych obrazów wprowadza artefakty
   i szum [@azulay2019small].
-- **Krawędzie i padding.** „same/zero” łamie symetrię przy brzegach - odpowiedzi
+- **Krawędzie i padding.** „same/zero” łamie symetrię przy brzegach przez co odpowiedzi
   nie są idealnie ekwiwariantne.
-- **Brak osi orientacji.** Standardowe CNN nie przechowują informacji, „pod jakim
-  kątem” wykryto aktywację - trudno to później zwinąć do rozpoznawania
-  niezależnego od kąta.
+- **Brak osi orientacji.** W standardowych CNN nie zapisuje się informacji o
+  kącie, pod którym wykryto aktywację - dlatego trudno później uzyskać
+  rozpoznawanie niezależne od obrotu.
 
 
 ## Przegląd literatury (E(2)-equivariant, CyCNN)
 
 **CyCNN (podejście użyte w pracy).** Obraz przemapowano do $(\rho,\varphi)$ i
-przetwarzano warstwami cylindrycznymi (**CyConv**) z **cyklicznym paddingiem**
-wzdłuż $\varphi$. Dla każdego filtra wykorzystano $n$ orientacji (grupa $C_n$).
-Obrót wejścia z $C_n$ wywołuje **cykliczny shift** po osi orientacji
-(**ekwiwariancja**), a **pooling po orientacjach** daje **inwariancję**. W
-badaniach użyto **CyVGG** i **CyResNet** [@kim2020cycnn].
+przetwarzany jest warstwami cylindrycznymi (**CyConv**) z **cyklicznym
+paddingiem** wzdłuż $\varphi$. Dla każdego filtra wykorzystano $n$ orientacji
+(grupa $C_n$). Obrót wejścia z $C_n$ powoduje **cykliczne przesunięcie** po osi
+orientacji (**ekwiwariancja**), a **pooling po orientacjach** zapewnia
+**inwariancję**. W badaniach użyte zostały modele **CyVGG** i **CyResNet**
+[@kim2020cycnn].
 
-**E(2)-equivariant / steerable CNNs (kontekst).** Sploty grupowe i jądra
-sterowalne umożliwiają ekwiwariancję względem translacji i rotacji (również dla
-ciągłych kątów) w grupie $\mathrm{E}(2)$. Wymaga to projektowania jąder zgodnie
-z reprezentacjami grupy i zwykle wiąże się z większym kosztem obliczeń. W tej
-pracy traktujemy temat ten jako tło teoretyczne
+**E(2)-equivariant / steerable CNNs (użyte jako kontekst).** Sploty grupowe i jądra
+sterowalne umożliwiają ekwiwariancję względem translacji i rotacji (także dla
+kątów ciągłych) w grupie $\mathrm{E}(2)$. Wymaga to projektowania jąder zgodnie
+z reprezentacjami grupy i zwykle wiąże się z większym kosztem jeżeli chodzi o moc obliczeniową. 
+W tej pracy traktujemy je jako tło teoretyczne
 [@cohen2016group; @weiler2019general; @cohen2019homogeneous].
 
 \newpage
@@ -551,15 +551,17 @@ pracy traktujemy temat ten jako tło teoretyczne
 ## Sposób augmentacji danych: zakresy rotacji, łączenie zbiorów
 
 \newpage
+
 # Architektury modeli
 (VGG-E, ResNet-56, CyCNN)
 
-**Przegląd.** Wykorzystane są bazy **VGG** (wariant **E**) i **ResNet** (wariant
-**56**) w ustawieniu „cifar” (obrazy 32×32). Konwolucje to głównie `3×3` z
-`padding=1`; w VGG pojawia się okresowy `MaxPool2d(2)`, a w ResNet zmniejszanie
-rozdzielczości odbywa się przez `stride=2`. Po części konwolucyjnej stosowany
-jest **global average pooling (GAP)** oraz **klasyfikator**. W VGG użyto wersji
-z BatchNorm (VGG\_bn) i klasyfikatora `512→512→C` z dropoutem (w implementacji:
+**Przegląd.** W pracy wykorzystano bazowe architektury **VGG** (wariant **E**) i
+**ResNet** (wariant **56**) w ustawieniu dla **CIFAR** (obrazy 32×32). Warstwy
+splotowe to głównie `3×3` z `padding=1`. W VGG po każdym bloku stosowany jest
+`MaxPool2d(2)`, a w ResNecie rozdzielczość zmniejszana jest przez `stride=2`.
+Po części splotowej występuje **global average pooling (GAP)** i prosty
+**klasyfikator**. W VGG używana jest wersja z normalizacją (VGG\_bn) oraz
+dwustopniowy klasyfikator `512→512→C` z dropoutem (w implementacji:
 `AdaptiveAvgPool2d((1,1))` + `nn.Sequential` z dwiema warstwami liniowymi i
 wyjściem `C`).
 
@@ -568,9 +570,10 @@ wyjściem `C`).
 Układ zgodny z [@simonyan2014vgg], dostosowany do 32×32 (CIFAR). W plikach
 **VGG** i **CyVGG** konfiguracja **E** to:
 `[64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512,
-'M', 512, 512, 512, 512, 'M']`. Warstwy budowane są przez fabrykę
-`make_layers(cfg['E'], ...)`, z opcją BatchNorm (`*_bn`) i `MaxPool2d` po
-symbolu `'M'`. Za częścią splotową: `AdaptiveAvgPool2d((1,1))`, flatten i dwie
+'M', 512, 512, 512, 512, 'M']`. Warstwy budowane są przez funkcję
+`make_layers(cfg['E'], ...)`, z opcją BatchNorm (`*_bn`) i z `MaxPool2d`
+wstawianym w miejscach oznaczonych symbolem `'M'`. Za częścią splotową
+stosowane jest `AdaptiveAvgPool2d((1,1))`, następnie spłaszczenie (flatten) i dwie
 warstwy liniowe `512→512→C` z dropoutem.
 
 - **Blok 1:** 64, 64 → MaxPool (32→16)  
@@ -579,29 +582,33 @@ warstwy liniowe `512→512→C` z dropoutem.
 - **Blok 4:** 512×4 → MaxPool (4→2)  
 - **Blok 5:** 512×4 → MaxPool (2→1)
 
-W **CyVGG** każda `Conv2d` jest zastąpiona **`CyConv2d`** (interfejs jak w
-`Conv2d`: `3×3`, `padding=1`, wsparcie `stride`/dylacji). Klasyfikator i układ
-bloków pozostają takie same jak w VGG.
+W **CyVGG** każdą `Conv2d` zastąpiono **`CyConv2d`** (interfejs zgodny
+z `Conv2d`: `3×3`, `padding=1`, wsparcie `stride`/dylacji). Klasyfikator i
+układ bloków pozostają takie same jak w VGG.
+
 
 ## ResNet-56 (CIFAR, 6n+2 z n=9)
 
-Schemat jak w [@he2016resnet] dla CIFAR. Startowa `Conv 3×3`, następnie **3
-grupy** po **n=9** bloków `BasicBlock`. Grupa 1 (16 kanałów, `stride 1`), Grupa 2
-(32 kanały, pierwszy blok `stride 2`), Grupa 3 (64 kanały, pierwszy blok
-`stride 2`). `BasicBlock`: `Conv3×3 → BN → ReLU → Conv3×3 → BN` + skrót.
-Downsample - **opcja A** (CIFAR): podpróbkowanie przestrzenne `x[:, :, ::2, ::2]`
-i dopełnienie kanałów `F.pad(...)`. Zakończenie: **GAP** → warstwa liniowa
-`64→C`.
+Schemat jak w [@he2016resnet] dla CIFAR. Na wejściu `Conv 3×3`, a dalej **3
+grupy** po **n=9** bloków `BasicBlock`. Grupa 1 (16 kanałów, `stride 1`),
+Grupa 2 (32 kanały, pierwszy blok `stride 2`), Grupa 3 (64 kanały, pierwszy
+blok `stride 2`). `BasicBlock` ma postać: `Conv3×3 → BN → ReLU → Conv3×3 → BN`
++ skrót.
 
-W **CyResNet** zastąpiono wszystkie `nn.Conv2d` przez **`CyConv2d`** (w tym
-`conv1` oraz konwolucje w `BasicBlock`). Reszta (BN, ReLU, shortcut, GAP,
-`Linear`) pozostaje bez zmian względem bazowej wersji.
+Downsample - **opcja A** (CIFAR): podpróbkowanie przestrzenne `x[:, :, ::2, ::2]`
+i dopełnienie kanałów przez `F.pad(...)`. Zakończenie: **GAP** → warstwa
+liniowa `64→C`.
+
+W **CyResNet** wszystkie `nn.Conv2d` zastąpiono **`CyConv2d`** (w tym `conv1`
+i konwolucje w `BasicBlock`). Pozostałe elementy (BN, ReLU, shortcut, GAP,
+`Linear`) pozostają bez zmian względem wersji bazowej.
+
 
 ## Wersje cykliczne: **CyVGG-E** i **CyResNet-56**
 
 - **Conv → CyConv.** Każdą `Conv2d` zastąpiono **`CyConv2d`**. Interfejs
-  (rozmiary jąder, `stride`, `padding`) jest drop-in zgodny z `Conv2d`, więc
-  topologia i klasyfikator są identyczne jak w bazach.
+  (rozmiary jąder, `stride`, `padding`) jest drop-in zgodny z `Conv2d`,
+  więc topologia i klasyfikator są identyczne jak w bazach.
 
 - **Implementacja warstwy.** `CyConv2d` opakowuje własną funkcję autograd
   (`CyConv2dFunction`) i wywołuje rozszerzenie CUDA
@@ -609,14 +616,15 @@ W **CyResNet** zastąpiono wszystkie `nn.Conv2d` przez **`CyConv2d`** (w tym
   GPU (opisany w kodzie jako „Workspace for Cy-Winograd algorithm”). Wagi
   inicjalizowane są przez `xavier_uniform_`.
 
-- **Uwaga dot. osi orientacji.** W kodzie modeli **nie ma jawnej dodatkowej osi
-  „orientacja”** ani osobnego „poolingu po orientacjach”. Z poziomu PyTorch
-  interfejs filtrów ma kształt `[C_out, C_in, k, k]` (jak w standardowym
-  `Conv2d`). Mechanizmy rotacyjne - jeśli obecne - są enkapsulowane w jądrze
-  CUDA `CyConv2d_cuda`, niewidocznym w plikach modeli.
+- **Uwaga dot. osi orientacji.** W kodzie modeli **nie ma jawnej dodatkowej
+  osi „orientacja”** ani osobnego „poolingu po orientacjach”. Z poziomu
+  PyTorch interfejs filtrów ma kształt `[C_out, C_in, k, k]` (jak w
+  standardowym `Conv2d`). Mechanizmy rotacyjne - jeśli obecne - są
+  enkapsulowane w jądrze CUDA `CyConv2d_cuda`, niewidocznym w plikach
+  modeli.
 
 - **Inwariancja w praktyce.** Po stronie modeli **GAP** oraz (opcjonalnie)
-  dalsze uśrednianie w klasyfikatorze są identyczne jak w bazach; brak
+  dalsze uśrednianie w klasyfikatorze są identyczne jak w bazach - brak
   osobnego „poolingu po orientacjach” widocznego w kodzie modeli.
 
 ## Uzgodnienia I/O i selektor modeli
@@ -632,13 +640,13 @@ W **CyResNet** zastąpiono wszystkie `nn.Conv2d` przez **`CyConv2d`** (w tym
 ## Standardowe CNN
 
 Jako bazy zastosowano **VGG** (wariant **E / VGG-19**) i **ResNet-56**. Konwolucje
-`3×3` z `padding=1`, w VGG okresowy `MaxPool2d(2)`, w ResNet zmniejszanie
-rozdzielczości przez `stride=2`. Po części konwolucyjnej: **GAP** i
-**klasyfikator** (w VGG: dwie warstwy w pełni połączone `512→512→C` z dropoutem;
-w ResNet: `Linear 64→C`). Warianty VGG w kodzie występują także w wersjach `*_bn`
-(z BatchNorm). Modele te są z natury **ekwawariantne translacyjnie** (dobrze
-znoszą przesunięcia), lecz nie posiadają wbudowanego mechanizmu inwariancji na
-rotacje - stanowią więc punkt odniesienia dla wersji cyklicznych
+`3×3` z `padding=1`, w VGG okresowy `MaxPool2d(2)`, w ResNecie zmniejszanie
+rozdzielczości przez `stride=2`. Po części splotowej: **GAP** i **klasyfikator**
+(w VGG: dwie warstwy w pełni połączone `512→512→C` z dropoutem; w ResNecie:
+`Linear 64→C`). Warianty VGG w kodzie występują także w wersjach `*_bn`
+(z BatchNorm). Modele te są z natury **ekwiwariantne translacyjnie** (dobrze
+znoszą przesunięcia), ale nie posiadają wbudowanego mechanizmu inwariancji
+względem rotacji - stanowią więc punkt odniesienia dla wersji cyklicznych
 [@simonyan2014vgg; @he2016resnet].
 
 ## Rotacyjnie inwariantne sieci (CyResNet, CyVGG)
@@ -646,9 +654,9 @@ rotacje - stanowią więc punkt odniesienia dla wersji cyklicznych
 Wersje cykliczne (**CyVGG-E**, **CyResNet-56**) powstały przez **podmianę każdej
 `Conv2d` na `CyConv2d`**. Architektura bloków, liczby kanałów, GAP i układ
 klasyfikatora pozostają bez zmian, co pozwala porównać wpływ samej warstwy
-konwolucyjnej. W kodzie modeli **nie ma jawnego wymiaru orientacji** ani
-dedykowanego „poolingu po orientacjach”; funkcjonalność rotacyjna jest schowana
-w implementacji CUDA `CyConv2d_cuda`, wywoływanej z poziomu `CyConv2d`
+splotowej. W kodzie modeli **nie ma jawnego wymiaru orientacji** ani
+dedykowanego „poolingu po orientacjach”. Funkcjonalność związaną z rotacją
+zrealizowano w jądrze CUDA `CyConv2d_cuda`, wywoływanym z poziomu `CyConv2d`
 [@kim2020cycnn].
 
 ## Transformacje polarne: linearpolar vs logpolar
@@ -657,37 +665,43 @@ w implementacji CUDA `CyConv2d_cuda`, wywoływanej z poziomu `CyConv2d`
 
 ### Szczegóły implementacyjne: warstwa `CyConv2d` (CUDA)
 
-**Rozszerzenie.** Warstwa korzysta z modułu C++/CUDA budowanego jako
-`CyConv2d_cuda` z plików `cycnn.cpp` i `cycnn_cuda.cu` (setup przez
-`setuptools` / `BuildExtension`).
+**Rozszerzenie.**\
+Warstwa korzysta z modułu C++/CUDA kompilowanego jako
+`CyConv2d_cuda` z plików `cycnn.cpp` i `cycnn_cuda.cu` (przy użyciu
+`setuptools` i `BuildExtension`).
 
-**Interfejs (C++ binding).** W `cycnn.cpp` eksportowane są funkcje
-`forward(...)` i `backward(...)` (pybind11) przyjmujące `input`, `weight`,
-`workspace` oraz `stride`, `padding`, `dilation`. Makra sprawdzają, że
-tensory są **CUDA** i **contiguous**, po czym wywoływane są implementacje
-`cyconv2d_cuda_forward/backward`.
+**Interfejs (wiązanie C++).**\
+W `cycnn.cpp` eksportowane są funkcje
+`forward(...)` i `backward(...)` (pybind11). Przyjmują one `input`,
+`weight`, `workspace` oraz `stride`, `padding`, `dilation`. Makra
+sprawdzają, czy tensory są **CUDA** i **contiguous**, po czym wywoływane
+są implementacje `cyconv2d_cuda_forward/backward`.
 
-**Warstwa w PyTorch.** `CyConv2dFunction` (autograd) wywołuje
-`CyConv2d_cuda.forward/backward` i przekazuje **workspace** oraz parametry
-geometrii. Moduł `CyConv2d` trzyma wagi o kształcie `[C_out, C_in, k, k]`
-(inicjowane `xavier_uniform_`) i w `forward` używa
-`CyConv2dFunction.apply(...)`.
+**Warstwa w PyTorch.**\
+`CyConv2dFunction` (autograd) wywołuje
+`CyConv2d_cuda.forward/backward` i przekazuje **workspace** oraz
+parametry geometrii. Moduł `CyConv2d` przechowuje wagi o kształcie
+`[C_out, C_in, k, k]` (inicjowane `xavier_uniform_`) i w `forward`
+korzysta z `CyConv2dFunction.apply(...)`.
 
-**Bufor roboczy.** `CyConv2d.workspace` to prealokowany tensor `float32` na
-GPU o rozmiarze `1024*1024*1024` elementów (~4 GiB), opisany jako
-„Workspace for Cy-Winograd algorithm”. To może powodować **OOM** na kartach
-z mniejszą pamięcią VRAM.
+**Bufor roboczy.**\
+`CyConv2d.workspace` to prealokowany tensor `float32`
+na GPU o rozmiarze `1024*1024*1024` elementów (~ 4 GiB), opisany jako
+„Workspace for Cy-Winograd algorithm”. Może to powodować **OOM** na
+kartach z mniejszą ilością VRAM.
 
-**Integracja z modelami.** Wszystkie `nn.Conv2d` w wariantach **CyVGG** i
-**CyResNet** są zastąpione `CyConv2d` (m.in. `conv1` oraz konwolucje w
-blokach). Topologia, BN/ReLU, GAP i klasyfikator są zachowane 1:1 względem
-bazowych wersji.
+**Integracja z modelami.**\
+Wszystkie `nn.Conv2d` w wariantach **CyVGG**
+i **CyResNet** zostały zastąpione `CyConv2d` (m.in. `conv1` oraz
+konwolucje w blokach). Topologia, BN/ReLU, GAP i klasyfikator są
+zachowane 1:1 względem wersji bazowych.
 
-**Uwaga merytoryczna.** W kodzie modeli nie widać **jawnej osi
-„orientacji”** ani osobnego **poolingu po orientacjach**; z poziomu PyTorch
-wagi mają klasyczny kształt `[C_out, C_in, k, k]`. Jeśli własności rotacyjne
-występują, to są **enkapsulowane w jądrze CUDA** (`cycnn_cuda.cu`)
-wywoływanym przez bindingi.
+**Uwaga merytoryczna.**\
+W kodzie modeli nie ma **jawnej osi
+„orientacja”** ani osobnego **poolingu po orientacjach**. Z poziomu
+PyTorch wagi mają klasyczny kształt `[C_out, C_in, k, k]`. Jeśli
+własności rotacyjne występują, są **enkapsulowane w jądrze CUDA**
+(`cycnn_cuda.cu`) wywoływanym przez bindingi.
 
 ## Python, PyTorch
 
