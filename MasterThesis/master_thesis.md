@@ -542,11 +542,37 @@ W tej pracy traktujemy je jako tło teoretyczne
 
 ## MNIST (cyfry odręczne)
 
-## GTSRB Gray  (znaki drogowe w odcienach szarości)
+Klasyczny benchmark rozpoznawania cyfr 0–9 [@lecun1998gradient]. Obrazy
+28×28 w skali szarości zostały **przeskalowane do 32×32**, aby pasowały
+do ustawień „cifarowych” (VGG/ResNet). Wejście: 1 kanał, **10 klas**.
+Normalizacja per-kanał; brak informacji barwnej. Rotacje do testów
+inwariancji zgodnie z protokołem w rozdz. *Augmentacja*
+(źródło zbioru: [@mnist_web]).
 
-## GTSRB RGB (znaki drogowe w kolorze (RGB))
+## GTSRB Gray (znaki drogowe w odcieniach szarości)
 
-## LEGO (obiekty 3d rzutowane na 2d)
+Wariant przygotowany na bazie oryginalnego **GTSRB** - po **konwersji do
+skali szarości** i **resizie do 32×32** [@stallkamp2011gtsrb]. Wejście:
+1 kanał, **43 klasy**. Ten wariant „oczyszcza” wpływ koloru, dzięki czemu
+lepiej izoluje **rotację** jako czynnik trudności
+(por. omówienie benchmarku: [@stallkamp2012manvscomputer; @gtsrb_site]).
+
+## GTSRB RGB (znaki drogowe w kolorze)
+
+Oryginalny **GTSRB** w **RGB**, z **resizem do 32×32**
+[@stallkamp2011gtsrb; @gtsrb_site]. Wejście: 3 kanały, **43 klasy**.
+Służy do porównania z wariantem Gray - sprawdzamy, na ile **kolor**
+pomaga przy zapewnianiu inwariancji rotacyjnej.
+
+## LEGO (obiekty 3D rzutowane na 2D)
+
+Zbiór **Images of LEGO Bricks** (Kaggle) [@hazelzet_lego_kaggle].
+Na potrzeby pracy próbki zostały **przeskalowane do 96×96** i
+**zkonwertowane do skali szarości** (spójność z pozostałymi eksperymentami).
+**50 klas**. Zbiór jest syntetyczny (rzutowanie obiektów 3D na 2D),
+co pozwala badać zachowanie modeli pod **kontrolowanymi rotacjami**
+i zróżnicowaniem kształtów.
+
 
 ## Sposób augmentacji danych: zakresy rotacji, łączenie zbiorów
 
