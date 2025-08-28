@@ -542,20 +542,71 @@ W tej pracy traktujemy je jako tło teoretyczne
 
 ## MNIST (cyfry odręczne)
 
-Klasyczny benchmark rozpoznawania cyfr 0–9 [@lecun1998gradient]. Obrazy
-28×28 w skali szarości zostały **przeskalowane do 32×32**, aby pasowały
-do ustawień „cifarowych” (VGG/ResNet). Wejście: 1 kanał, **10 klas**.
-Normalizacja per-kanał; brak informacji barwnej. Rotacje do testów
-inwariancji zgodnie z protokołem w rozdz. *Augmentacja*
-(źródło zbioru: [@mnist_web]).
+Klasyczny benchmark rozpoznawania cyfr 0–9 [@lecun1998gradient]. Zbiór
+zawiera **60 000** próbek uczących i **10 000** testowych; obrazy
+**28×28**, skala szarości, piksele w [0, 255] (w pracy: normalizowane do
+[0, 1] i dalej standaryzowane) [@mnist_web]. Szczegóły formatu i plików są 
+dostępne na oficjalnej stronie MNIST [@mnist_web].
+
+**Przetwarzanie pod eksperymenty.**  
+- Obrazy zostały **przeskalowane do 32×32**, aby pasowały do ustawień
+  „cifarowych” (VGG/ResNet).  
+- Wejście: **1 kanał**, **10 klas**.  
+- **Normalizacja per-kanał** (wyliczona na zbiorze uczącym); w praktyce
+  często używa się mean $\approx 0.1307$, std $\approx 0.3081$`- takie wartości pojawiają
+  się w przykładach referencyjnych PyTorcha [@pytorch].  
+- **Podział train/val/test:** walidację wydzielono z treningu (np. 5 000
+  próbek) spójnie z innymi zbiorami.
+
+**Dlaczego MNIST tu jest?**  
+- Prosty, „czysty” zestaw do szybkich iteracji i testów **rotacji cyfr**
+  (mało szumu, jednolity kontrast).  
+- Umożliwia uczciwe porównanie **baz** (VGG/ResNet) z **wersjami
+  cyklicznymi** (CyVGG/CyResNet) przy tym samym budżecie obliczeń.  
+- Uwaga praktyczna: rotacje potrafią **mylić pary 6/9, 2/5** przy dużych
+  kątach - to naturalny „edge case”, który dobrze obnaża różnice między
+  *augmentacją* a *architekturą*.
+
+**Rotacje w eksperymentach.**  
+Zastosowano kontrolowane scenariusze kątowe (szczegóły w rozdz. *Augmentacja
+i protokół*): wariant **bez rotacji** (baseline), **małe/średnie obroty**
+oraz **pełen zakres 0–360°**. Celem jest pokazanie, kiedy **architektura
+cykliczna** daje przewagę nad samą augmentacją.
+
 
 ## GTSRB Gray (znaki drogowe w odcieniach szarości)
 
-Wariant przygotowany na bazie oryginalnego **GTSRB** - po **konwersji do
-skali szarości** i **resizie do 32×32** [@stallkamp2011gtsrb]. Wejście:
-1 kanał, **43 klasy**. Ten wariant „oczyszcza” wpływ koloru, dzięki czemu
-lepiej izoluje **rotację** jako czynnik trudności
-(por. omówienie benchmarku: [@stallkamp2012manvscomputer; @gtsrb_site]).
+**German Traffic Sign Recognition Benchmark (GTSRB)** to zestaw znaków drogowych
+z rzeczywistych nagrań, obejmujący **43 klasy**, z oficjalnym podziałem na część
+uczącą i testową (IJCNN 2011) [@stallkamp2011gtsrb; @gtsrb_site]. W literaturze
+często przytacza się także analizę „man vs. computer” z metrykami porównawczymi
+[@stallkamp2012manvscomputer].
+
+**Wariant „Gray” w tej pracy.**  
+Na potrzeby eksperymentów wszystkie obrazy zostały **przeskalowane do 32×32**
+i **skonwertowane do skali szarości** (1 kanał), tak aby pasowały do ustawień
+„cifarowych” i umożliwiały **izolację wpływu rotacji** od informacji barwnej.
+Zachowano **43 klasy**; walidację wydzielono z **oficjalnej** części treningowej
+(spójnie z innymi zbiorami). Zastosowano **normalizację per-kanał** na zbiorze
+uczącym.
+
+**Dlaczego wariant Gray?**  
+Kolor bywa silną wskazówką (np. czerwone obramowania, niebieskie tła), a celem
+tej pracy jest **geometria**: sprawdzenie, co daje **architektura rotacyjnie
+inwariantna** w porównaniu z bazową, bez „pomocy” informacji barwnej. Wersja Gray
+ułatwia czyste porównania z **GTSRB RGB** (rozdz. poniżej), gdzie różnica wynika
+właśnie z dostępności koloru.
+
+**Wyzwania charakterystyczne dla GTSRB.**  
+Nierównomierny rozkład klas (część rzadkich), duża zmienność skali i oświetlenia,
+perspektywa, rozmycie ruchu - wszystko to utrudnia proste uogólnianie i dobrze
+testuje **stabilność względem rotacji** [@stallkamp2011gtsrb; @stallkamp2012manvscomputer].
+
+**Rotacje w eksperymentach.**  
+Wykorzystano scenariusze kątowe z rozdz. *Augmentacja i protokół* (bez rotacji,
+małe/średnie obroty, pełen zakres 0–360°), aby porównać **VGG/ResNet** z
+**CyVGG/CyResNet** w identycznym budżecie obliczeń.
+
 
 ## GTSRB RGB (znaki drogowe w kolorze)
 
