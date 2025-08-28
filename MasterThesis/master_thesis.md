@@ -610,10 +610,35 @@ małe/średnie obroty, pełen zakres 0–360°), aby porównać **VGG/ResNet** z
 
 ## GTSRB RGB (znaki drogowe w kolorze)
 
-Oryginalny **GTSRB** w **RGB**, z **resizem do 32×32**
-[@stallkamp2011gtsrb; @gtsrb_site]. Wejście: 3 kanały, **43 klasy**.
-Służy do porównania z wariantem Gray - sprawdzamy, na ile **kolor**
-pomaga przy zapewnianiu inwariancji rotacyjnej.
+**German Traffic Sign Recognition Benchmark (GTSRB)** w wersji kolorowej
+to ten sam zestaw **43 klas** z oficjalnym podziałem train/test
+[@stallkamp2011gtsrb; @gtsrb_site]. W pracy obrazy zostały
+**przeskalowane do 32×32** (ustawienia „cifarowe”), z zachowaniem
+**3 kanałów (RGB)**. Normalizacja wykonana **per-kanał** na zbiorze
+uczącym; walidację wydzielono z części treningowej analogicznie jak dla
+wariantu Gray [@stallkamp2012manvscomputer].
+
+**Po co wersja RGB?**  
+Kolor bywa silnym sygnałem (czerwone obramowania zakazów, żółte
+trójkąty ostrzegawcze, niebieskie nakazy), więc wariant RGB pozwala
+sprawdzić, na ile informacje barwne **kompensują** trudność związaną z
+rotacjami - oraz jak bardzo **architektury rotacyjnie inwariantne**
+(CyVGG/CyResNet) dalej poprawiają wyniki względem baz (VGG/ResNet).
+Przyjęta procedura (ten sam rozmiar, te same podziały, ten sam
+klasyfikator) pozwala porównywać **RGB vs Gray** 1:1.
+
+**Wyzwania w praktyce.**  
+Mimo przewagi koloru, duża zmienność **punktu widzenia**, **skali**,
+**oświetlenia** i **rozmycia ruchu** utrzymuje problem rotacji jako
+istotny czynnik trudności. Kolor pomaga odróżniać klasy o podobnym
+kształcie, ale **nie zastępuje** inwariancji rotacyjnej.
+
+**Rotacje w eksperymentach.**  
+Wykorzystano te same scenariusze kątowe co wcześniej (baseline bez
+rotacji, małe/średnie obroty, pełen zakres **0–360°**) - celem jest
+uczciwe porównanie **VGG/ResNet** i **CyVGG/CyResNet** przy identycznym
+budżecie obliczeń.
+
 
 ## LEGO (obiekty 3D rzutowane na 2D)
 
