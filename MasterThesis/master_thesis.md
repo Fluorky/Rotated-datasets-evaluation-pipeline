@@ -642,12 +642,35 @@ budżecie obliczeń.
 
 ## LEGO (obiekty 3D rzutowane na 2D)
 
-Zbiór **Images of LEGO Bricks** (Kaggle) [@hazelzet_lego_kaggle].
-Na potrzeby pracy próbki zostały **przeskalowane do 96×96** i
-**zkonwertowane do skali szarości** (spójność z pozostałymi eksperymentami).
-**50 klas**. Zbiór jest syntetyczny (rzutowanie obiektów 3D na 2D),
-co pozwala badać zachowanie modeli pod **kontrolowanymi rotacjami**
-i zróżnicowaniem kształtów.
+Zbiór **Images of LEGO Bricks** (Kaggle) [@hazelzet_lego_kaggle] - obrazy
+elementów LEGO renderowanych/fotografowanych jako **rzuty 2D**. Na potrzeby
+pracy próbki zostały **przeskalowane do 96×96** i **skonwertowane do skali
+szarości**, aby zachować spójność z pozostałymi eksperymentami. Ustalono
+**50 klas** (1 kanał wejściowy), a walidację wydzielono z części
+treningowej analogicznie jak w innych zbiorach; zastosowano **normalizację
+per-kanał**.
+
+**Dlaczego LEGO?**  
+- Obiekty mają **złożone kształty** i detale krawędziowe - to naturalny test
+  „wrażliwości na orientację”.  
+- W przeciwieństwie do MNIST (proste cyfry) i GTSRB (silny sygnał koloru),
+  LEGO lepiej **izoluje geometrię** (kształt/układ wypustek, światłocień).  
+- Dobrze pokazuje różnicę między podejściem **augmentacyjnym** a
+  **architektonicznym** (CyVGG/CyResNet).
+
+**Rotacje w eksperymentach.**  
+Stosowano kontrolowane scenariusze kątowe opisane w rozdz. *Augmentacja i
+protokół* (m.in. brak rotacji, małe/średnie obroty, pełen zakres 0–360°),
+co pozwala porównać bazy (**VGG/ResNet**) z wersjami cyklicznymi
+(**CyVGG/CyResNet**) przy tej samej części klasyfikacyjnej i budżecie
+obliczeń.
+
+**Uwaga praktyczna.**  
+Przy **log-polarnych** przekształceniach i małej rozdzielczości blisko
+środka pojawia się większa gęstość próbkowania - w preprocessing’u
+zastosowano interpolację biliniarną i stały środek układu, aby ograniczyć
+artefakty i zachować porównywalność między wariantami.
+
 
 
 ## Sposób augmentacji danych: zakresy rotacji, łączenie zbiorów
