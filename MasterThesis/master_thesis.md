@@ -543,37 +543,36 @@ W tej pracy traktujemy je jako tło teoretyczne
 
 ## MNIST (cyfry odręczne)
 
-Zbiór MNIST to klasyczny benchmark rozpoznawania cyfr 0–9 [@lecun1998gradient]. Zbiór
-zawiera **60 000** próbek uczących i **10 000** testowych, obrazy mają rodzielczość
-**28×28**, w skali szarości, piksele posiadające odcień szarości w zakresie [0, 255] 
-(w pracy są one normalizowane do przedziału [0, 1] i dalej standaryzowane) 
-[@mnist_web]. Szczegóły formatu i plików są 
-dostępne na oficjalnej stronie MNIST [@mnist_web].
+Zbiór MNIST to klasyczny benchmark rozpoznawania cyfr 0-9
+[@lecun1998gradient]. Obejmuje **60 000** próbek uczących i **10 000**
+testowych. Obrazy mają rozdzielczość **28×28**, są w skali szarości, a
+wartości pikseli mieszczą się w zakresie [0, 255]. W eksperymentach
+wartości te są najpierw skalowane do [0, 1], a następnie standaryzowane
+per kanał. Szczegóły formatu i struktury plików są dostępne na stronie
+projektu [@mnist_web].
 
-**Przetwarzanie pod eksperymenty.**  
-- Obrazy zostały **przeskalowane do 32×32**, aby pasowały do ustawień
-  „cifarowych” (VGG/ResNet).  
-- Wejście: **1 kanał**, **10 klas**.  
-- **Normalizacja per-kanał** (wyliczona na zbiorze uczącym); w praktyce
-  często używa się mean $\approx 0.1307$, std $\approx 0.3081$ - takie wartości pojawiają
-  się w przykładach referencyjnych PyTorcha [@pytorch].  
-- **Podział train/val/test:** walidację wydzielono z treningu (5 000
-  próbek) spójnie z innymi zbiorami.
+Na potrzeby porównań obrazy zostały **przeskalowane do 32×32**, aby
+dopasować je do ustawień „cifarowych” stosowanych w VGG i ResNet. Wejście
+ma **1 kanał**, a liczba klas wynosi **10**. Normalizacja jest liczona na
+zbiorze uczącym, przy czym w praktyce często przyjmuje się wartości z przykładów
+referencyjnych PyTorcha: średnia ≈ 0.1307 i odchylenie standardowe ≈
+0.3081 [@pytorch]. Podział na zbiory utrzymuje spójność z resztą
+eksperymentów: z części treningowej wydzielany jest zbiór walidacyjny
+(5 000 próbek), a test pozostaje jak w oryginale.
 
-**Dlaczego MNIST został użyty w pracy??**  
-- Prosty, „czysty” zestaw do szybkich iteracji i testów **rotacji cyfr**
-  (mało szumu, jednolity kontrast).  
-- Umożliwia uczciwe porównanie **bazowych** (VGG/ResNet) z **wersjami
-  cyklicznymi** (CyVGG/CyResNet) przy tym samym budżecie obliczeń.  
-- W praktyce rotacje potrafią **mylić pary 6/9, 2/5** przy dużych
-  kątach, jest to naturalny „edge case”, który dobrze obnaża różnice między
-  *augmentacją*, a *architekturą*.
+Wybór MNIST wynika z jego prostoty i „czystości”, co pozwala szybko
+iterować i w kontrolowany sposób badać wpływ **rotacji cyfr**. Zbiór
+dobrze nadaje się do uczciwego porównania modeli bazowych (VGG/ResNet) z
+**wersjami cyklicznymi** (CyVGG/CyResNet) przy tym samym budżecie
+obliczeń. Rotacje ujawniają też naturalne przypadki brzegowe, np. pary
+**6/9** czy **2/5**, które przy większych kątach bywają mylone,
+pozwala to wyraźniej odróżnić wpływ **augmentacji** od wpływu **architektury**.
 
-**Rotacje w eksperymentach.**  
-Zastosowano kontrolowane scenariusze kątowe (szczegóły w rozdz. *Augmentacja
-i protokół*):wariant **bez rotacji** (baseline), **małe/średnie obroty**
-oraz **pełen zakres 0–360°**. Celem jest pokazanie, kiedy **architektura
-cykliczna** daje przewagę nad samą augmentacją.
+W części poświęconej augmentacji wprowadzane są kontrolowane scenariusze
+kątowe: wariant **bez rotacji** jako punkt odniesienia, warianty z
+**małymi i średnimi obrotami**, a także **pełny zakres 0-360°**. Celem
+jest wykazanie, kiedy **architektura cykliczna** zapewnia przewagę nad
+samą augmentacją rotacją.
 
 
 ## GTSRB Gray (znaki drogowe w odcieniach szarości)
@@ -581,106 +580,102 @@ cykliczna** daje przewagę nad samą augmentacją.
 **German Traffic Sign Recognition Benchmark (GTSRB)** to zestaw znaków drogowych
 z rzeczywistych nagrań, obejmujący **43 klasy**, z oficjalnym podziałem na część
 uczącą i testową (IJCNN 2011) [@stallkamp2011gtsrb; @gtsrb_site]. W literaturze
-często przytacza się także analizę „man vs. computer” z metrykami porównawczymi
-[@stallkamp2012manvscomputer].
+często przytaczana jest również analiza „man vs. computer” z metrykami
+porównawczymi [@stallkamp2012manvscomputer].
 
-**Wariant „Gray” w tej pracy.**  
-Na potrzeby eksperymentów wszystkie obrazy zostały **przeskalowane do 32×32**
-i **skonwertowane do skali szarości** (1 kanał), tak aby pasowały do ustawień
-„cifarowych” i umożliwiały **izolację wpływu rotacji** od informacji barwnej.
-Zachowano **43 klasy**; walidację wydzielono z **oficjalnej** części treningowej
-(spójnie z innymi zbiorami). Zastosowano **normalizację per-kanał** na zbiorze
-uczącym.
+W wariancie **Gray** zastosowanym w tej pracy wszystkie obrazy zostały
+**przeskalowane do 32×32** i **skonwertowane do skali szarości** (1 kanał), tak
+aby dopasować je do ustawień „cifarowych” oraz wyizolować wpływ **rotacji** od
+informacji barwnej. Zachowano **43 klasy**; walidację wydzielono z **oficjalnej**
+części treningowej (spójnie z pozostałymi zbiorami). Zastosowano **normalizację
+per-kanał** wyliczaną na zbiorze uczącym.
 
-**Dlaczego użyty został wariant Gray?**  
-Kolor bywa silną wskazówką (np. czerwone obramowania, niebieskie tła), a celem
-tej pracy jest **geometria** i sprawdzenie, co daje **architektura rotacyjnie
-inwariantna** w porównaniu z bazową, bez „pomocy” informacji barwnej. Wersja Gray
-ułatwia czyste porównania z **GTSRB RGB** (rozdz. poniżej), gdzie ewentualne różnice wynikają
-właśnie z dostępności koloru.
+Wybór wersji w odcieniach szarości motywowany jest tym, że kolor bywa silną
+wskazówką (np. czerwone obramowania, niebieskie tła), podczas gdy celem jest
+tu głównie **geometria** i ocena, co daje **architektura rotacyjnie inwariantna**
+na tle bazowej, bez „pomocy” informacji barwnej. Taki wariant ułatwia też
+czyste porównania z **GTSRB RGB** (sekcja poniżej), w których różnice można
+przypisać właśnie dostępności koloru.
 
-**Wyzwania charakterystyczne dla GTSRB.**  
-Nierównomierny rozkład klas, duża zmienność skali i oświetlenia,
-perspektywa, rozmycie w ruchu, to wszystko to utrudnia proste uogólnianie i dobrze
-testuje **stabilność względem rotacji** [@stallkamp2011gtsrb; @stallkamp2012manvscomputer].
+Zbiór GTSRB stawia kilka typowych wyzwań: nierównomierny rozkład klas, duża
+zmienność skali i oświetlenia, efekty perspektywy oraz rozmycie w ruchu. Te
+czynniki utrudniają proste uogólnianie i dobrze testują **stabilność względem
+rotacji** [@stallkamp2011gtsrb; @stallkamp2012manvscomputer].
 
-**Rotacje w eksperymentach.**  
-Wykorzystano scenariusze kątowe z rozdz. *Augmentacja i protokół* (bez rotacji,
-małe/średnie obroty, połączenie róznych kombinacji kątów, pełen zakres 0–360°), aby porównać **VGG/ResNet** z
-**CyVGG/CyResNet** w identycznym budżecie obliczeń.
+W eksperymentach wykorzystano scenariusze kątowe opisane w rozdziale
+*Augmentacja i protokół*: wariant **bez rotacji** (baseline), zestawy
+**małych/średnich obrotów**, połączenia **różnych** kombinacji kątów oraz
+**pełen zakres 0-360°**. Pozwala to porównać **VGG/ResNet** z
+**CyVGG/CyResNet** przy identycznym budżecie obliczeń.
 
 
 ## GTSRB RGB (znaki drogowe w kolorze)
 
-**German Traffic Sign Recognition Benchmark (GTSRB)** w wersji kolorowej
-to ten sam zestaw **43 klas** z oficjalnym podziałem train/test
-[@stallkamp2011gtsrb; @gtsrb_site]. W pracy obrazy zostały
-**przeskalowane do 32×32** (ustawienia „cifarowe”), z zachowaniem
-**3 kanałów (RGB)**. Normalizacja wykonana **per-kanał** na zbiorze
-uczącym; walidację wydzielono z części treningowej analogicznie jak dla
-wariantu Gray [@stallkamp2012manvscomputer].
+German Traffic Sign Recognition Benchmark (GTSRB) w wersji kolorowej to ten sam
+zestaw 43 klas z oficjalnym podziałem na trening i test
+[@stallkamp2011gtsrb; @gtsrb_site]. Na potrzeby eksperymentów obrazy są
+przeskalowane do 32×32 (ustawienia „cifarowe”) z zachowaniem trzech kanałów
+(RGB). Normalizacja wykonywana jest per kanał na zbiorze uczącym, a walidację
+wydzielono z części treningowej analogicznie jak dla wariantu Gray
+[@stallkamp2012manvscomputer].
 
-**Dlaczego została używa wersja RGB?**  
-Kolor bywa silnym sygnałem (czerwone obramowania zakazów, żółte
-trójkąty ostrzegawcze, niebieskie nakazy), więc użycie wariantu RGB pozwala
-sprawdzić, na ile informacje barwne **kompensują** trudność związaną z
-rotacjami - oraz jak bardzo **architektury rotacyjnie inwariantne**
-(CyVGG/CyResNet) dalej poprawiają wyniki względem baz (VGG/ResNet).
-Przyjęta procedura (ten sam rozmiar, te same podziały, ten sam
-klasyfikator) pozwala porównywać **RGB vs Gray** 1:1.
+Wersja RGB została włączona, aby ocenić, w jakim stopniu informacja barwna może
+kompensować trudność związaną z rotacjami oraz na ile architektury rotacyjnie
+inwariantne (CyVGG/CyResNet) nadal poprawiają wyniki względem bazowych modeli
+(VGG/ResNet). Zastosowanie tych samych rozmiarów wejścia, tych samych podziałów
+oraz tego samego klasyfikatora pozwala na porównanie RGB i Gray w układzie 1:1.
 
-**Wyzwania w praktyce.**  
-Mimo przewagi koloru, duża zmienność **punktu widzenia**, **skali**,
-**oświetlenia** i **rozmycia ruchu** pozostawiają problem rotacji jako
-istotny czynnik trudności. Kolor pomaga odróżniać klasy o podobnym
-kształcie, ale **nie zastępuje** inwariancji rotacyjnej.
+W praktyce kolor stanowi silny sygnał (np. czerwone obramowania zakazów, żółte
+trójkąty ostrzegawcze, niebieskie nakazy), lecz nie eliminuje problemów
+wynikających z dużej zmienności punktu widzenia, skali, oświetlenia i rozmycia
+ruchu. Rotacje pozostają istotnym czynnikiem trudności, a informacja barwna
+pomaga głównie odróżniać klasy o podobnych kształtach.
 
-**Rotacje w eksperymentach.**  
-Wykorzystano te same scenariusze kątowe co wcześniej (baseline bez
-rotacji, małe/średnie obroty, połączenie róznych kombinacji kątów, pełen zakres **0–360°**), gdyż celem jest
-uczciwe porównanie **VGG/ResNet** i **CyVGG/CyResNet** przy identycznym
-budżecie obliczeń.
+W części eksperymentalnej stosowane są te same scenariusze kątowe co wcześniej:
+wariant bez rotacji jako punkt odniesienia, warianty z małymi i średnimi
+obrotami, połączenia różnych kombinacji kątów oraz pełny zakres 0-360°. Dzięki
+temu zachowana jest porównywalność między VGG/ResNet a CyVGG/CyResNet przy
+jednakowym budżecie obliczeń.
 
 
 ## LEGO (obiekty 3D rzutowane na 2D)
 
-Zbiór **Images of LEGO Bricks** (Kaggle) [@hazelzet_lego_kaggle] - obrazy
-elementów LEGO renderowanych jako **rzuty 2D**,**skonwertowane do skali
-szarości**. Na potrzeby pracy próbki zostały **przeskalowane do 96×96**,  
-aby zachować detale kloców. Ustalono **50 klas** (1 kanał wejściowy), 
-a walidacja wydzielona została z części treningowej analogicznie jak w innych zbiorach, 
-zastosowana została również **normalizacja per-kanał**.
+Zbiór **Images of LEGO Bricks** (Kaggle) [@hazelzet_lego_kaggle] obejmuje obrazy
+elementów LEGO renderowanych jako rzuty 2D. W tej pracy obrazy zostały
+skonwertowane do skali szarości i przeskalowane do **96×96**, aby zachować
+detale klocków. Ustalono **50 klas** (wejście 1-kanałowe), walidację
+wydzielono z części treningowej analogicznie jak w pozostałych zbiorach, a
+normalizacja jest liczona per kanał na zbiorze uczącym.
 
-**Dlaczego LEGO?**  
-- Obiekty mają **złożone kształty** i detale co sprawia, że jest to naturalny test
-  „wrażliwości na orientację”.  
-- W przeciwieństwie do MNIST (proste cyfry) i GTSRB (silny sygnał koloru),
-  LEGO lepiej **izoluje geometrię** (kształt/układ wypustek, światłocień).  
-- Dobrze pokazuje różnicę między podejściem **augmentacyjnym** a
-  **architektonicznym** (CyVGG/CyResNet).
+Wybór zbioru LEGO motywowany jest tym, że obiekty mają złożone kształty i
+drobne szczegóły, co stanowi naturalny test wrażliwości na orientację. W
+odróżnieniu od MNIST (proste cyfry) i GTSRB (silny sygnał koloru), LEGO lepiej
+izoluje **geometrię** obiektu, czyli układ wypustek i światłocień, dzięki czemu
+różnice między podejściem augmentacyjnym a architektonicznym
+(**CyVGG/CyResNet** vs **VGG/ResNet**) są czytelniejsze.
 
-**Rotacje w eksperymentach.**  
-Stosowano kontrolowane scenariusze kątowe opisane w rozdz. *Augmentacja i
-protokół* (m.in. brak rotacji, małe/średnie obroty, połączenie róznych kombinacji kątów, 
-pełen zakres 0–360°), co pozwala porównać bazowe modele (**VGG/ResNet**) z wersjami cyklicznymi
-(**CyVGG/CyResNet**) przy tej samej części klasyfikacyjnej i budżecie
-obliczeń.
+W eksperymentach zastosowano te same scenariusze kątowe co w innych zbiorach:
+wariant bez rotacji jako punkt odniesienia, warianty z małymi i średnimi
+obrotami, połączenia różnych kombinacji kątów oraz pełny zakres **0-360°**.
+Porównania są prowadzone przy tej samej części klasyfikacyjnej i tym samym
+budżecie obliczeń, aby izolować wpływ komponentu rotacyjnego.
 
-**Uwaga praktyczna.**  
-Przy **log-polarnych** przekształceniach i małej rozdzielczości blisko
-środka pojawia się większa gęstość próbkowania, w preprocessing’u
-zastosowana została interpolacja biliniarna i stały środek układu, aby ograniczyć
-artefakty i zachować porównywalność między wariantami.
+Przy przekształceniach log-polarnych i niewielkiej rozdzielczości rośnie
+gęstość próbkowania w pobliżu środka. W przetwarzaniu wstępnym stosowana jest
+interpolacja biliniarna i stały środek układu, co ogranicza artefakty i
+utrzymuje porównywalność między wariantami.
+
 
 
 ## Sposób augmentacji danych: zakresy rotacji, łączenie zbiorów
 
 Pipeline obsługuje dwa formaty wejścia. Pierwszy to klasyczny format IDX
-(ubyte), stosowany m.in. w zbiorze mnist MNIST oraz LEGO. Drugi to tryb NPY, 
-w którym dane zapisywane są w formacie 'npy' np. jako `train_images.npy` i `train_labels.npy`, 
-a dla części testowej jako `test_images.npy` i `test_labels.npy`. Niezależnie od 
-formatu została zastosowana ta sama logika budowania zbiorów danych oraz ich podziału 
-na `train` i `test`.
+(ubyte), stosowany m.in. w zbiorze MNIST. Drugi to tryb NPY, w którym dane
+zapisywane są jako `train_images.npy` i `train_labels.npy`, zaś dla części
+testowej jako `test_images.npy` i `test_labels.npy`. Niezależnie od formatu
+zastosowana jest ta sama logika budowania zbiorów danych oraz ich podziału na
+`train` i `test`. Dodatkowo, w ścieżce IDX dla MNIST nazwa pliku `t10k` jest
+zamieniana na `test` przed uruchomieniem rotacji.
 
 ## Sposób augmentacji danych: rotacje i łączenie zbiorów
 
@@ -696,7 +691,7 @@ Augmentacja rotacją występuje w dwóch wersjach. W pierwszej stosowane są ką
 stałe: dla każdej z góry zadanej wartości tworzony jest osobny zestaw nazwany
 według szablonu `rotated-{theta}`. W praktyce wykorzystywane są dwie siatki
 kątów: co 30° (30, 60, …, 330) oraz co 45° (45, 90, …, 315). Dostępny jest
-również preset łączny `fixed_all`, który obejmuje obie siatki. Dla każdej
+również preset łączny `fixed_all`, który obejmuje te obie siatki. Dla każdej
 wartości kąta przygotowywane są oddzielne zbiory treningowe i testowe.
 
 Druga wersja opiera się na przedziałach kątów. Tworzone są zbiory
@@ -707,7 +702,7 @@ każdego przedziału, co zwiększa różnorodność danych.
 
 Parametry przekształceń są stałe w obrębie formatu. W trybie NPY obrót
 wykonywany jest wokół środka kadru, z interpolacją liniową, bez
-rozszerzania płótna, piksele wypadające poza obraz wypełniane są stałym
+rozszerzania płótna, a piksele wypadające poza obraz wypełniane są stałym
 kolorem tła. W trybie IDX używana jest funkcja `PIL.Image.rotate` w
 ustawieniach domyślnych, co utrzymuje stały rozmiar wyjściowy.
 
@@ -719,10 +714,10 @@ one w folderze `merged_datasets/`, a ich nazwy zaczynają się od prefiksu
 `merged_fixed_45` oraz `merged_fixed_all`. Dla wariantu przedziałowego
 dostępne są m.in. `merged_range_0_90`, `merged_range_90_180`,
 `merged_range_180_270`, `merged_range_270_360`, a także szersze
-`merged_range_0_180` oraz pełny `merged_range_full_0_360`. Każdy z tych
-presetów może być rozszerzany o zbiór bez rotacji, co oznaczane jest
-dopiskiem `_plus_non_rotated`. Dla każdego presetu przygotowywane są osobno
-zbiory `train` i `test`.
+`merged_range_0_180`, `merged_range_180_360` oraz pełny
+`merged_range_full_0_360`. Każdy z tych presetów może być rozszerzany o zbiór
+bez rotacji, co oznaczane jest dopiskiem `_plus_non_rotated`. Dla każdego
+presetu przygotowywane są osobno zbiory `train` i `test`.
 
 Sposób łączenia zależy od formatu. W IDX pliki `*-images-idx3-ubyte` i
 `*-labels-idx1-ubyte` są sklejane, a nagłówki aktualizowane są o nową liczbę
@@ -736,8 +731,9 @@ plikami `train_images.npy`, `train_labels.npy`, `test_images.npy`,
 `test_labels.npy`. Obok tworzone są katalogi wariantów obrotowych, takie jak
 `rotated-30` czy `rotated-0-30`, z analogicznymi plikami dla podziałów
 `train` i `test`. Zbiory połączone zapisywane są w `merged_datasets/`, m.in.
-w `merged_fixed_30` oraz `merged_range_full_0_360_plus_non_rotated`, również
-z kompletami plików treningowych i testowych.
+w `merged_fixed_30`, `merged_range_180_360_plus_non_rotated` oraz
+`merged_range_full_0_360_plus_non_rotated`, również z kompletami plików
+treningowych i testowych.
 
 ### Scenariusze trenowanie - test
 
@@ -746,11 +742,14 @@ Nazwy w tym pliku odpowiadają ścieżkom na dysku. Przykładowe klucze
 (wartości mają tę samą postać) to: `dataset_LEGO_non_rotated`,
 `merged_datasets/merged_fixed_30`,
 `merged_datasets/merged_fixed_30_plus_non_rotated`,
-`merged_datasets/merged_range_full_0_360_plus_non_rotated`, `rotated-30`,
-`rotated-45`, `rotated-0-30`, `rotated-90-120`. Dla każdego zbioru
-treningowego przypisywana jest lista zbiorów testowych. Zawsze uwzględniany
-jest zbiór bazowy bez rotacji, sam zbiór treningowy oraz dodatkowe zbiory
-rotowane dobrane zgodnie z ustalonym limitem.
+`merged_datasets/merged_range_0_180`,
+`merged_datasets/merged_range_0_180_plus_non_rotated`,
+`merged_datasets/merged_range_180_360_plus_non_rotated`,
+`merged_datasets/merged_range_full_0_360_plus_non_rotated`,
+`rotated-30`, `rotated-45`, `rotated-0-30`, `rotated-90-120`. 
+Dla każdego zbioru treningowego przypisywana jest lista zbiorów testowych. Zawsze
+uwzględniany jest zbiór bazowy bez rotacji, sam zbiór treningowy oraz
+dodatkowe zbiory rotowane dobrane zgodnie z ustalonym limitem.
 
 \newpage
 
@@ -805,28 +804,25 @@ i konwolucje w `BasicBlock`). Pozostałe elementy (BN, ReLU, shortcut, GAP,
 `Linear`) pozostajone zostały bez zmian względem wersji bazowej.
 
 
-## Wersje cykliczne: **CyVGG-E** i **CyResNet-56**
+## Wersje cykliczne: CyVGG-E i CyResNet-56
 
-- **Conv → CyConv.** Każdą `Conv2d` zastąpiono **`CyConv2d`**. Interfejs
-  (rozmiary jąder, `stride`, `padding`) jest drop-in zgodny z `Conv2d`,
-  więc topologia i klasyfikator są identyczne jak w bazach.
+Wersje cykliczne powstają przez zastąpienie każdej `Conv2d` warstwą
+`CyConv2d`. Interfejs (`kernel size`, `stride`, `padding`) jest zgodny
+z `Conv2d`, więc topologia sieci i część klasyfikacyjna pozostają bez zmian.
+`CyConv2d` opakowuje własną funkcję autograd (`CyConv2dFunction`) i
+wywołuje rozszerzenie CUDA `CyConv2d_cuda.forward/backward(...)`. Wagi
+mają kształt `[C_out, C_in, k, k]` i są inicjalizowane przez
+`xavier_uniform_`. Moduł korzysta z dużego bufora roboczego na GPU
+(opisanego w kodzie jako „Workspace for Cy-Winograd algorithm”).
 
-- **Implementacja warstwy.** `CyConv2d` opakowuje własną funkcję autograd
-  (`CyConv2dFunction`) i wywołuje rozszerzenie CUDA
-  `CyConv2d_cuda.forward/backward(...)`. Moduł posiada duży bufor roboczy na
-  GPU (opisany w kodzie jako „Workspace for Cy-Winograd algorithm”). Wagi
-  inicjalizowane są przez `xavier_uniform_`.
-
-- **Uwaga dot. osi orientacji.** W kodzie modeli **nie ma jawnej dodatkowej
-  osi „orientacja”** ani osobnego „poolingu po orientacjach”. Z poziomu
-  PyTorch interfejs filtrów ma kształt `[C_out, C_in, k, k]` (jak w
-  standardowym `Conv2d`). Mechanizmy rotacyjne - jeśli obecne - są
-  enkapsulowane w jądrze CUDA `CyConv2d_cuda`, niewidocznym w plikach
-  modeli.
-
-- **Inwariancja w praktyce.** Po stronie modeli **GAP** oraz (opcjonalnie)
-  dalsze uśrednianie w klasyfikatorze są identyczne jak w bazach - brak
-  osobnego „poolingu po orientacjach” widocznego w kodzie modeli.
+W definicjach modeli nie występuje jawna oś „orientacja” ani osobny
+pooling po orientacjach. Z punktu widzenia PyTorch parametry filtrów
+zachowują standardowy kształt `[C_out, C_in, k, k]`. Mechanizmy
+rotacyjne - o ile są użyte - realizowane są w jądrze CUDA
+`CyConv2d_cuda`, niewidocznym na poziomie kodu modeli.
+W praktyce inwariancja po stronie modeli nie jest wprowadzana osobno:
+`GAP` oraz ewentualne uśrednianie w klasyfikatorze działają tak samo jak
+w wersjach bazowych i nie ma dodatkowego „poolingu po orientacjach”.
 
 ## Uzgodnienia I/O i selektor modeli
 
