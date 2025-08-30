@@ -789,41 +789,43 @@ zrealizowana została w jądrze CUDA z użyciem `CyConv2d_cuda`, wywoływanym z 
 
 ### Szczegóły implementacyjne: warstwa `CyConv2d` (CUDA)
 
-**Rozszerzenie - struktura**\
-Warstwa korzysta z modułu C++/CUDA kompilowanego jako
-`CyConv2d_cuda` z plików źródłowych `cycnn.cpp` i `cycnn_cuda.cu` (przy użyciu
-`setuptools` i `BuildExtension`).
+# Implementacja i środowisko eksperymentalne
 
-**Interfejs**\
-W `cycnn.cpp` eksportowane są funkcje
-`forward(...)` i `backward(...)` (pybind11). Przyjmują one `input`,
-`weight`, `workspace` oraz `stride`, `padding`, `dilation`. Makra
-sprawdzają, czy tensory są **CUDA** i **contiguous**, po czym wywoływane
-są implementacje `cyconv2d_cuda_forward/backward`.
+### Szczegóły implementacyjne: warstwa `CyConv2d` (CUDA)
 
-**Warstwa w PyTorch.**\
-`CyConv2dFunction` (autograd) wywołuje
-`CyConv2d_cuda.forward/backward` i przekazuje **workspace** oraz
-parametry geometrii. Moduł `CyConv2d` przechowuje wagi o kształcie
-`[C_out, C_in, k, k]` (inicjowane `xavier_uniform_`) i w `forward`
-wykorzystuje `CyConv2dFunction.apply(...)`.
+Warstwa `CyConv2d` korzysta z rozszerzenia C++/CUDA kompilowanego jako `CyConv2d_cuda`.
+Pliki źródłowe wykorzystywane do kompilacji to `cycnn.cpp` i `cycnn_cuda.cu`, ich budowanie 
+przy użyciu `setuptools` z `BuildExtension`. Dzięki temu wywołania tej biblioteki z poziomu Pythona 
+trafiają bezpośrednio do rdzeni CUDA.
+W pliku `cycnn.cpp` udostępnione są funkcje `forward(...)` i `backward(...)`
+z użyciem pybind11. Przyjmują one tensory `input`, `weight` oraz bufor
+`workspace`, a także parametry geometrii: `stride`, `padding`, `dilation`.
+Przed przekazaniem do implementacji CUDA sprawdzane jest, czy dane
+znajdują się na GPU i mają ciągły układ w pamięci. Następnie wywoływane są
+funkcje `cyconv2d_cuda_forward` i `cyconv2d_cuda_backward`.
 
-**Bufor roboczy.**\
-`CyConv2d.workspace` jest to prealokowany tensor `float32`
-na GPU o rozmiarze `1024*1024*1024` elementów (~ 4 GiB), opisany jako
-„Workspace for Cy-Winograd algorithm”. Może to powodować **OOM** na
-kartach graficznych z mniejszą ilością VRAM.
+Po stronie PyTorch warstwa jest opakowana w `CyConv2dFunction` z własnymi
+`forward` i `backward`. Moduł `CyConv2d` przechowuje wagi o kształcie
+`[C_out, C_in, k, k]` z inicjalizacją z użyciem `xavier_uniform_`. W metodzie `forward`
+wywoływana jest `CyConv2dFunction.apply(...)`, do której przekazywane są
+parametry kroku, dopełnienia i dylacji oraz wskaźnik do bufora roboczego.
+Bufor `workspace` jest prealokowany na GPU jako tensor `float32` o rozmiarze
+`1024*1024*1024` elementów, jest to w przybliżeniu około 4 GiB. W kodzie został opisany
+jako miejsce pracy wariantu algorytmu Winograda. Rozwiązanie to pozwala skórcić czas obliczeń, ale
+wymaga odpowiedniej ilości pamięci VRAM, przez co na kartach graficznych posiadających mniej VRAMU mogą 
+pojawić się błędy OOM.
 
-**Integracja z modelami.**\
-Wszystkie `nn.Conv2d` w wariantach **CyVGG**
-i **CyResNet** zostały zastąpione `CyConv2d` (m.in. `conv1` oraz
-konwolucje znajdujące się w blokach). Topologia, BN/ReLU, GAP i klasyfikator są
-zachowane 1:1 względem wersji bazowych.
-W kodzie modeli nie ma **jawnej osi
-„orientacja”** ani osobnego **poolingu po orientacjach**. Z poziomu
-PyTorch wagi mają klasyczny kształt `[C_out, C_in, k, k]`. Jeśli
-własności rotacyjne występują, są **enkapsulowane w jądrze CUDA**
-(`cycnn_cuda.cu`) wywoływanym przez bindingi.
+Integracja z modelami jest bezpośrednia. We wszystkich miejscach, gdzie w
+bazowych architekturach użyto `nn.Conv2d`, zarówno w `conv1`, jak i w
+konwolucjach wewnątrz bloków, w wersjach **CyVGG** i **CyResNet** wstawiono
+`CyConv2d`. Pozostałe elementy pozostają bez zmian: BatchNorm, ReLU, GAP i
+klasyfikator działają tak samo jak w wersjach referencyjnych.
+W samych definicjach modeli nie ma jawnej osi orientacji ani osobnego poolingu
+po orientacjach. Z punktu widzenia PyTorch wagi mają klasyczny kształt
+`[C_out, C_in, k, k]`. Jeśli pojawia się zachowanie związane z obrotami, to jest
+ono realizowane w kodzie CUDA (`cycnn_cuda.cu`), do którego odwołują się
+bindingi z `cycnn.cpp`.
+
 
 ## Python, PyTorch
 
