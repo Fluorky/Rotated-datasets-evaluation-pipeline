@@ -675,6 +675,70 @@ artefakty i zachować porównywalność między wariantami.
 
 ## Sposób augmentacji danych: zakresy rotacji, łączenie zbiorów
 
+Pipeline obsługuje dwa formaty wejścia. Pierwszy to klasyczny format IDX
+(ubyte), stosowany m.in. w zbiorze mnist MNIST oraz LEGO. Drugi to tryb NPY, 
+w którym dane zapisywane są w formacie 'npy' np. jako `train_images.npy` i `train_labels.npy`, 
+a dla części testowej jako `test_images.npy` i `test_labels.npy`. Niezależnie od 
+formatu została zastosowana ta sama logika budowania zbiorów danych oraz ich podziału 
+na `train` i `test`.
+
+### Rotacje
+
+Augmentacja rotacją ma dwie wersje. W pierwszej używam kątów stałych: dla
+każdego z góry zadanego X powstaje osobny zestaw `rotated-θ`. W praktyce
+korzystam z dwóch siatek kątów: co 30° (30, 60, …, 330) oraz co 45°
+(45, 90, …, 315). Dostępny jest też preset łączny `fixed_all`, który
+zawiera obie siatki. Dla każdej wartości X przygotowuję osobno część
+treningową i testową.
+
+Druga wersja to rotacje z przedziałów. Buduję zbiory `rotated-a-b` dla
+dwunastu zakresów: [0,30), [30,60), …, [330,360). Dla każdej próbki kąt
+losowany jest z rozkładu jednostajnego w ramach danego przedziału. Losowanie
+odbywa się niezależnie dla każdej próbki i dla każdego przedziału, co
+zwiększa różnorodność przykładów.
+
+Parametry przekształceń są stałe w obrębie formatu. W trybie NPY obrót
+wykonywany jest wokół środka kadru, z interpolacją liniową, bez
+rozszerzania płótna; piksele wypadające poza obraz wypełniane są stałym
+kolorem tła (odpowiednik `BORDER_CONSTANT`). W trybie IDX korzystam z
+`PIL.Image.rotate` w ustawieniach domyślnych, co utrzymuje stały rozmiar
+wyjściowy.
+
+### Łączenie zbiorów
+
+Na podstawie zbiorów obrotowych tworzę presety złączone. Dla kątów stałych
+powstają `fixed_30` (zbiory co 30°), `fixed_45` (zbiory co 45°) oraz
+`fixed_all` (unia obu). W wariancie przedziałowym dostępne są zarówno
+zakresy krótsze, np. `range_0_90` czy `range_180_270`, jak i dłuższe,
+np. `range_0_180`, a także pełny `range_full_0_360`. Każdy preset może
+być rozszerzony o zbiór bez rotacji (dopisek `+ non_rotated`). Dla
+każdego z nich buduję osobno część treningową i testową.
+
+Sposób łączenia zależy od formatu. W IDX sklejane są pliki
+`*-images-idx3-ubyte` i `*-labels-idx1-ubyte`, a nagłówki uaktualniam o
+nową liczbę próbek. W NPY wykonuję konkatenację macierzy obrazów i wektorów
+etykiet wzdłuż osi próbek.
+
+### Organizacja katalogów
+
+Struktura katalogów jest prosta. W katalogu bazowym znajduje się folder
+zbioru źródłowego (np. `dataset_X`) z plikami `train_images.npy`,
+`train_labels.npy`, `test_images.npy` i `test_labels.npy`. Obok powstają
+foldery wariantów obrotowych, np. `rotated-30` czy `rotated-0-30`, z
+analogicznymi plikami dla podziałów `train` i `test`. Zestawy połączone
+zapisywane są w `merged_datasets`, np. w `merged_fixed_30` albo
+`merged_range_full_0_360_plus_non_rotated`, również z kompletami plików
+treningowych i testowych.
+
+### Scenariusze trenowanie - test
+
+Do porównań wykorzystuję plik JSON z opisem scenariuszy ewaluacji. Każdy
+zbiór treningowy ma przypisaną listę zbiorów testowych. Zawsze znajduje się
+tam zbiór bazowy bez rotacji, sam zbiór treningowy oraz dodatkowe zbiory
+testowe dobrane losowo do ustalonego limitu. Dzięki temu wyniki są
+powtarzalne, a różnice wynikają z doboru kątów i sposobu łączenia danych,
+a nie z ręcznych zmian w procedurze.
+
 \newpage
 
 # Architektury modeli
