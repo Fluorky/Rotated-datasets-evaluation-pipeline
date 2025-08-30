@@ -766,7 +766,7 @@ i konwolucje w `BasicBlock`). Pozostałe elementy (BN, ReLU, shortcut, GAP,
 Jako bazy zastosowano **VGG** (wariant **E / VGG-19**) i **ResNet-56**. Konwolucje
 `3×3` z `padding=1`, w VGG z okresowym `MaxPool2d(2)`, w ResNecie zaś jest zmniejszanie
 rozdzielczości przez `stride=2`. Po części splotowej **GAP** i **klasyfikator**
-(w VGG są to dwie warstwy w pełni połączone `512→512→C` z dropoutem, aż w ResNecie jes to
+(w VGG są to dwie warstwy w pełni połączone `512→512→C` z dropoutem, aż w ResNecie jest to
 `Linear 64→C`). Warianty VGG w kodzie występują także w wersjach `*_bn`
 (z BatchNorm). Modele te są z natury **ekwiwariantne translacyjnie** (dobrze
 znoszą przesunięcia), ale nie posiadają wbudowanego mechanizmu inwariancji
