@@ -61,7 +61,7 @@ w praktyce bywają wrażliwe na pozornie drobne zmiany takie jak
 obrócenie obiektu o kilkanaście stopni czy niewielki przechył kamery.
 To, co dla człowieka jest naturalne i natychmiast rozpoznawalne (znak
 drogowy pod kątem, cyfra obrócona na kartce), dla klasycznej
-konwolucyjnej sieci neuronowej bywa problemem. Rdzeń trudności to brak
+konwolucyjnej sieci neuronowej bywa problemem. Największy problem to brak
 naturalnej inwariantności względem rotacji: standardowe CNN-y „z
 definicji” lepiej radzą sobie z przesunięciami niż z obrotami
 [@goodfellow2016deep; @dumoulin2016guide].
@@ -73,9 +73,9 @@ architektury z wbudowaną geometrią: sieci grupowo równoważne (G-CNN,
 E(2)-equivariant) [@cohen2016group; @kim2020cycnn], sieci cykliczne
 (CyCNN; w szczególności **CyVGG** i **CyResNet**) operujące na wielu
 orientacjach oraz przekształcenia do układów polarnych (linear-polar i
-log-polar), które „prostują” rotacje do przesunięć. Cel jest wspólny: by
-model rozpoznawał „to samo” niezależnie od orientacji, bez agresywnego
-dublowania danych.
+log-polar), które „prostują” rotacje do przesunięć. Cel jest wspólny, 
+mianowicie by model rozpoznawał „to samo” niezależnie od orientacji, 
+bez agresywnego dublowania danych.
 
 Niniejsza praca skupia się na praktycznej weryfikacji tych podejść.
 Przygotowano zbiory obejmujące m.in. odręcznie napisane cyfry, znaki
@@ -134,20 +134,20 @@ zastosowano następujące rozwiązania technologiczne:
 
 - **Język programowania Python** - podstawowe narzędzie do implementacji
   algorytmów oraz obsługi frameworków uczenia maszynowego, dzięki
-  wszechstronności i ekosystemowi bibliotek [@python-docs] 
-  Środowiska były izolowane dzięki użyciu `venv`.
+  wszechstronności i bogatemu ekosystemowi bibliotek [@python-docs] 
+  Środowiska uruchomieniowe były izolowane dzięki użyciu `venv`.
 
   **Frameworki uczenia maszynowego:**
   - **PyTorch** - elastyczny framework do budowy, trenowania i wdrażania modeli
-    ML/DL (w tym własnych warstw, jak `CyConv`) [@pytorch-docs].
+    ML/DL (w tym własnych warstw, takich jak `CyConv`) [@pytorch-docs].
 
 - **Modele cykliczne (CyCNN).** W pracy zostało przyjęte podejście, w
   którym obraz został przemapowany do współrzędnych $(\rho,\varphi)$.
   Dzięki temu obrót $R_\alpha$ staje się przesunięciem o $\alpha$ po osi
   $\varphi$. Konwolucje zostały zastąpione warstwami cylindrycznymi
   (CyConv) z cyklicznym paddingiem po $\varphi$. Dla każdego filtra
-  zostało przygotowanych $n$ orientacji; odpowiedzi zostały złożone z
-  dodatkową osią „orientacja”. Obrót wejścia powoduje cykliczny shift
+  zostało przygotowanych $n$ orientacji, a odpowiedzi zostały złożone z
+  dodatkową osią „orientacja”. Obrót wejścia powoduje cykliczne przesunięcie
   po tej osi, a pooling po orientacjach daje inwariancję względem
   rotacji. Został ustawione takie parametry jak stały środek układu polarnych, 
   stała siatka próbkowania oraz biliniarna interpolacja. Padding po 
@@ -157,10 +157,10 @@ zastosowano następujące rozwiązania technologiczne:
 - **Wykorzystanie akceleracji GPU (NVIDIA)** - obliczenia zostały
   znacząco przyspieszone dzięki użyciu kart **RTX 3070 Ti 8 GB** oraz
   **RTX 3060 12 GB**. Frameworki takie jak PyTorch wspierają **CUDA**, **Tensor** oraz **cuDNN**, co
-  umożliwia efektywne wykorzystanie zasobów GPU
-  [@cuda-docs; @cudnn-docs]. Monitorowanie i diagnostyka zostały wykonane z użyciem narzędzia `nvidia-smi`.
+  umożliwia efektywne wykorzystanie zasobów GPU [@cuda-docs; @cudnn-docs]. 
+  Monitorowanie i diagnostyka zostały wykonane z użyciem narzędzia `nvidia-smi`.
 
-- **Tensor Cores (Ampere).** Zastosowane karty RTX (3070 Ti, 3060) mają
+- **Tensor Cores (Ampere).** Zastosowane karty graficzne RTX (3070 Ti, 3060) mają
   rdzenie Tensor, które sprzętowo przyspieszają operacje macierzowe
   (konwolucje/matmul). Biblioteki **cuDNN/cuBLAS** na architekturze
   **Ampere** domyślnie mogą używać trybu **TF32** dla obciążeń FP32,
@@ -168,12 +168,12 @@ zastosowano następujące rozwiązania technologiczne:
   Dodatkowo, w **PyTorchu** możliwe jest włączenie **mieszanej precyzji**
   (FP16/BF16) przez **AMP** w miejscach, gdzie to bezpieczne, przy 
   włączeniu tego feature, zwykle przyspiesza to trening przy
-  porównywalnej jakości (szczegóły w dokumentacji).
+  porównywalnej jakości (szczegóły znajdują się w dokumentacji).
   [@nvidia_tensorcores; @nvidia_tf32; @micikevicius2018mixed; @pytorch_amp]
 
 - **System operacyjny: Linux (Ubuntu LTS).** Główne środowisko uruchomieniowe stanowił system operacyjny 
   **Ubuntu** (dystrybucja LTS) posiadający stabilne
-  jądro, pakiety z APT, łatwa integrację ze sterownikami NVIDIA i CUDA.
+  jądro, pakiety z APT, łatwą integrację ze sterownikami NVIDIA i CUDA.
   Treningi uruchamiane były **lokalnie** na maszynach z GPU NVIDII. 
   [@ubuntu_docs]. Dla zgodności ze środowiskami Windows używano też
   wariantu **WSL2** (ten sam obraz Dockera i ta sama konfiguracja)
@@ -217,8 +217,9 @@ kontrolowanymi rotacjami.
   o kontrolowane rotacje oraz zostały przygotowane spójne podziały zbiorów na
   train/val/test.
 
-- **Augmentacja i protokół:** zostały zdefiniowane zakresy kątów,
-  liczba powtórzeń i podział na zbiory train/val/test (uczący/
+- **Augmentacja i protokół nauki, validacji oraz testów:** 
+  zostały zdefiniowane zakresy kątów do sprawdzenia,
+  liczba treningów, podział na zbiory train/val/test (uczący/
   walidacyjny/testowy), z możliwością powtórzenia trenowań.
 
 - **Środowisko i implementacja:** został wykorzystany **PyTorch** z
@@ -254,7 +255,7 @@ kontrolowanymi rotacjami.
 
 ### Artefakty pracy
 
-- Repozytoria z kodem, skryptami i plikami konfiguracyjnymi (PyTorch).
+- Repozytoria z kodem, skryptami i plikami konfiguracyjnymi.
 - Pliki konfiguracyjne eksperymentów i opis danych.
 - Wytrenowane wagi modeli (wybrane checkpointy) oraz raporty z ewaluacji.
 - Tekst pracy z dokumentacją eksperymentów i wnioskami.
@@ -329,7 +330,7 @@ $$
 
 W praktyce większość frameworków oblicza **korelację krzyżową** (bez
 odwracania jądra), mimo że w API funkcja nazywana jest `conv` [@dumoulin2016guide].  
-Nie ma to jednak znaczenia dla procesu uczenia, bo sieć i tak dobierze
+Nie ma to jednak końcowo znaczenia dla procesu uczenia, bo sieć i tak dobierze
 właściwe wagi.
 
 #### Stride, padding, rozmiary
@@ -374,7 +375,7 @@ R_\ell = R_{\ell-1} + (k_\ell-1)\!\!\prod_{j<\ell}s_j.
 $$
 
 W praktyce nie wszystkie piksele w obrębie tego pola mają taki sam wpływ. Największy
-wpływ ma obszar centralny, a znaczenie maleje ku brzegom, a rozkład wpływu
+wpływ ma obszar centralny, a znaczenie maleje ku brzegom, przy czym rozkład wpływu
 przypomina rozkład Gaussa. Z tego powodu w bazowych architekturach VGG i ResNet dobiera się
 głębokość tak, aby przy stosowanej rozdzielczości objąć cały obiekt bez utraty
 istotnego kontekstu [@luo2016erf].
@@ -388,10 +389,10 @@ artefaktów brzegowych, co ułatwia stabilne uczenie cech niezależnych od kąta
 #### Receptywne pole w układzie polarnym\
 
 Po mapowaniu $(x,y)\!\to\!(\rho,\varphi)$ receptywne pole staje się „wąskim paskiem”
-wzdłuż promienia $\rho$ i stabilnym po kącie $\varphi$. Dzięki temu obrót
+wzdłuż promienia $\rho$ i przy czym stabilnym po kącie $\varphi$. Dzięki temu obrót
 $\mathcal{R}_\alpha$ na wejściu jest równoważny **przesunięciu** o $\alpha$ po osi
 $\varphi$. Warstwy typu `CyConv` z **cyklicznym paddingiem** wzdłuż $\varphi$ nie
-„tną” informacji na brzegach, co wzmacnia ekwiwariancję rotacyjną [@kim2020cycnn].
+„tną” informacji na brzegach, co oczywiście wzmacnia ekwiwariancję rotacyjną [@kim2020cycnn].
 
 
 ### Nieliniowości i normalizacja
@@ -399,7 +400,7 @@ $\varphi$. Warstwy typu `CyConv` z **cyklicznym paddingiem** wzdłuż $\varphi$ 
 Blok konwolucyjny pozostaje **taki sam** we wszystkich wariantach (bazowych i
 cyklicznych). Celem porównania jest wpływ **rotacji**, a nie dobór aktywacji.
 
-Normalizację zastosowano standardowo, aby stabilizować uczenie. W wariantach
+Zastosowano standardową normalizację, celem stabilizacji uczenie. W wariantach
 **CyCNN** statystyki normalizacji liczone są **wspólnie po osi orientacji**, tak aby
 **nie faworyzować żadnego kąta** i nie naruszać własności rotacyjnych
 [@ioffe2015batchnorm; @kim2020cycnn].
@@ -417,7 +418,7 @@ taka sama w wariantach bazowych i cyklicznych, aby izolować wpływ części
 #### Pooling po orientacjach - szczegóły praktyczne\
 
 Agregacja po osi *orientacja* (avg lub max) realizuje **inwariancję rotacyjną**.
-Na wynik wpływa liczba orientacji **n**: większe **n** oznacza dokładniejszą
+Na wynik końcowy wpływa liczba orientacji **n**, czyli większe **n** oznacza dokładniejszą
 rozdzielczość kątową (mniejszy błąd zaokrąglenia $2\pi/n$), ale też wyższy koszt
 obliczeń i pamięci. W eksperymentach utrzymano identyczny klasyfikator za
 poolingiem, aby jednoznacznie mierzyć wpływ części „rotacyjnej”
@@ -426,7 +427,7 @@ poolingiem, aby jednoznacznie mierzyć wpływ części „rotacyjnej”
 ### Trening
 
 Protokół trenowania został **zamrożony** między wariantami (te same: liczba epok,
-rozmiar batcha, budżet obliczeń, wczesne zatrzymanie - wsyzstko zgodnie z
+rozmiar batcha, budżet obliczeniowy, wczesne zatrzymanie - wsyzstko to zgodnie z
 planem eksperymentu). Augmentacje ograniczono do tych **niezależnych od rotacji**
 w testach „czysto architektonicznych”. Augmentację rotacją stosowano wyłącznie w
 eksperymentach kontrolnych, tak aby pokazać różnicę między „augmentacją” a
@@ -439,8 +440,8 @@ eksperymentach kontrolnych, tak aby pokazać różnicę między „augmentacją�
   **cykliczny padding** po $\varphi$; pozostałe elementy (głębokość, liczba
   kanałów) dobrano tak, aby utrzymać *porównywalny budżet parametrów/FLOPs*
   względem baz.
-- **Bez innych trików:** nie wprowadzano zmian niezwiązanych z rotacją, aby nie
-  mieszać efektów [@kim2020cycnn].
+- **Nie wprowadzano zmian niezwiązanych z rotacją, aby nie
+  mieszać efektów** [@kim2020cycnn].
 
 ### Ekwiwariancja translacyjna (kontrast do rotacyjnej)
 
@@ -499,7 +500,7 @@ W praktyce:
   prosta implementacja. Rozwiązanie to jest dobre pod **inwariancję rotacyjną**.
 - **Log-polar:** skala rośnie logarytmicznie po $\rho$ - zmiany skali stają się
   przesunięciami po osi promienia. Jest to idealne rozwiązanie pod **rotacje i skale**, 
-  ale bliżej środka rośnie gęstość próbkowania i wrażliwość na wybór środka [@reddy1996logpolar].
+  ale bliżej środka rośnie gęstość próbkowania i przy tym wrażliwość na wybór środka [@reddy1996logpolar].
 
 W praktyce stosowana jest interpolacja biliniarna wraz z **cyklicznym paddingiem po $\varphi$**, oraz stałym
 środkiem. Blisko $\rho{=}0$ warto wygładzić / wykluczyć kilka próbek, aby uniknąć „osobliwości” środka [@kim2020cycnn].
@@ -507,7 +508,7 @@ W praktyce stosowana jest interpolacja biliniarna wraz z **cyklicznym paddingiem
 ## Problemy z rotacyjną inwariancją w klasycznych CNN
 
 - **Kierunkowość filtrów.** Pojedynczy kernel jest wrażliwy głównie na jedną
-  orientację - bez dodatkowych mechanizmów sieć „gubi” obroty.
+  orientację, gbyż bez dodatkowych mechanizmów sieć „gubi” obroty.
 - **Augmentacja nie domyka całości.** Rotacje pomagają, ale wydłużają trening i
   zostawiają „dziury” między kątami (przy małym kroku i ograniczonym budżecie).
 - **Aliasing / interpolacja.** Obracanie dyskretnych obrazów wprowadza artefakty
@@ -542,10 +543,11 @@ W tej pracy traktujemy je jako tło teoretyczne
 
 ## MNIST (cyfry odręczne)
 
-Klasyczny benchmark rozpoznawania cyfr 0–9 [@lecun1998gradient]. Zbiór
-zawiera **60 000** próbek uczących i **10 000** testowych; obrazy
-**28×28**, skala szarości, piksele w [0, 255] (w pracy: normalizowane do
-[0, 1] i dalej standaryzowane) [@mnist_web]. Szczegóły formatu i plików są 
+Zbiór MNIST to klasyczny benchmark rozpoznawania cyfr 0–9 [@lecun1998gradient]. Zbiór
+zawiera **60 000** próbek uczących i **10 000** testowych, obrazy mają rodzielczość
+**28×28**, w skali szarości, piksele posiadające odcień szarości w zakresie [0, 255] 
+(w pracy są one normalizowane do przedziału [0, 1] i dalej standaryzowane) 
+[@mnist_web]. Szczegóły formatu i plików są 
 dostępne na oficjalnej stronie MNIST [@mnist_web].
 
 **Przetwarzanie pod eksperymenty.**  
@@ -553,23 +555,23 @@ dostępne na oficjalnej stronie MNIST [@mnist_web].
   „cifarowych” (VGG/ResNet).  
 - Wejście: **1 kanał**, **10 klas**.  
 - **Normalizacja per-kanał** (wyliczona na zbiorze uczącym); w praktyce
-  często używa się mean $\approx 0.1307$, std $\approx 0.3081$`- takie wartości pojawiają
+  często używa się mean $\approx 0.1307$, std $\approx 0.3081$ - takie wartości pojawiają
   się w przykładach referencyjnych PyTorcha [@pytorch].  
-- **Podział train/val/test:** walidację wydzielono z treningu (np. 5 000
+- **Podział train/val/test:** walidację wydzielono z treningu (5 000
   próbek) spójnie z innymi zbiorami.
 
-**Dlaczego MNIST tu jest?**  
+**Dlaczego MNIST został użyty w pracy??**  
 - Prosty, „czysty” zestaw do szybkich iteracji i testów **rotacji cyfr**
   (mało szumu, jednolity kontrast).  
-- Umożliwia uczciwe porównanie **baz** (VGG/ResNet) z **wersjami
+- Umożliwia uczciwe porównanie **bazowych** (VGG/ResNet) z **wersjami
   cyklicznymi** (CyVGG/CyResNet) przy tym samym budżecie obliczeń.  
-- Uwaga praktyczna: rotacje potrafią **mylić pary 6/9, 2/5** przy dużych
-  kątach - to naturalny „edge case”, który dobrze obnaża różnice między
-  *augmentacją* a *architekturą*.
+- W praktyce rotacje potrafią **mylić pary 6/9, 2/5** przy dużych
+  kątach, jest to naturalny „edge case”, który dobrze obnaża różnice między
+  *augmentacją*, a *architekturą*.
 
 **Rotacje w eksperymentach.**  
 Zastosowano kontrolowane scenariusze kątowe (szczegóły w rozdz. *Augmentacja
-i protokół*): wariant **bez rotacji** (baseline), **małe/średnie obroty**
+i protokół*):wariant **bez rotacji** (baseline), **małe/średnie obroty**
 oraz **pełen zakres 0–360°**. Celem jest pokazanie, kiedy **architektura
 cykliczna** daje przewagę nad samą augmentacją.
 
@@ -590,21 +592,21 @@ Zachowano **43 klasy**; walidację wydzielono z **oficjalnej** części treningo
 (spójnie z innymi zbiorami). Zastosowano **normalizację per-kanał** na zbiorze
 uczącym.
 
-**Dlaczego wariant Gray?**  
+**Dlaczego użyty został wariant Gray?**  
 Kolor bywa silną wskazówką (np. czerwone obramowania, niebieskie tła), a celem
-tej pracy jest **geometria**: sprawdzenie, co daje **architektura rotacyjnie
+tej pracy jest **geometria** i sprawdzenie, co daje **architektura rotacyjnie
 inwariantna** w porównaniu z bazową, bez „pomocy” informacji barwnej. Wersja Gray
-ułatwia czyste porównania z **GTSRB RGB** (rozdz. poniżej), gdzie różnica wynika
+ułatwia czyste porównania z **GTSRB RGB** (rozdz. poniżej), gdzie ewentualne różnice wynikają
 właśnie z dostępności koloru.
 
 **Wyzwania charakterystyczne dla GTSRB.**  
-Nierównomierny rozkład klas (część rzadkich), duża zmienność skali i oświetlenia,
-perspektywa, rozmycie ruchu - wszystko to utrudnia proste uogólnianie i dobrze
+Nierównomierny rozkład klas, duża zmienność skali i oświetlenia,
+perspektywa, rozmycie w ruchu, to wszystko to utrudnia proste uogólnianie i dobrze
 testuje **stabilność względem rotacji** [@stallkamp2011gtsrb; @stallkamp2012manvscomputer].
 
 **Rotacje w eksperymentach.**  
 Wykorzystano scenariusze kątowe z rozdz. *Augmentacja i protokół* (bez rotacji,
-małe/średnie obroty, pełen zakres 0–360°), aby porównać **VGG/ResNet** z
+małe/średnie obroty, połączenie róznych kombinacji kątów, pełen zakres 0–360°), aby porównać **VGG/ResNet** z
 **CyVGG/CyResNet** w identycznym budżecie obliczeń.
 
 
@@ -618,9 +620,9 @@ to ten sam zestaw **43 klas** z oficjalnym podziałem train/test
 uczącym; walidację wydzielono z części treningowej analogicznie jak dla
 wariantu Gray [@stallkamp2012manvscomputer].
 
-**Po co wersja RGB?**  
+**Dlaczego została używa wersja RGB?**  
 Kolor bywa silnym sygnałem (czerwone obramowania zakazów, żółte
-trójkąty ostrzegawcze, niebieskie nakazy), więc wariant RGB pozwala
+trójkąty ostrzegawcze, niebieskie nakazy), więc użycie wariantu RGB pozwala
 sprawdzić, na ile informacje barwne **kompensują** trudność związaną z
 rotacjami - oraz jak bardzo **architektury rotacyjnie inwariantne**
 (CyVGG/CyResNet) dalej poprawiają wyniki względem baz (VGG/ResNet).
@@ -629,13 +631,13 @@ klasyfikator) pozwala porównywać **RGB vs Gray** 1:1.
 
 **Wyzwania w praktyce.**  
 Mimo przewagi koloru, duża zmienność **punktu widzenia**, **skali**,
-**oświetlenia** i **rozmycia ruchu** utrzymuje problem rotacji jako
+**oświetlenia** i **rozmycia ruchu** pozostawiają problem rotacji jako
 istotny czynnik trudności. Kolor pomaga odróżniać klasy o podobnym
 kształcie, ale **nie zastępuje** inwariancji rotacyjnej.
 
 **Rotacje w eksperymentach.**  
 Wykorzystano te same scenariusze kątowe co wcześniej (baseline bez
-rotacji, małe/średnie obroty, pełen zakres **0–360°**) - celem jest
+rotacji, małe/średnie obroty, połączenie róznych kombinacji kątów, pełen zakres **0–360°**), gdyż celem jest
 uczciwe porównanie **VGG/ResNet** i **CyVGG/CyResNet** przy identycznym
 budżecie obliczeń.
 
@@ -643,15 +645,14 @@ budżecie obliczeń.
 ## LEGO (obiekty 3D rzutowane na 2D)
 
 Zbiór **Images of LEGO Bricks** (Kaggle) [@hazelzet_lego_kaggle] - obrazy
-elementów LEGO renderowanych/fotografowanych jako **rzuty 2D**. Na potrzeby
-pracy próbki zostały **przeskalowane do 96×96** i **skonwertowane do skali
-szarości**, aby zachować spójność z pozostałymi eksperymentami. Ustalono
-**50 klas** (1 kanał wejściowy), a walidację wydzielono z części
-treningowej analogicznie jak w innych zbiorach; zastosowano **normalizację
-per-kanał**.
+elementów LEGO renderowanych jako **rzuty 2D**,**skonwertowane do skali
+szarości**. Na potrzeby pracy próbki zostały **przeskalowane do 96×96**,  
+aby zachować detale kloców. Ustalono **50 klas** (1 kanał wejściowy), 
+a walidacja wydzielona została z części treningowej analogicznie jak w innych zbiorach, 
+zastosowana została również **normalizacja per-kanał**.
 
 **Dlaczego LEGO?**  
-- Obiekty mają **złożone kształty** i detale krawędziowe - to naturalny test
+- Obiekty mają **złożone kształty** i detale co sprawia, że jest to naturalny test
   „wrażliwości na orientację”.  
 - W przeciwieństwie do MNIST (proste cyfry) i GTSRB (silny sygnał koloru),
   LEGO lepiej **izoluje geometrię** (kształt/układ wypustek, światłocień).  
@@ -660,17 +661,16 @@ per-kanał**.
 
 **Rotacje w eksperymentach.**  
 Stosowano kontrolowane scenariusze kątowe opisane w rozdz. *Augmentacja i
-protokół* (m.in. brak rotacji, małe/średnie obroty, pełen zakres 0–360°),
-co pozwala porównać bazy (**VGG/ResNet**) z wersjami cyklicznymi
+protokół* (m.in. brak rotacji, małe/średnie obroty, połączenie róznych kombinacji kątów, 
+pełen zakres 0–360°), co pozwala porównać bazowe modele (**VGG/ResNet**) z wersjami cyklicznymi
 (**CyVGG/CyResNet**) przy tej samej części klasyfikacyjnej i budżecie
 obliczeń.
 
 **Uwaga praktyczna.**  
 Przy **log-polarnych** przekształceniach i małej rozdzielczości blisko
-środka pojawia się większa gęstość próbkowania - w preprocessing’u
-zastosowano interpolację biliniarną i stały środek układu, aby ograniczyć
+środka pojawia się większa gęstość próbkowania, w preprocessing’u
+zastosowana została interpolacja biliniarna i stały środek układu, aby ograniczyć
 artefakty i zachować porównywalność między wariantami.
-
 
 
 ## Sposób augmentacji danych: zakresy rotacji, łączenie zbiorów
@@ -684,11 +684,10 @@ artefakty i zachować porównywalność między wariantami.
 **ResNet** (wariant **56**) w ustawieniu dla **CIFAR** (obrazy 32×32). Warstwy
 splotowe to głównie `3×3` z `padding=1`. W VGG po każdym bloku stosowany jest
 `MaxPool2d(2)`, a w ResNecie rozdzielczość zmniejszana jest przez `stride=2`.
-Po części splotowej występuje **global average pooling (GAP)** i prosty
+Po części splotowej występuje **global average pooling (GAP)** oraz prosty
 **klasyfikator**. W VGG używana jest wersja z normalizacją (VGG\_bn) oraz
-dwustopniowy klasyfikator `512→512→C` z dropoutem (w implementacji:
-`AdaptiveAvgPool2d((1,1))` + `nn.Sequential` z dwiema warstwami liniowymi i
-wyjściem `C`).
+dwustopniowy klasyfikator `512→512→C` z dropoutem (w implementacji`AdaptiveAvgPool2d((1,1))` + `nn.Sequential` 
+z dwiema warstwami liniowymi i wyjściem `C`).
 
 ## VGG - wariant E (VGG-19, „3×3 everywhere”)
 
@@ -707,14 +706,14 @@ warstwy liniowe `512→512→C` z dropoutem.
 - **Blok 4:** 512×4 → MaxPool (4→2)  
 - **Blok 5:** 512×4 → MaxPool (2→1)
 
-W **CyVGG** każdą `Conv2d` zastąpiono **`CyConv2d`** (interfejs zgodny
-z `Conv2d`: `3×3`, `padding=1`, wsparcie `stride`/dylacji). Klasyfikator i
-układ bloków pozostają takie same jak w VGG.
+W **CyVGG** każdą `Conv2d` zastąpiono **`CyConv2d`** (jest interfejs zgodny
+z `Conv2d`: `3×3`, `padding=1`, ze wsparciem dylacji ang. `stride`). Klasyfikator i
+układ bloków pozostają takie same jak w przypadku VGG.
 
 
 ## ResNet-56 (CIFAR, 6n+2 z n=9)
 
-Schemat jak w [@he2016resnet] dla CIFAR. Na wejściu `Conv 3×3`, a dalej **3
+Schemat jak w [@he2016resnet] dla datasetu CIFAR. Na wejściu `Conv 3×3`, a dalej **3
 grupy** po **n=9** bloków `BasicBlock`. Grupa 1 (16 kanałów, `stride 1`),
 Grupa 2 (32 kanały, pierwszy blok `stride 2`), Grupa 3 (64 kanały, pierwszy
 blok `stride 2`). `BasicBlock` ma postać: `Conv3×3 → BN → ReLU → Conv3×3 → BN`
@@ -726,7 +725,7 @@ liniowa `64→C`.
 
 W **CyResNet** wszystkie `nn.Conv2d` zastąpiono **`CyConv2d`** (w tym `conv1`
 i konwolucje w `BasicBlock`). Pozostałe elementy (BN, ReLU, shortcut, GAP,
-`Linear`) pozostają bez zmian względem wersji bazowej.
+`Linear`) pozostajone zostały bez zmian względem wersji bazowej.
 
 
 ## Wersje cykliczne: **CyVGG-E** i **CyResNet-56**
@@ -755,7 +754,7 @@ i konwolucje w `BasicBlock`). Pozostałe elementy (BN, ReLU, shortcut, GAP,
 ## Uzgodnienia I/O i selektor modeli
 
 - **Kanały wejścia.** 1 kanał dla `mnist`, `mnist-custom`, `GTSRB-custom`, `LEGO`;
-  3 kanały w pozostałych przypadkach (np. CIFAR, pełny GTSRB).
+  3 kanały w pozostałych przypadkach (np. CIFAR, GTSRB RGB).
 - **Liczba klas.** `MNIST`/`CIFAR-10`: 10; `GTSRB`: 43; `LEGO`: 50; `CIFAR-100`:
   100 - zgodnie z helperami `get_num_classes`.
 - **Selektor modeli.** `get_model(model, dataset, classify=True)` zwraca jedną z
@@ -765,23 +764,23 @@ i konwolucje w `BasicBlock`). Pozostałe elementy (BN, ReLU, shortcut, GAP,
 ## Standardowe CNN
 
 Jako bazy zastosowano **VGG** (wariant **E / VGG-19**) i **ResNet-56**. Konwolucje
-`3×3` z `padding=1`, w VGG okresowy `MaxPool2d(2)`, w ResNecie zmniejszanie
-rozdzielczości przez `stride=2`. Po części splotowej: **GAP** i **klasyfikator**
-(w VGG: dwie warstwy w pełni połączone `512→512→C` z dropoutem; w ResNecie:
+`3×3` z `padding=1`, w VGG z okresowym `MaxPool2d(2)`, w ResNecie zaś jest zmniejszanie
+rozdzielczości przez `stride=2`. Po części splotowej **GAP** i **klasyfikator**
+(w VGG są to dwie warstwy w pełni połączone `512→512→C` z dropoutem, aż w ResNecie jes to
 `Linear 64→C`). Warianty VGG w kodzie występują także w wersjach `*_bn`
 (z BatchNorm). Modele te są z natury **ekwiwariantne translacyjnie** (dobrze
 znoszą przesunięcia), ale nie posiadają wbudowanego mechanizmu inwariancji
-względem rotacji - stanowią więc punkt odniesienia dla wersji cyklicznych
+względem rotacji, stąd stanowią więc punkt odniesienia dla wersji cyklicznych
 [@simonyan2014vgg; @he2016resnet].
 
 ## Rotacyjnie inwariantne sieci (CyResNet, CyVGG)
 
-Wersje cykliczne (**CyVGG-E**, **CyResNet-56**) powstały przez **podmianę każdej
+Wersje cykliczne (**CyVGG-E**, **CyResNet-56**) powstały przez **podmianę każdej warstwy
 `Conv2d` na `CyConv2d`**. Architektura bloków, liczby kanałów, GAP i układ
-klasyfikatora pozostają bez zmian, co pozwala porównać wpływ samej warstwy
+klasyfikatora pozostane zostały bez zmian, co pozwala ma porównanie wpływu samej warstwy
 splotowej. W kodzie modeli **nie ma jawnego wymiaru orientacji** ani
 dedykowanego „poolingu po orientacjach”. Funkcjonalność związaną z rotacją
-zrealizowano w jądrze CUDA `CyConv2d_cuda`, wywoływanym z poziomu `CyConv2d`
+zrealizowana została w jądrze CUDA z użyciem `CyConv2d_cuda`, wywoływanym z poziomu `CyConv2d`
 [@kim2020cycnn].
 
 ## Transformacje polarne: linearpolar vs logpolar
@@ -790,12 +789,12 @@ zrealizowano w jądrze CUDA `CyConv2d_cuda`, wywoływanym z poziomu `CyConv2d`
 
 ### Szczegóły implementacyjne: warstwa `CyConv2d` (CUDA)
 
-**Rozszerzenie.**\
+**Rozszerzenie - struktura**\
 Warstwa korzysta z modułu C++/CUDA kompilowanego jako
-`CyConv2d_cuda` z plików `cycnn.cpp` i `cycnn_cuda.cu` (przy użyciu
+`CyConv2d_cuda` z plików źródłowych `cycnn.cpp` i `cycnn_cuda.cu` (przy użyciu
 `setuptools` i `BuildExtension`).
 
-**Interfejs (wiązanie C++).**\
+**Interfejs**\
 W `cycnn.cpp` eksportowane są funkcje
 `forward(...)` i `backward(...)` (pybind11). Przyjmują one `input`,
 `weight`, `workspace` oraz `stride`, `padding`, `dilation`. Makra
@@ -807,21 +806,19 @@ są implementacje `cyconv2d_cuda_forward/backward`.
 `CyConv2d_cuda.forward/backward` i przekazuje **workspace** oraz
 parametry geometrii. Moduł `CyConv2d` przechowuje wagi o kształcie
 `[C_out, C_in, k, k]` (inicjowane `xavier_uniform_`) i w `forward`
-korzysta z `CyConv2dFunction.apply(...)`.
+wykorzystuje `CyConv2dFunction.apply(...)`.
 
 **Bufor roboczy.**\
-`CyConv2d.workspace` to prealokowany tensor `float32`
+`CyConv2d.workspace` jest to prealokowany tensor `float32`
 na GPU o rozmiarze `1024*1024*1024` elementów (~ 4 GiB), opisany jako
 „Workspace for Cy-Winograd algorithm”. Może to powodować **OOM** na
-kartach z mniejszą ilością VRAM.
+kartach graficznych z mniejszą ilością VRAM.
 
 **Integracja z modelami.**\
 Wszystkie `nn.Conv2d` w wariantach **CyVGG**
 i **CyResNet** zostały zastąpione `CyConv2d` (m.in. `conv1` oraz
-konwolucje w blokach). Topologia, BN/ReLU, GAP i klasyfikator są
+konwolucje znajdujące się w blokach). Topologia, BN/ReLU, GAP i klasyfikator są
 zachowane 1:1 względem wersji bazowych.
-
-**Uwaga merytoryczna.**\
 W kodzie modeli nie ma **jawnej osi
 „orientacja”** ani osobnego **poolingu po orientacjach**. Z poziomu
 PyTorch wagi mają klasyczny kształt `[C_out, C_in, k, k]`. Jeśli
