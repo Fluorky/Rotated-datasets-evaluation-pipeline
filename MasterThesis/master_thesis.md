@@ -684,54 +684,65 @@ na `train` i `test`.
 
 ### Rotacje
 
-Augmentacja rotacją ma dwie formy. W wariancie z kątami stałymi tworzę zbiory
-`rotated-θ` dla kolejnych wartości θ. Używam dwóch siatek: co 30° (30, 60, …,
-330) oraz co 45° (45, 90, …, 315). Dla każdej wartości powstają osobno zbiory
-treningowe i testowe.
+Augmentacja rotacją ma dwie wersje. W pierwszej używane są kąty stałę: dla
+każdej z góry zadanej wartości powstaje osobny zestaw nazwany według
+szablonu `rotated-{theta}`. W praktyce korzystane są z dwie siatki kątów: co 30°
+(30, 60, …, 330) oraz co 45° (45, 90, …, 315). Dostępny jest też preset
+łączny `fixed_all`, który zawiera obie siatki. Dla każdej wartości kąta
+przygotowuję osobno część treningową i testową.
 
-W wariancie przedziałowym buduję zbiory `rotated-a-b` dla dwunastu zakresów:
-[0,30), [30,60), …, [330,360). Dla każdej próbki kąt losowany jest z rozkładu
-jednostajnego wewnątrz danego przedziału. Losowanie jest niezależne dla każdej
-próbki i dla każdego przedziału.
+Druga wersja to rotacje z przedziałów. Buduję zbiory `rotated-a-b` dla
+dwunastu zakresów: [0,30), [30,60), …, [330,360). Dla każdej próbki kąt
+losowany jest z rozkładu jednostajnego w ramach danego przedziału. Losowanie
+jest niezależne dla każdej próbki i dla każdego przedziału, co zwiększa
+różnorodność danych.
 
-Parametry transformacji są stałe w obrębie formatu. W trybie NPY obrót odbywa
-się wokół środka, z interpolacją liniową, bez rozszerzania płótna; piksele poza
-kadrem mają stały kolor tła. W trybie IDX korzystam z `PIL.Image.rotate` w
-ustawieniach domyślnych, co utrzymuje stały rozmiar wyjściowy.
+Parametry przekształceń są stałe w obrębie formatu. W trybie NPY obrót
+wykonywany jest wokół środka kadru, z interpolacją liniową, bez
+rozszerzania płótna; piksele wypadające poza obraz wypełniane są stałym
+kolorem tła. W trybie IDX korzystam z `PIL.Image.rotate` w ustawieniach
+domyślnych, co utrzymuje stały rozmiar wyjściowy.
 
 ### Łączenie zbiorów
 
-Na bazie zbiorów obrotowych powstają presety złączone. Dla kątów stałych są to
-`fixed_30`, `fixed_45` i `fixed_all`. Dla wariantu przedziałowego tworzę mniejsze
-zakresy (np. `range_0_90`, `range_90_180`, `range_180_270`, `range_270_360`) oraz
-szersze (`range_0_180`, `range_full_0_360`). Każdy preset może być rozszerzony
-o bazę bez rotacji (dopisek `+ non_rotated`). Dla każdego presetu powstają
-osobne zbiory `train` i `test`.
+Na podstawie zbiorów obrotowych tworzę zbiory połączone. Technicznie są one
+zapisywane w folderze `merged_datasets/`, a ich nazwy zaczynają się od
+prefiksu `merged_`. Dla kątów stałych powstają `merged_fixed_30`,
+`merged_fixed_45` i `merged_fixed_all`. Dla wariantu przedziałowego dostępne
+są m.in. `merged_range_0_90`, `merged_range_90_180`, `merged_range_180_270`,
+`merged_range_270_360`, szersze `merged_range_0_180` oraz pełny
+`merged_range_full_0_360`. Każdy z tych presetów może być rozszerzony o
+zbiór bez rotacji (dopisek `_plus_non_rotated`). Dla każdego presetu
+buduję osobno część treningową i testową.
 
-Łączenie zależy od formatu. W IDX sklejane są pliki `*-images-idx3-ubyte` oraz
-`*-labels-idx1-ubyte` z aktualizacją nagłówków. W NPY konkatenowane są macierze
-obrazów i wektory etykiet wzdłuż osi próbek.
-
+Sposób łączenia zależy od formatu. W IDX sklejane są pliki
+`*-images-idx3-ubyte` i `*-labels-idx1-ubyte`, a nagłówki aktualizuję o
+nową liczbę próbek. W NPY wykonuję konkatenację macierzy obrazów i wektorów
+etykiet wzdłuż osi próbek.
 
 ### Organizacja katalogów
 
-Struktura katalogów jest prosta. W katalogu bazowym znajduje się folder
-zbioru źródłowego (np. `dataset_X`) z plikami `train_images.npy`,
-`train_labels.npy`, `test_images.npy` i `test_labels.npy`. Obok powstają
-foldery wariantów obrotowych, np. `rotated-30` czy `rotated-0-30`, z
-analogicznymi plikami dla podziałów `train` i `test`. Zestawy połączone
-zapisywane są w `merged_datasets`, np. w `merged_fixed_30` albo
-`merged_range_full_0_360_plus_non_rotated`, również z kompletami plików
-treningowych i testowych.
+W katalogu bazowym znajduje się folder zbioru źródłowego (np. `dataset_X`)
+z plikami `train_images.npy`, `train_labels.npy`, `test_images.npy`,
+`test_labels.npy`. Obok powstają katalogi wariantów obrotowych, np.
+`rotated-30` czy `rotated-0-30`, z analogicznymi plikami dla podziałów
+`train` i `test`. Zestawy połączone zapisywane są w `merged_datasets/`,
+np. w `merged_fixed_30` albo `merged_range_full_0_360_plus_non_rotated`,
+również z kompletami plików treningowych i testowych.
 
 ### Scenariusze trenowanie - test
 
-Do porównań wykorzystuję plik JSON z opisem scenariuszy ewaluacji. Każdy
-zbiór treningowy ma przypisaną listę zbiorów testowych. Zawsze znajduje się
-tam zbiór bazowy bez rotacji, sam zbiór treningowy oraz dodatkowe zbiory
-testowe dobrane losowo do ustalonego limitu. Dzięki temu wyniki są
-powtarzalne, a różnice wynikają z doboru kątów i sposobu łączenia danych,
-a nie z ręcznych zmian w procedurze.
+Do porównań wykorzystuję plik JSON z opisem scenariuszy ewaluacji. Nazwy w
+tym pliku odpowiadają ścieżkom na dysku. Przykłady kluczy (wartości mają
+tę samą postać): 
+`dataset_DATASETNAME_non_rotated`,
+`merged_datasets/merged_fixed_30`,
+`merged_datasets/merged_fixed_30_plus_non_rotated`,
+`merged_datasets/merged_range_full_0_360_plus_non_rotated`,
+`rotated-30`, `rotated-45`, `rotated-0-30`, `rotated-90-120` itd. Dla
+każdego zbioru treningowego przypisana jest lista zbiorów testowych. Zawsze
+uwzględniam bazę bez rotacji, sam zbiór treningowy oraz dodatkowe zbiory
+rotowane wybrane zgodnie z ustalonym limitem.
 
 \newpage
 
