@@ -684,40 +684,34 @@ na `train` i `test`.
 
 ### Rotacje
 
-Augmentacja rotacją ma dwie wersje. W pierwszej używam kątów stałych: dla
-każdego z góry zadanego X powstaje osobny zestaw `rotated-θ`. W praktyce
-korzystam z dwóch siatek kątów: co 30° (30, 60, …, 330) oraz co 45°
-(45, 90, …, 315). Dostępny jest też preset łączny `fixed_all`, który
-zawiera obie siatki. Dla każdej wartości X przygotowuję osobno część
-treningową i testową.
+Augmentacja rotacją ma dwie formy. W wariancie z kątami stałymi tworzę zbiory
+`rotated-θ` dla kolejnych wartości θ. Używam dwóch siatek: co 30° (30, 60, …,
+330) oraz co 45° (45, 90, …, 315). Dla każdej wartości powstają osobno zbiory
+treningowe i testowe.
 
-Druga wersja to rotacje z przedziałów. Buduję zbiory `rotated-a-b` dla
-dwunastu zakresów: [0,30), [30,60), …, [330,360). Dla każdej próbki kąt
-losowany jest z rozkładu jednostajnego w ramach danego przedziału. Losowanie
-odbywa się niezależnie dla każdej próbki i dla każdego przedziału, co
-zwiększa różnorodność przykładów.
+W wariancie przedziałowym buduję zbiory `rotated-a-b` dla dwunastu zakresów:
+[0,30), [30,60), …, [330,360). Dla każdej próbki kąt losowany jest z rozkładu
+jednostajnego wewnątrz danego przedziału. Losowanie jest niezależne dla każdej
+próbki i dla każdego przedziału.
 
-Parametry przekształceń są stałe w obrębie formatu. W trybie NPY obrót
-wykonywany jest wokół środka kadru, z interpolacją liniową, bez
-rozszerzania płótna; piksele wypadające poza obraz wypełniane są stałym
-kolorem tła (odpowiednik `BORDER_CONSTANT`). W trybie IDX korzystam z
-`PIL.Image.rotate` w ustawieniach domyślnych, co utrzymuje stały rozmiar
-wyjściowy.
+Parametry transformacji są stałe w obrębie formatu. W trybie NPY obrót odbywa
+się wokół środka, z interpolacją liniową, bez rozszerzania płótna; piksele poza
+kadrem mają stały kolor tła. W trybie IDX korzystam z `PIL.Image.rotate` w
+ustawieniach domyślnych, co utrzymuje stały rozmiar wyjściowy.
 
 ### Łączenie zbiorów
 
-Na podstawie zbiorów obrotowych tworzę presety złączone. Dla kątów stałych
-powstają `fixed_30` (zbiory co 30°), `fixed_45` (zbiory co 45°) oraz
-`fixed_all` (unia obu). W wariancie przedziałowym dostępne są zarówno
-zakresy krótsze, np. `range_0_90` czy `range_180_270`, jak i dłuższe,
-np. `range_0_180`, a także pełny `range_full_0_360`. Każdy preset może
-być rozszerzony o zbiór bez rotacji (dopisek `+ non_rotated`). Dla
-każdego z nich buduję osobno część treningową i testową.
+Na bazie zbiorów obrotowych powstają presety złączone. Dla kątów stałych są to
+`fixed_30`, `fixed_45` i `fixed_all`. Dla wariantu przedziałowego tworzę mniejsze
+zakresy (np. `range_0_90`, `range_90_180`, `range_180_270`, `range_270_360`) oraz
+szersze (`range_0_180`, `range_full_0_360`). Każdy preset może być rozszerzony
+o bazę bez rotacji (dopisek `+ non_rotated`). Dla każdego presetu powstają
+osobne zbiory `train` i `test`.
 
-Sposób łączenia zależy od formatu. W IDX sklejane są pliki
-`*-images-idx3-ubyte` i `*-labels-idx1-ubyte`, a nagłówki uaktualniam o
-nową liczbę próbek. W NPY wykonuję konkatenację macierzy obrazów i wektorów
-etykiet wzdłuż osi próbek.
+Łączenie zależy od formatu. W IDX sklejane są pliki `*-images-idx3-ubyte` oraz
+`*-labels-idx1-ubyte` z aktualizacją nagłówków. W NPY konkatenowane są macierze
+obrazów i wektory etykiet wzdłuż osi próbek.
+
 
 ### Organizacja katalogów
 
