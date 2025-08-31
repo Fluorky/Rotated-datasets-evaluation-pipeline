@@ -100,6 +100,7 @@ W dalszej części pracy przedstawiono podstawy, dane i augmentację,
 architektury, środowisko eksperymentalne, protokoły ewaluacji oraz
 wyniki z analizą i wnioskami.
 
+\newpage
 
 ## Cel i motywacja pracy
 
@@ -294,7 +295,7 @@ przypadku sieci posiadającej pełne połączenia.
 
 Zamiast analizować cały obraz jednocześnie, CNN wykorzystują mały filtr, który
 przesuwa się po lokalnych fragmentach obrazów. W ten sposób uczą się prostych
-detektorów (np. krawędzi, tekstur, kształtów), a w wyższych warstwach -
+detektorów (np. krawędzi, tekstur, kształtów), zaś w wyższych warstwach 
 bardziej złożonych cech [@lecun1998gradient; @goodfellow2016deep].
 
 Dla przesunięcia $\mathcal T_t$ oraz jądra $K$ zachodzi własność
@@ -329,8 +330,8 @@ K_{c,i}(a,b)\,X_i(u-a,\;v-b).
 $$
 
 W praktyce większość frameworków oblicza **korelację krzyżową** (bez
-odwracania jądra), mimo że w API funkcja nazywana jest `conv` [@dumoulin2016guide].  
-Nie ma to jednak końcowo znaczenia dla procesu uczenia, bo sieć i tak dobierze
+odwracania jądra), pomimo tego, że w API funkcja nazywana jest `conv` [@dumoulin2016guide].  
+Nie ma to jednak końcowo znaczenia dla procesu uczenia, bo sieć i tak ostatecznie dobierze
 właściwe wagi.
 
 #### Stride, padding, rozmiary
@@ -505,20 +506,64 @@ W praktyce:
 W praktyce stosowana jest interpolacja biliniarna wraz z **cyklicznym paddingiem po $\varphi$**, oraz stałym
 środkiem. Blisko $\rho{=}0$ warto wygładzić / wykluczyć kilka próbek, aby uniknąć „osobliwości” środka [@kim2020cycnn].
 
+\newpage
+
 ## Problemy z rotacyjną inwariancją w klasycznych CNN
 
-- **Kierunkowość filtrów.** Pojedynczy kernel jest wrażliwy głównie na jedną
-  orientację, gbyż bez dodatkowych mechanizmów sieć „gubi” obroty.
-- **Augmentacja nie domyka całości.** Rotacje pomagają, ale wydłużają trening i
-  zostawiają „dziury” między kątami (przy małym kroku i ograniczonym budżecie).
-- **Aliasing / interpolacja.** Obracanie dyskretnych obrazów wprowadza artefakty
-  i szum [@azulay2019small].
-- **Krawędzie i padding.** „same/zero” łamie symetrię przy brzegach przez co odpowiedzi
-  nie są idealnie ekwiwariantne.
-- **Brak osi orientacji.** W standardowych CNN nie zapisuje się informacji o
-  kącie, pod którym wykryto aktywację - dlatego trudno później uzyskać
-  rozpoznawanie niezależne od obrotu.
+W praktyce klasyczne CNN dobrze zachowują się względem przesunięć,
+ale nie domykają symetrii obrotu. Wynika to z natury splotu definiowanego
+na dyskretnej siatce, z efektów interpolacji oraz też z braku jawnej
+reprezentacji kąta w strumieniu cech. Poniżej zebrane zostały najważniejsze
+źródła nieinwariancji, które mają bezpośredni wpływ na wyniki i ich
+interpretację.
 
+- **Kierunkowość filtrów.** Małe jądra `3×3` i `5×5` reagują głównie na
+  jedną orientację. Aby pokryć wiele kątów, sieć musiałaby nauczyć się
+  wielu „obróconych kopii” tych samych detektorów, co zwiększa zapotrzebowanie
+  na dane i parametry. Kompozycja kilku warstw częściowo pomaga, ale nie
+  rozwiązuje problemu bez dodatkowych mechanizmów ukierunkowanych na kąt.
+
+- **Augmentacja nie domyka całości.** Obracanie wzbogaca dane, ale przykrywa
+  tylko zbiór **dyskretnych** kątów. Między tymi wartościami pozostaje
+  „szczelina” generalizacji, zwłaszcza przy małej siatce kątów i ograniczonym
+  budżecie. Dodatkowo augmentacja wydłuża trening i wprowadza wariancję
+  związaną z losowym próbkowaniem kątów.
+
+- **Aliasing i interpolacja.** Obrót rastra wymaga **resamplingu** i wyboru
+  jądra interpolacji. Pojawia się rozmycie lub aliasing, a wysokie częstotliwości
+  są tłumione inaczej w zależności od kąta oraz implementacji
+  [@azulay2019small]. Skutkuje to niespójnością odpowiedzi nawet przy identycznym
+  obiekcie obróconym o niewielki kąt.
+
+- **Krawędzie i padding.** Dopełnianie „same/zero” łamie symetrię na brzegach.
+  W pobliżu krawędzi zmienia się kontekst, więc odpowiedzi nie są idealnie
+  ekwiwariantne. Stride i pooling pogłębiają ten efekt przez rzadkie próbkowanie
+  siatki oraz aliasing, co dodatkowo osłabia stabilność na małe obroty
+  [@dumoulin2016guide].
+
+- **Brak osi orientacji.** W typowych CNN nie jest jawnie przechowywana
+  informacja o kącie wykrytej cechy. Reprezentacja „miesza” orientacje w
+  kanałach, więc późniejsze domknięcie do **inwariancji** (np. przez pooling)
+  nie ma do czego się odnieść. Stąd potrzeba osobnej osi „orientacja” i
+  operacji cyklicznych lub mapowania do współrzędnych polarnych.
+
+- **Brak zgodności grupowej.** Splot standardowy zapewnia ekwiwariancję dla
+  **translacji**, ale nie dla **rotacji**. Na siatce pikseli obrót nie
+  komutuje ze splotem tak jak przesunięcie. Stąd klasyczne CNN nie mają
+  wbudowanej gwarancji, że $\Phi(\mathcal R_\alpha X)$ jest prostą transformacją
+  $\Phi(X)$ w przeciwieństwie do translacji.
+
+- **Wczesne warstwy i pole widzenia.** We wczesnych warstwach receptywne pole
+  bywa zbyt małe, by odróżnić lokalne rotacje wzorca od innych zmian. Głębsze
+  warstwy łapią szerszy kontekst dopiero po poolingach i podpróbkowaniu, co
+  z kolei traci precyzję kątową.
+
+- **Interakcja z rozmiarem i kształtem obiektu.** Rotacja zmienia relacje
+  między szczegółami, a siatką próbkowania (np. różna liczba „przecinanych”
+  pikseli wzdłuż krawędzi przy różnych kątach). Skutkiem są fluktuacje
+  odpowiedzi niepołączone z klasą, lecz połączone z geometrią siatki.
+
+\newpage
 
 ## Przegląd literatury (E(2)-equivariant, CyCNN)
 
@@ -665,7 +710,7 @@ gęstość próbkowania w pobliżu środka. W przetwarzaniu wstępnym stosowana 
 interpolacja biliniarna i stały środek układu, co ogranicza artefakty i
 utrzymuje porównywalność między wariantami.
 
-
+\newpage
 
 ## Sposób augmentacji danych: zakresy rotacji, łączenie zbiorów
 
@@ -858,9 +903,7 @@ zrealizowana została w jądrze CUDA z użyciem `CyConv2d_cuda`, wywoływanym z 
 
 ## Transformacje polarne: linearpolar vs logpolar
 
-# Implementacja i środowisko eksperymentalne
-
-### Szczegóły implementacyjne: warstwa `CyConv2d` (CUDA)
+\newpage
 
 # Implementacja i środowisko eksperymentalne
 
@@ -923,6 +966,8 @@ bindingi z `cycnn.cpp`.
 
 ## Ranking modeli
 
+\newpage
+
 # Porównanie wyników
 
 ## CyCNN vs klasyczne CNN
@@ -942,6 +987,8 @@ cake and have it too” [@kaczynski1995wp]).
 
 ## Wydajność na różnych zbiorach
 
+\newpage
+
 # Wnioski
 
 ## Skuteczność rotacyjnych architektur
@@ -949,6 +996,8 @@ cake and have it too” [@kaczynski1995wp]).
 ## Wnioski z automatyzacji i systematyzacji ewaluacji
 
 ## Propozycje dalszych badań
+
+\newpage
 
 # Aneks
 
