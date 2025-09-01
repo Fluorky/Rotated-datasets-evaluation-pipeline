@@ -53,7 +53,7 @@ w Katedrze Systemów Inteligentnych, WFiIS UŁ
 
 # Wstęp
 
-Obrazy otaczają nas z każdej strony: od zdjęć ze smartfonów, zdjęcia
+Obrazy otaczają nas z każdej strony, od zdjęć ze smartfonów, zdjęcia
 satelitarne, przez monitoring miejski, katalogi produktów i systemy
 kontroli jakości na liniach produkcyjnych, po systemy wspomagania jazdy.
 Choć współczesne modele rozpoznawania obrazu radzą sobie bardzo dobrze,
@@ -62,7 +62,7 @@ obrócenie obiektu o kilkanaście stopni czy niewielki przechył kamery.
 To, co dla człowieka jest naturalne i natychmiast rozpoznawalne (znak
 drogowy pod kątem, cyfra obrócona na kartce), dla klasycznej
 konwolucyjnej sieci neuronowej bywa problemem. Największy problem to brak
-naturalnej inwariantności względem rotacji: standardowe CNN-y „z
+naturalnej inwariantności względem rotacji, standardowe CNN-y „z
 definicji” lepiej radzą sobie z przesunięciami niż z obrotami
 [@goodfellow2016deep; @dumoulin2016guide].
 
@@ -71,7 +71,7 @@ poszerzanie danych o zrotowane przykłady, które poprawiają odporność, ale
 wydłużają trening i nie gwarantują uogólnienia na wszystkie kąty. Druga to
 architektury z wbudowaną geometrią: sieci grupowo równoważne (G-CNN,
 E(2)-equivariant) [@cohen2016group; @kim2020cycnn], sieci cykliczne
-(CyCNN; w szczególności **CyVGG** i **CyResNet**) operujące na wielu
+(CyCNN, a w szczególności **CyVGG** i **CyResNet**) operujące na wielu
 orientacjach oraz przekształcenia do układów polarnych (linear-polar i
 log-polar), które „prostują” rotacje do przesunięć. Cel jest wspólny, 
 mianowicie by model rozpoznawał „to samo” niezależnie od orientacji, 
@@ -86,8 +86,8 @@ inwariantne i ich warianty bazowe w **PyTorchu** [@paszke2019pytorch],
 mierząc wpływ transformacji (linear-polar vs. log-polar), wyboru
 architektury i zakresu kątów na jakość predykcji. Obliczenia realizowano
 na kartach graficznych: **NVIDIA GeForce RTX 3070 Ti 8 GB** oraz **RTX 3060 12 GB**,
-co skróciło czas trenowania i umożliwiło szeroki przegląd eksperymentów;
-środowisko uruchomieniowe ustandaryzowano z użyciem **Dockera** dla
+co skróciło czas trenowania i umożliwiło szeroki przegląd eksperymentów.
+Środowisko uruchomieniowe ustandaryzowano z użyciem **Dockera** dla
 powtarzalności.
 
 Celem pracy jest nie tylko pokazanie, że „da się” uzyskać odporność na
@@ -510,58 +510,56 @@ W praktyce stosowana jest interpolacja biliniarna wraz z **cyklicznym paddingiem
 
 ## Problemy z rotacyjną inwariancją w klasycznych CNN
 
-W praktyce klasyczne CNN dobrze zachowują się względem przesunięć,
-ale nie domykają symetrii obrotu. Wynika to z natury splotu definiowanego
-na dyskretnej siatce, z efektów interpolacji oraz też z braku jawnej
-reprezentacji kąta w strumieniu cech. Poniżej zebrane zostały najważniejsze
-źródła nieinwariancji, które mają bezpośredni wpływ na wyniki i ich
-interpretację.
+W praktyce klasyczne CNN dobrze znoszą przesunięcia, ale nie domykają
+symetrii obrotu. Wynika to z natury splotu na dyskretnej siatce, efektów
+interpolacji oraz braku jawnej reprezentacji kąta w strumieniu cech.
+Poniżej zebrano najważniejsze źródła nieinwariancji, które bezpośrednio
+wpływają na wyniki i ich interpretację.
 
 - **Kierunkowość filtrów.** Małe jądra `3×3` i `5×5` reagują głównie na
   jedną orientację. Aby pokryć wiele kątów, sieć musiałaby nauczyć się
-  wielu „obróconych kopii” tych samych detektorów, co zwiększa zapotrzebowanie
-  na dane i parametry. Kompozycja kilku warstw częściowo pomaga, ale nie
-  rozwiązuje problemu bez dodatkowych mechanizmów ukierunkowanych na kąt.
+  wielu obróconych kopii tych samych detektorów, co zwiększa zapotrzebowanie
+  na dane i parametry. Kompozycja kilku warstw częściowo pomaga, ale bez
+  mechanizmów ukierunkowanych na kąt problem nie znika.
 
-- **Augmentacja nie domyka całości.** Obracanie wzbogaca dane, ale przykrywa
-  tylko zbiór **dyskretnych** kątów. Między tymi wartościami pozostaje
-  „szczelina” generalizacji, zwłaszcza przy małej siatce kątów i ograniczonym
-  budżecie. Dodatkowo augmentacja wydłuża trening i wprowadza wariancję
-  związaną z losowym próbkowaniem kątów.
+- **Augmentacja nie domyka całości.** Obracanie wzbogaca dane, ale pokrywa
+  tylko zbiór dyskretnych kątów. Między tymi wartościami pozostaje
+  „szczelina” generalizacji, zwłaszcza przy rzadkiej siatce kątów i
+  ograniczonym budżecie. Dodatkowo augmentacja wydłuża trening i wnosi
+  wariancję związaną z losowym próbkowaniem kątów.
 
-- **Aliasing i interpolacja.** Obrót rastra wymaga **resamplingu** i wyboru
-  jądra interpolacji. Pojawia się rozmycie lub aliasing, a wysokie częstotliwości
-  są tłumione inaczej w zależności od kąta oraz implementacji
-  [@azulay2019small]. Skutkuje to niespójnością odpowiedzi nawet przy identycznym
-  obiekcie obróconym o niewielki kąt.
+- **Aliasing i interpolacja.** Obrót danego rastra wymaga resamplingu i doboru
+  jądra interpolacji. Pojawia się wtedy rozmycie lub aliasing, a wysokie
+  częstotliwości są tłumione inaczej zależnie od kąta oraz implementacji
+  [@azulay2019small]. Skutkiem jest niespójność odpowiedzi nawet przy
+  niewielkich obrotach tego samego obiektu.
 
-- **Krawędzie i padding.** Dopełnianie „same/zero” łamie symetrię na brzegach.
-  W pobliżu krawędzi zmienia się kontekst, więc odpowiedzi nie są idealnie
-  ekwiwariantne. Stride i pooling pogłębiają ten efekt przez rzadkie próbkowanie
-  siatki oraz aliasing, co dodatkowo osłabia stabilność na małe obroty
+- **Krawędzie i padding.** Dopełnianie „same/zero” łamie symetrię przy
+  brzegach. W pobliżu krawędzi zmienia się kontekst, więc odpowiedzi nie są
+  idealnie ekwiwariantne. Stride i pooling pogłębiają ten efekt przez rzadsze
+  próbkowanie i aliasing, co dodatkowo obniża stabilność na małe obroty
   [@dumoulin2016guide].
 
-- **Brak osi orientacji.** W typowych CNN nie jest jawnie przechowywana
-  informacja o kącie wykrytej cechy. Reprezentacja „miesza” orientacje w
-  kanałach, więc późniejsze domknięcie do **inwariancji** (np. przez pooling)
-  nie ma do czego się odnieść. Stąd potrzeba osobnej osi „orientacja” i
-  operacji cyklicznych lub mapowania do współrzędnych polarnych.
+- **Brak osi orientacji.** W typowych CNN nie zapisuje się jawnie informacji
+  o kącie wykrytej cechy. Orientacje „mieszają się” w kanałach, więc późniejsze
+  domknięcie do inwariancji (np. przez pooling) nie ma do czego się odnieść.
+  Stąd potrzeba osi „orientacja” i operacji cyklicznych lub mapowania do układu
+  polarnego.
 
-- **Brak zgodności grupowej.** Splot standardowy zapewnia ekwiwariancję dla
-  **translacji**, ale nie dla **rotacji**. Na siatce pikseli obrót nie
-  komutuje ze splotem tak jak przesunięcie. Stąd klasyczne CNN nie mają
-  wbudowanej gwarancji, że $\Phi(\mathcal R_\alpha X)$ jest prostą transformacją
-  $\Phi(X)$ w przeciwieństwie do translacji.
+- **Brak zgodności grupowej.** Standardowy splot gwarantuje ekwiwariancję dla
+  translacji, ale nie dla rotacji. Na siatce pikseli obrót nie komutuje
+  ze splotem jak przesunięcie. Klasyczne CNN nie mają więc gwarancji, że
+  $\Phi(\mathcal R_\alpha X)$ jest prostą transformacją $\Phi(X)$.
 
 - **Wczesne warstwy i pole widzenia.** We wczesnych warstwach receptywne pole
-  bywa zbyt małe, by odróżnić lokalne rotacje wzorca od innych zmian. Głębsze
-  warstwy łapią szerszy kontekst dopiero po poolingach i podpróbkowaniu, co
-  z kolei traci precyzję kątową.
+  jest małe, przez co lokalne rotacje bywają nierozróżnialne od innych zmian.
+  Szerszy kontekst pojawia się dopiero po poolingach i podpróbkowaniu, co
+  jednocześnie obniża precyzję kątową.
 
 - **Interakcja z rozmiarem i kształtem obiektu.** Rotacja zmienia relacje
-  między szczegółami, a siatką próbkowania (np. różna liczba „przecinanych”
+  między detalami, a siatką próbkowania (np. inna liczba „przecinanych”
   pikseli wzdłuż krawędzi przy różnych kątach). Skutkiem są fluktuacje
-  odpowiedzi niepołączone z klasą, lecz połączone z geometrią siatki.
+  aktywacji i decyzji zależne od rasteryzacji i kąta, a nie od samej klasy.
 
 \newpage
 
