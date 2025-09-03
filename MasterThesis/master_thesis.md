@@ -73,8 +73,8 @@ architektury z wbudowaną geometrią: sieci grupowo równoważne (G-CNN,
 E(2)-equivariant) [@cohen2016group; @kim2020cycnn], sieci cykliczne
 (CyCNN, a w szczególności **CyVGG** i **CyResNet**) operujące na wielu
 orientacjach oraz przekształcenia do układów polarnych (linear-polar i
-log-polar), które „prostują” rotacje do przesunięć. Cel jest wspólny, 
-mianowicie by model rozpoznawał „to samo” niezależnie od orientacji, 
+log-polar), które „prostują” rotacje do przesunięć. Cel jest wspólny,
+mianowicie by model rozpoznawał „to samo” niezależnie od orientacji,
 bez agresywnego dublowania danych.
 
 Niniejsza praca skupia się na praktycznej weryfikacji tych podejść.
@@ -135,7 +135,7 @@ zastosowano następujące rozwiązania technologiczne:
 
 - **Język programowania Python** - podstawowe narzędzie do implementacji
   algorytmów oraz obsługi frameworków uczenia maszynowego, dzięki
-  wszechstronności i bogatemu ekosystemowi bibliotek [@python-docs] 
+  wszechstronności i bogatemu ekosystemowi bibliotek [@python-docs]
   Środowiska uruchomieniowe były izolowane dzięki użyciu `venv`.
 
   **Frameworki uczenia maszynowego:**
@@ -150,15 +150,15 @@ zastosowano następujące rozwiązania technologiczne:
   zostało przygotowanych $n$ orientacji, a odpowiedzi zostały złożone z
   dodatkową osią „orientacja”. Obrót wejścia powoduje cykliczne przesunięcie
   po tej osi, a pooling po orientacjach daje inwariancję względem
-  rotacji. Został ustawione takie parametry jak stały środek układu polarnych, 
-  stała siatka próbkowania oraz biliniarna interpolacja. Padding po 
-  $\varphi$ został ustawiony na cykliczny. Implementacja została wykonana 
+  rotacji. Został ustawione takie parametry jak stały środek układu polarnych,
+  stała siatka próbkowania oraz biliniarna interpolacja. Padding po
+  $\varphi$ został ustawiony na cykliczny. Implementacja została wykonana
   w **PyTorchu** (punkt odniesienia: CyCNN [@kim2020cycnn]).
 
 - **Wykorzystanie akceleracji GPU (NVIDIA)** - obliczenia zostały
   znacząco przyspieszone dzięki użyciu kart **RTX 3070 Ti 8 GB** oraz
   **RTX 3060 12 GB**. Frameworki takie jak PyTorch wspierają **CUDA**, **Tensor** oraz **cuDNN**, co
-  umożliwia efektywne wykorzystanie zasobów GPU [@cuda-docs; @cudnn-docs]. 
+  umożliwia efektywne wykorzystanie zasobów GPU [@cuda-docs; @cudnn-docs].
   Monitorowanie i diagnostyka zostały wykonane z użyciem narzędzia `nvidia-smi`.
 
 - **Tensor Cores (Ampere).** Zastosowane karty graficzne RTX (3070 Ti, 3060) mają
@@ -167,15 +167,15 @@ zastosowano następujące rozwiązania technologiczne:
   **Ampere** domyślnie mogą używać trybu **TF32** dla obciążeń FP32,
   co daje dodatkowe przyspieszenie bez zmian w modelu.
   Dodatkowo, w **PyTorchu** możliwe jest włączenie **mieszanej precyzji**
-  (FP16/BF16) przez **AMP** w miejscach, gdzie to bezpieczne, przy 
+  (FP16/BF16) przez **AMP** w miejscach, gdzie to bezpieczne, przy
   włączeniu tego feature, zwykle przyspiesza to trening przy
   porównywalnej jakości (szczegóły znajdują się w dokumentacji).
   [@nvidia_tensorcores; @nvidia_tf32; @micikevicius2018mixed; @pytorch_amp]
 
-- **System operacyjny: Linux (Ubuntu LTS).** Główne środowisko uruchomieniowe stanowił system operacyjny 
+- **System operacyjny: Linux (Ubuntu LTS).** Główne środowisko uruchomieniowe stanowił system operacyjny
   **Ubuntu** (dystrybucja LTS) posiadający stabilne
   jądro, pakiety z APT, łatwą integrację ze sterownikami NVIDIA i CUDA.
-  Treningi uruchamiane były **lokalnie** na maszynach z GPU NVIDII. 
+  Treningi uruchamiane były **lokalnie** na maszynach z GPU NVIDII.
   [@ubuntu_docs]. Dla zgodności ze środowiskami Windows używano też
   wariantu **WSL2** (ten sam obraz Dockera i ta sama konfiguracja)
   [@wsl_docs].
@@ -218,7 +218,7 @@ kontrolowanymi rotacjami.
   o kontrolowane rotacje oraz zostały przygotowane spójne podziały zbiorów na
   train/val/test.
 
-- **Augmentacja i protokół nauki, validacji oraz testów:** 
+- **Augmentacja i protokół nauki, validacji oraz testów:**
   zostały zdefiniowane zakresy kątów do sprawdzenia,
   liczba treningów, podział na zbiory train/val/test (uczący/
   walidacyjny/testowy), z możliwością powtórzenia trenowań.
@@ -229,7 +229,7 @@ kontrolowanymi rotacjami.
   @cudnn-docs]. Przygotowane zostały skrypty w
   Pythonie do trenowania, testowania i ewaluacji [@python-docs].
   Środowisko uruchomieniowe zostało ustandaryzowane z
-  użyciem **Dockera** [@docker-docs]. 
+  użyciem **Dockera** [@docker-docs].
 
 - **Metryki i analiza:** została przeprowadzona ocena jakości (accuracy,
   macierze pomyłek), analiza stabilności (średnia/mediana/odchylenie
@@ -295,7 +295,7 @@ przypadku sieci posiadającej pełne połączenia.
 
 Zamiast analizować cały obraz jednocześnie, CNN wykorzystują mały filtr, który
 przesuwa się po lokalnych fragmentach obrazów. W ten sposób uczą się prostych
-detektorów (np. krawędzi, tekstur, kształtów), zaś w wyższych warstwach 
+detektorów (np. krawędzi, tekstur, kształtów), zaś w wyższych warstwach
 bardziej złożonych cech [@lecun1998gradient; @goodfellow2016deep].
 
 Dla przesunięcia $\mathcal T_t$ oraz jądra $K$ zachodzi własność
@@ -305,7 +305,7 @@ $$
 $$
 
 Intuicyjnie oznacza to, że jeśli obraz zostanie przesunięty, to odpowiadająca
-mu mapa cech również przesunie się o ten sam wektor.  
+mu mapa cech również przesunie się o ten sam wektor.
 **Inwariancja na przesunięcia** osiągana jest w praktyce poprzez pooling
 (lokalny lub globalny) bądź zwiększenie kroku (stride). Rzadsze próbkowanie
 powoduje, że wynik klasyfikacji nie jest zależny od dokładnej pozycji obiektu
@@ -318,9 +318,9 @@ pikseli. Dzięki temu uzyskuje się **współdzielenie wag** (liczba parametrów
 rośnie wraz z $H,W$) oraz **lokalność obliczeń**
 [@dumoulin2016guide; @goodfellow2016deep].
 
-**Kształty.**  
-Wejście: $X \in \mathbb{R}^{C_{\text{in}}\times H\times W}$.  
-Zestaw jąder: $K \in \mathbb{R}^{C_{\text{out}}\times C_{\text{in}}\times k\times k}$.  
+**Kształty.**
+Wejście: $X \in \mathbb{R}^{C_{\text{in}}\times H\times W}$.
+Zestaw jąder: $K \in \mathbb{R}^{C_{\text{out}}\times C_{\text{in}}\times k\times k}$.
 Wyjście: $Y \in \mathbb{R}^{C_{\text{out}}\times H'\times W'}$.
 
 **Definicja (pojedynczy kanał wyjściowy $c$):**
@@ -330,7 +330,7 @@ K_{c,i}(a,b)\,X_i(u-a,\;v-b).
 $$
 
 W praktyce większość frameworków oblicza **korelację krzyżową** (bez
-odwracania jądra), pomimo tego, że w API funkcja nazywana jest `conv` [@dumoulin2016guide].  
+odwracania jądra), pomimo tego, że w API funkcja nazywana jest `conv` [@dumoulin2016guide].
 Nie ma to jednak końcowo znaczenia dla procesu uczenia, bo sieć i tak ostatecznie dobierze
 właściwe wagi.
 
@@ -356,11 +356,11 @@ H'=\Big\lfloor \frac{H+2p-d\,(k-1)-1}{s}\Big\rfloor+1,\qquad
 W'=\Big\lfloor \frac{W+2p-d\,(k-1)-1}{s}\Big\rfloor+1.
 $$
 
-**Typowe ustawienia.**  
-- *valid*: $p=0$ - mapy cech maleją;  
-- *same* (dla $s=1$): $p=\lfloor k/2\rfloor$ - $H'=H$, $W'=W$;  
+**Typowe ustawienia.**
+- *valid*: $p=0$ - mapy cech maleją;
+- *same* (dla $s=1$): $p=\lfloor k/2\rfloor$ - $H'=H$, $W'=W$;
 - *stride $>1$*: wbudowane **podpróbkowanie** (mniej obliczeń, mniejsza
-  rozdzielczość);  
+  rozdzielczość);
 - *dylacja $>1$*: większe **efektywne** pole widzenia bez nowych parametrów
   (częste w detekcji/segmentacji) [@dumoulin2016guide].
 
@@ -444,9 +444,9 @@ klasyfikator zostały pozostawione bez zmian, tak aby utrzymać porównywalny bu
 parametrów/FLOPs względem bazowych modeli. Na poziomie definicji modeli nie
 dodano jawnej osi „orientacja” ani osobnego poolingu po orientacjach,
 jeśli mechanizmy rotacyjne są użyte, są one enkapsulowane w implementacji
-CyConv2d (jądro CUDA), a nie w topologii sieci. Nie zostały prowadzone modyfikacje 
-niezwiązane z rotacją (np. zmiana funkcji aktywacji, normalizacja, głębokość, 
-rozmiar jąder, liczby kanałów czy regularizacji), aby nie mieszać 
+CyConv2d (jądro CUDA), a nie w topologii sieci. Nie zostały prowadzone modyfikacje
+niezwiązane z rotacją (np. zmiana funkcji aktywacji, normalizacja, głębokość,
+rozmiar jąder, liczby kanałów czy regularizacji), aby nie mieszać
 ich wpływu z efektem komponentu rotacyjnego[@kim2020cycnn].
 
 ### Ekwiwariancja translacyjna (kontrast do rotacyjnej)
@@ -492,8 +492,8 @@ $$
 \Phi(\mathcal{R}_\alpha X)=\Phi(X).
 $$
 
-W praktyce:  
-- **translacja:** uśrednianie / podpróbkowanie (GAP, stride);  
+W praktyce:
+- **translacja:** uśrednianie / podpróbkowanie (GAP, stride);
 - **rotacja:** (a) augmentacja o obroty, (b) architektura ze śledzeniem
   orientacji (oś „kąt” + pooling po orientacjach), (c) mapowanie do
   współrzędnych polarnych, gdzie obrót staje się przesunięciem po osi
@@ -504,7 +504,7 @@ W praktyce:
 - **Linear-polar:** równy przyrost w pikselach po $\rho$ i $\varphi$. Stabilne kąty,
   prosta implementacja. Rozwiązanie to jest dobre pod **inwariancję rotacyjną**.
 - **Log-polar:** skala rośnie logarytmicznie po $\rho$ - zmiany skali stają się
-  przesunięciami po osi promienia. Jest to idealne rozwiązanie pod **rotacje i skale**, 
+  przesunięciami po osi promienia. Jest to idealne rozwiązanie pod **rotacje i skale**,
   ale bliżej środka rośnie gęstość próbkowania i przy tym wrażliwość na wybór środka [@reddy1996logpolar].
 
 W praktyce stosowana jest interpolacja biliniarna wraz z **cyklicznym paddingiem po $\varphi$**, oraz stałym
@@ -569,20 +569,42 @@ wpływają na wyniki i ich interpretację.
 
 ## Przegląd literatury (E(2)-equivariant, CyCNN)
 
-**CyCNN (podejście użyte w pracy).** Obraz przemapowano do $(\rho,\varphi)$ i
-przetwarzany jest warstwami cylindrycznymi (**CyConv**) z **cyklicznym
-paddingiem** wzdłuż $\varphi$. Dla każdego filtra wykorzystano $n$ orientacji
-(grupa $C_n$). Obrót wejścia z $C_n$ powoduje **cykliczne przesunięcie** po osi
-orientacji (**ekwiwariancja**), a **pooling po orientacjach** zapewnia
-**inwariancję**. W badaniach użyte zostały modele **CyVGG** i **CyResNet**
-[@kim2020cycnn].
+**CyCNN (podejście użyte w pracy).** Obraz przemapowywany jest do
+układu $(\rho,\varphi)$ i przetwarzany warstwami cylindrycznymi
+(**CyConv**) z cyklicznym paddingiem wzdłuż $\varphi$. Dla każdego
+filtra stosowane jest $n$ orientacji (grupa $C_n$). Obrót wejścia
+z $C_n$ przekłada się na cykliczne przesunięcie po osi orientacji
+(ekwiwariancja), a pooling po orientacjach domyka
+inwariancję. W praktyce wybór $n$ równoważy rozdzielczość kątową
+i koszt obliczeń; pozycja środka oraz interpolacja wpływają na
+stabilność brzegów. W badaniach wykorzystywane są **CyVGG** i
+**CyResNet**, co pozwala porównać wariant rotacyjny z bazą przy
+zbliżonym budżecie parametrów i FLOPs [@kim2020cycnn].
 
-**E(2)-equivariant / steerable CNNs (użyte jako kontekst).** Sploty grupowe i jądra
-sterowalne umożliwiają ekwiwariancję względem translacji i rotacji (także dla
-kątów ciągłych) w grupie $\mathrm{E}(2)$. Wymaga to projektowania jąder zgodnie
-z reprezentacjami grupy i zwykle wiąże się z większym kosztem jeżeli chodzi o moc obliczeniową. 
-W tej pracy traktujemy je jako tło teoretyczne
-[@cohen2016group; @weiler2019general; @cohen2019homogeneous].
+**E(2)-equivariant / steerable CNNs.** Modele tej klasy
+zapewniają ekwiwariancję względem translacji i rotacji (także
+ciągłych kątów) w grupie $\mathrm{E}(2)$ poprzez sploty grupowe
+i jądra sterowalne. Podstawą jest projektowanie filtrów zgodnie
+z reprezentacjami grupy (np. indukowanymi), co umożliwia dzielenie
+wag między orientacjami i gwarantuje zgodność z działaniem grupy
+na cechach [@cohen2016group; @weiler2019general; @cohen2019homogeneous].
+Rozszerzenia obejmują także grupy dihedralne $D_n$ (rotacje + odbicia)
+oraz konstrukcje na przestrzeniach jednorodnych. Kosztem są większe
+wymagania obliczeniowe i pamięciowe oraz większa złożoność implementacji
+(ograniczenia na kształt jąder, transformaty bazowe, wiele typów pól
+cech). Zyskiem jest dokładna ekwiwariancja, także dla kątów
+niezależnych od siatki.
+
+**Porównanie i wybór.** Obie ścieżki wprowadzają „wbudowaną” symetrię
+rotacji: CyCNN wykorzystuje mapowanie do współrzędnych polarnych i
+prosty mechanizm cyklicznego przesuwania po osi kąta, a modele
+E(2)-equivariant realizują ścisłą zgodność grupową poprzez projekt
+jąder. W pracy preferowana jest linia **CyCNN** ze względu na
+kompatybilność ze standardowym pipelinem (drop-in w miejsce `Conv2d`)
+i porównywalny budżet parametrów, przy jednoczesnym zachowaniu
+jasnej ścieżki do inwariancji przez pooling po orientacjach
+[@kim2020cycnn; @cohen2016group; @weiler2019general; @cohen2019homogeneous].
+
 
 \newpage
 
@@ -594,9 +616,9 @@ przeskalowano do **32×32** w skali szarości o 10 klasach [@lecun1998gradient],
 GTSRB Gray do **32×32** w skali szarości mający 43 klasy, a GTSRB RGB również przeskalowano do **32×32**
 z trzema kanałami (też 43 klasy), z zachowaniem oficjalnego podziału na trening i
 test (IJCNN 2011) [@stallkamp2011gtsrb; @gtsrb_site]. Zbiór LEGO przygotowano jako
-obrazy **96×96** w skali szarości posiadający 50 klas [@hazelzet_lego_kaggle]. 
+obrazy **96×96** w skali szarości posiadający 50 klas [@hazelzet_lego_kaggle].
 Część walidacyjną zbiorów wydzielono z części treningowej we wszystkich zbiorach,
-pozostawiając test jak w oryginale. Ujednolicenie rozmiaru wejścia i części klasyfikacyjnej 
+pozostawiając test jak w oryginale. Ujednolicenie rozmiaru wejścia i części klasyfikacyjnej
 pozwala porównywać modele bazowe i cykliczne przy tym samym budżecie obliczeń. Szczegóły
 formatów (IDX/NPY), normalizacji oraz scenariuszy rotacyjnych zostaly opisane
 rozdziałach poświęconych augmentacji i implementacji.
@@ -806,7 +828,7 @@ Nazwy w tym pliku odpowiadają ścieżkom na dysku. Przykładowe klucze
 `merged_datasets/merged_range_0_180_plus_non_rotated`,
 `merged_datasets/merged_range_180_360_plus_non_rotated`,
 `merged_datasets/merged_range_full_0_360_plus_non_rotated`,
-`rotated-30`, `rotated-45`, `rotated-0-30`, `rotated-90-120`. 
+`rotated-30`, `rotated-45`, `rotated-0-30`, `rotated-90-120`.
 Dla każdego zbioru treningowego przypisywana jest lista zbiorów testowych. Zawsze
 uwzględniany jest zbiór bazowy bez rotacji, sam zbiór treningowy oraz
 dodatkowe zbiory rotowane dobrane zgodnie z ustalonym limitem.
@@ -822,7 +844,7 @@ splotowe to głównie `3×3` z `padding=1`. W VGG po każdym bloku stosowany jes
 `MaxPool2d(2)`, a w ResNecie rozdzielczość zmniejszana jest przez `stride=2`.
 Po części splotowej występuje **global average pooling (GAP)** oraz prosty
 **klasyfikator**. W VGG używana jest wersja z normalizacją (VGG\_bn) oraz
-dwustopniowy klasyfikator `512→512→C` z dropoutem (w implementacji`AdaptiveAvgPool2d((1,1))` + `nn.Sequential` 
+dwustopniowy klasyfikator `512→512→C` z dropoutem (w implementacji`AdaptiveAvgPool2d((1,1))` + `nn.Sequential`
 z dwiema warstwami liniowymi i wyjściem `C`).
 
 ## VGG - wariant E (VGG-19, „3×3 everywhere”)
@@ -836,10 +858,10 @@ wstawianym w miejscach oznaczonych symbolem `'M'`. Za częścią splotową
 stosowane jest `AdaptiveAvgPool2d((1,1))`, następnie spłaszczenie (flatten) i dwie
 warstwy liniowe `512→512→C` z dropoutem.
 
-- **Blok 1:** 64, 64 → MaxPool (32→16)  
-- **Blok 2:** 128, 128 → MaxPool (16→8)  
-- **Blok 3:** 256×4 → MaxPool (8→4)  
-- **Blok 4:** 512×4 → MaxPool (4→2)  
+- **Blok 1:** 64, 64 → MaxPool (32→16)
+- **Blok 2:** 128, 128 → MaxPool (16→8)
+- **Blok 3:** 256×4 → MaxPool (8→4)
+- **Blok 4:** 512×4 → MaxPool (4→2)
 - **Blok 5:** 512×4 → MaxPool (2→1)
 
 W **CyVGG** każdą `Conv2d` zastąpiono **`CyConv2d`** (jest interfejs zgodny
@@ -949,8 +971,8 @@ logarytmiczny kosztem większej troski o okolice środka.
 ### Szczegóły implementacyjne: warstwa `CyConv2d` (CUDA)
 
 Warstwa `CyConv2d` korzysta z rozszerzenia C++/CUDA kompilowanego jako `CyConv2d_cuda`.
-Pliki źródłowe wykorzystywane do kompilacji to `cycnn.cpp` i `cycnn_cuda.cu`, ich budowanie 
-przy użyciu `setuptools` z `BuildExtension`. Dzięki temu wywołania tej biblioteki z poziomu Pythona 
+Pliki źródłowe wykorzystywane do kompilacji to `cycnn.cpp` i `cycnn_cuda.cu`, ich budowanie
+przy użyciu `setuptools` z `BuildExtension`. Dzięki temu wywołania tej biblioteki z poziomu Pythona
 trafiają bezpośrednio do rdzeni CUDA.
 W pliku `cycnn.cpp` udostępnione są funkcje `forward(...)` i `backward(...)`
 z użyciem pybind11. Przyjmują one tensory `input`, `weight` oraz bufor
@@ -967,7 +989,7 @@ parametry kroku, dopełnienia i dylacji oraz wskaźnik do bufora roboczego.
 Bufor `workspace` jest prealokowany na GPU jako tensor `float32` o rozmiarze
 `1024*1024*1024` elementów, jest to w przybliżeniu około 4 GiB. W kodzie został opisany
 jako miejsce pracy wariantu algorytmu Winograda. Rozwiązanie to pozwala skórcić czas obliczeń, ale
-wymaga odpowiedniej ilości pamięci VRAM, przez co na kartach graficznych posiadających mniej VRAMU mogą 
+wymaga odpowiedniej ilości pamięci VRAM, przez co na kartach graficznych posiadających mniej VRAMU mogą
 pojawić się błędy OOM.
 
 Integracja z modelami jest bezpośrednia. We wszystkich miejscach, gdzie w
@@ -1017,7 +1039,7 @@ bindingi z `cycnn.cpp`.
 
 ## CyVGG vs CyResNet
 
-[...] cyresnet56 uczył się dłużej niż cyvgg19, ale dawał bardziej stabilne wyniki, w szczególności w przypadku funkcji aktywacji typu logpolar. 
+[...] cyresnet56 uczył się dłużej niż cyvgg19, ale dawał bardziej stabilne wyniki, w szczególności w przypadku funkcji aktywacji typu logpolar.
 I jak to się mówi - nie można zjeść ciastka i mieć go też (ang. „You can’t eat your
 cake and have it too” [@kaczynski1995wp]).
 
