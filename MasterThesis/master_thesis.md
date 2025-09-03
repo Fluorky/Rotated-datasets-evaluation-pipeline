@@ -569,40 +569,72 @@ wpływają na wyniki i ich interpretację.
 
 ## Przegląd literatury (E(2)-equivariant, CyCNN)
 
-**CyCNN (podejście użyte w pracy).** Obraz przemapowywany jest do
-układu $(\rho,\varphi)$ i przetwarzany warstwami cylindrycznymi
-(**CyConv**) z cyklicznym paddingiem wzdłuż $\varphi$. Dla każdego
-filtra stosowane jest $n$ orientacji (grupa $C_n$). Obrót wejścia
-z $C_n$ przekłada się na cykliczne przesunięcie po osi orientacji
-(ekwiwariancja), a pooling po orientacjach domyka
-inwariancję. W praktyce wybór $n$ równoważy rozdzielczość kątową
-i koszt obliczeń; pozycja środka oraz interpolacja wpływają na
-stabilność brzegów. W badaniach wykorzystywane są **CyVGG** i
-**CyResNet**, co pozwala porównać wariant rotacyjny z bazą przy
-zbliżonym budżecie parametrów i FLOPs [@kim2020cycnn].
+Literatura o sieciach ekwiwariantnych rozwija się wokół dwóch głównych
+linii. Pierwsza to podejścia „geometryczne” oparte na mapowaniu do
+współrzędnych polarnych i operowaniu na osi kąta w sposób cykliczny
+(CyCNN). Druga to rodzina modeli o ściśle zdefiniowanej ekwiwariancji w
+grupie przekształceń E(2), realizowana przez sploty grupowe i jądra
+sterowalne projektowane zgodnie z reprezentacjami grupy. Oba kierunki
+celują w ten sam efekt - stabilną reprezentację względem rotacji - ale
+różnią się poziomem formalizmu i kosztem obliczeniowym.
 
-**E(2)-equivariant / steerable CNNs.** Modele tej klasy
-zapewniają ekwiwariancję względem translacji i rotacji (także
-ciągłych kątów) w grupie $\mathrm{E}(2)$ poprzez sploty grupowe
-i jądra sterowalne. Podstawą jest projektowanie filtrów zgodnie
-z reprezentacjami grupy (np. indukowanymi), co umożliwia dzielenie
-wag między orientacjami i gwarantuje zgodność z działaniem grupy
-na cechach [@cohen2016group; @weiler2019general; @cohen2019homogeneous].
-Rozszerzenia obejmują także grupy dihedralne $D_n$ (rotacje + odbicia)
-oraz konstrukcje na przestrzeniach jednorodnych. Kosztem są większe
-wymagania obliczeniowe i pamięciowe oraz większa złożoność implementacji
-(ograniczenia na kształt jąder, transformaty bazowe, wiele typów pól
-cech). Zyskiem jest dokładna ekwiwariancja, także dla kątów
-niezależnych od siatki.
+**CyCNN (podejście użyte w pracy).** W tej linii obraz jest
+przemapowywany do układu biegunowego $(\rho,\varphi)$, tak aby obrót w
+płaszczyźnie stał się przesunięciem po osi $\varphi$. Następnie
+stosowane są warstwy cylindryczne operujące na siatce $(\rho,\varphi)$
+z cyklicznym dopełnieniem po kącie. Koncepcyjnie każdemu filtrowi można
+przypisać $n$ orientacji - dyskretną grupę $C_n$ - co w praktyce daje
+możliwość przekształcenia obrotu wejścia w cykliczny shift po wymiarze
+„orientacja” na mapach cech. Pooling po orientacjach domyka inwariancję
+rotacyjną, a wybór $n$ równoważy rozdzielczość kątową i koszt
+obliczeń. Kluczowe są decyzje inżynierskie: wybór środka, sposób
+interpolacji oraz cykliczne dopełnianie przy $\varphi=0/2\pi$, które
+minimalizuje artefakty brzegowe. Takie podejście pozwala zachować
+standardowy pipeline uczenia, a wymiana klasycznej konwolucji na
+odpowiednik cylindryczny jest w dużej mierze „drop in”, dzięki czemu
+łatwo porównywać wersje bazowe i rotacyjne przy zbliżonym budżecie
+parametrów i FLOPs [@kim2020cycnn].
 
-**Porównanie i wybór.** Obie ścieżki wprowadzają „wbudowaną” symetrię
-rotacji: CyCNN wykorzystuje mapowanie do współrzędnych polarnych i
-prosty mechanizm cyklicznego przesuwania po osi kąta, a modele
-E(2)-equivariant realizują ścisłą zgodność grupową poprzez projekt
-jąder. W pracy preferowana jest linia **CyCNN** ze względu na
-kompatybilność ze standardowym pipelinem (drop-in w miejsce `Conv2d`)
-i porównywalny budżet parametrów, przy jednoczesnym zachowaniu
-jasnej ścieżki do inwariancji przez pooling po orientacjach
+**E(2)-equivariant i sieci steerowalne (kontekst).** Druga linia
+bazuje na formalizmie splotów grupowych i jąder sterowalnych. Zamiast
+mapować dane do układu biegunowego, definiuje się splot bezpośrednio na
+grupie przekształceń euklidesowych E(2) lub na przestrzeniach
+jednorodnych tej grupy. Filtry są konstruowane w zgodzie z
+reprezentacjami grupy, co umożliwia dzielenie wag między orientacjami i
+dokładną ekwiwariancję względem rotacji, także ciągłych kątów. Prace
+pokazują zarówno wersję dyskretną z sieciami G-CNN, jak i uogólnienia
+z jądrami sterowalnymi, gdzie parametry filtru są rozwijane w bazach
+harmonicznych i ograniczane przez reguły reprezentacji
+[@cohen2016group; @weiler2019general; @cohen2019homogeneous]. Rozszerzenia
+obejmują także grupy dihedralne $D_n$ (rotacje i odbicia) oraz modele na
+przestrzeniach jednorodnych, co pozwala precyzyjnie kontrolować, w jakim
+miejscu sieć ma być ekwiwariantna, a w jakim inwariantna.
+
+**Różnice praktyczne i kompromisy.** Modele E(2)-equivariant dają
+„twarde” gwarancje ekwiwariancji wynikające z algebry grupy i konstrukcji
+jąder, ale w zamian wymagają bardziej skomplikowanej implementacji
+(typy pól cech, ograniczenia na kształt filtru, operacje w bazach
+harmonicznych) i zwykle większego nakładu obliczeń oraz pamięci.
+CyCNN oferuje podejście lżejsze wdrożeniowo: z punktu widzenia kodu
+wystarczy zamienić operator splotu i dodać cykliczne traktowanie osi
+kątowej. Dokładność ekwiwariancji w CyCNN zależy od gęstości próbkowania
+kąta ($C_n$), jakości interpolacji i wyboru środka, ale w zamian można
+łatwo skalować architekturę i zachować kompatybilność z istniejącymi
+modelami (VGG/ResNet) oraz standardowymi zabiegami treningowymi
+(BatchNorm, dropout, GAP). W obu rodzinach kluczowe pozostaje miejsce
+„domknięcia” do inwariancji - pooling po orientacjach w CyCNN lub
+odpowiednio zaprojektowane operatory w modelach steerowalnych - a także
+kontrola aliasingu wynikającego z dyskretyzacji.
+
+**Wnioski dla tej pracy.** Wybór linii CyCNN wynika z chęci zachowania
+porównywalności z modelami bazowymi oraz z prostego, bezpośredniego
+mechanizmu łączenia informacji o orientacji w dalszej części sieci.
+Mapowanie do $(\rho,\varphi)$ i cykliczne traktowanie osi kąta pozwalają
+zredukować koszt implementacyjny, a jednocześnie wprowadzić kontrolowaną
+ekwiwariancję rotacyjną, która po agregacji orientacji przechodzi w
+inwariancję. Taki układ sprzyja rzetelnemu porównaniu „augmentacja
+rotacją” kontra „architektura z rotacją wbudowaną” przy tym samym
+klasyfikatorze i zbliżonym budżecie parametrów
 [@kim2020cycnn; @cohen2016group; @weiler2019general; @cohen2019homogeneous].
 
 
