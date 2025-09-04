@@ -8,4 +8,4 @@
   -V lang=pl-PL \
   -V geometry=margin=2.5cm \
   -M link-citations=true \
-  -M reference-section-title=Bibliograf
+  -M reference-section-title=Bibliografia
