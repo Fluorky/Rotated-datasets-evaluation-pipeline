@@ -579,7 +579,9 @@ grupy. Oba podejścia dążą do reprezentacji odpornej na obrót. Różnią
 się jednak stopniem formalizacji, kosztem obliczeniowym i wysiłkiem
 inżynierskim potrzebnym do integracji z typowymi pipelinami.
 
-**CyCNN.** W tej rodzinie metod obraz przemapowywany jest do układu
+
+### CyCNN
+W rodzinie CYCNN obraz przemapowywany jest do układu
 $(\rho,\varphi)$ tak, aby obrót w płaszczyźnie stał się przesunięciem po
 osi $\varphi$. Przetwarzanie odbywa się warstwami cylindrycznymi
 z dopełnieniem cyklicznym wzdłuż osi danego kąta. Dla każdego filtra przyjmuje
@@ -595,7 +597,8 @@ odpowiednik cylindryczny odbywa się bez zmiany interfejsu warstwy, co
 ułatwia kontrolowane porównania z wersjami bazowymi przy podobnym
 budżecie parametrów i zapotrzebowaniu na moc obliczeniową (FLOPs) [@kim2020cycnn].
 
-**E(2) equivariant i sieci sterowalne.** Druga linia prac zaś nie zmienia
+### E(2) equivariant i sieci sterowalne
+Druga linia prac zaś nie zmienia
 układu współrzędnych, lecz definiuje splot bezpośrednio na grupie E(2)
 albo na przestrzeniach jednorodnych tej grupy. Filtry konstruowane są
 w zgodzie z reprezentacjami, co pozwala dzielić wagi pomiędzy
@@ -609,9 +612,10 @@ rotacje i odbicia, a także modele na przestrzeniach jednorodnych, co
 ułatwia precyzyjne wskazanie, gdzie ma zajść ekwiwariancja, a gdzie
 inwariancja.
 
-**Aspekty implementacyjne i koszt.** Modele oparte na formalizmie E(2)
-zapewniają ścisłe gwarancje wynikające z algebry grupy oraz konstrukcji
-jąder. Osiąga się to kosztem większych wymagań obliczeniowych i
+### Aspekty implementacyjne i koszt
+Modele oparte na formalizmie E(2)zapewniają ścisłe gwarancje 
+wynikające z algebry grupy oraz konstrukcji jąder. 
+Osiąga się to kosztem większych wymagań obliczeniowych i
 pamięciowych oraz bardziej złożonej implementacji. Pojawia się konieczność
 definiowania typów pól cech, respektowania ograniczeń na kształt filtrów
 i pracy w bazach harmonicznych. Linia CyCNN jest lżejsza wdrożeniowo, ponieważ
@@ -622,7 +626,8 @@ wyboru środka. W zamian zachowana jest zgodność z istniejącymi modelami
 VGG i ResNet oraz ze standardowymi komponentami, takimi jak BatchNorm,
 dropout i GAP.
 
-**Wnioski w kontekście pracy.** Wybrana została architektura z rodziny
+### Wnioski w kontekście pracy 
+Wybrana została architektura z rodziny
 CyCNN, ponieważ ułatwia porównanie z modelami bazowymi i pozwala kontrolować
 informację o orientacji bez ingerencji w pozostałe elementy sieci. Mapowanie
 do $(\rho,\varphi)$ oraz cykliczne traktowanie osi kąta umożliwiają
