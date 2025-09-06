@@ -1042,6 +1042,46 @@ bindingi z `cycnn.cpp`.
 
 ## Automatyzacja: skrypty trenowania, testowania, ewaluacji
 
+### Automatyczna optymalizacja hiperparametrów z wykorzystaniem Optuny
+
+W celu poprawy jakości trenowanych modeli zastosowano automatyczną 
+optymalizację hiperparametrów. Ręczne dobieranie wartości takich jak 
+*learning rate*, *momentum* czy *weight decay* jest czasochłonne, 
+podatne na błędy i bardzo często prowadzi do nieoptymalnych rezultatów. 
+Optymalne ustawienia zależą od architektury sieci, charakteru zbioru 
+danych oraz użytych transformacji polarnych. Dlatego wykorzystano 
+bibliotekę **Optuna** [@akiba2019optuna], nowoczesne narzędzie do 
+strojenia hiperparametrów (*Hyperparameter Optimization, HPO*).
+
+W eksperymentach użyto algorytmu próbkowania **TPE (Tree-structured 
+Parzen Estimator)** oraz mechanizmu **pruning Median**, który pozwalał 
+na wczesne przerywanie eksperymentów z niską jakością wyników. Dzięki 
+temu czas obliczeń skrócony został nawet o 30%. Wyniki każdej próby były 
+zapisywane do plików CSV i JSON, co pozwalało na późniejszą analizę oraz
+łatwe odtworzenie najlepszych konfiguracji.
+
+Dla każdego z modeli (ResNet56, VGG19, CyResNet56, CyVGG19) oraz obu 
+wariantów transformacji (*linear polar*, *log polar*) uruchomiono proces 
+optymalizacji na zbiorach typu *non_rotated*. W każdym przypadku 
+wykonano 25 prób, z maksymalnie dziesięcioma epokami uczenia, aby ograniczyć 
+czas trwania eksperymentów. Wyszukiwane były wartości następujących 
+hiperparametrów: *learning rate* w zakresie [1e−4, 5e−2] (log-uniform), 
+*weight decay* w zakresie [1e−7, 1e−3] (log-uniform) oraz *momentum* w 
+zakresie [0.85, 0.99] (uniform).
+
+Zastosowanie Optuny pozwoliło uzyskać wyższą dokładność w 
+porównaniu do wartości dobranych ręcznie. Algorytm najczęściej wybierał 
+*learning rate* w zakresie 0.001–0.01, co pokrywa się z doświadczeniem 
+z literatury. Automatyczna optymalizacja była korzystna także w 
+przypadku prostych zbiorów (MNIST, GTSRB), a przy bardziej złożonych 
+eksperymentach pozwoliła uniknąć arbitralnych decyzji i zaoszczędzić 
+czas obliczeń.
+
+Włączenie automatycznej optymalizacji do cyklu 
+eksperymentalnego zwiększyło wiarygodność wyników i zapewniło, że 
+otrzymane modele nie bazują na ręcznym zgadywaniu, lecz na systematycznym 
+dostrajaniu zgodnym z aktualnym stanem wiedzy.
+
 ## Obsługa GPU, Docker, WSL
 
 ## Organizacja logów, modeli, confusion matrixów
