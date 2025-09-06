@@ -70,7 +70,7 @@ def predefined_merges(base_dir, dataset_name, output_dir, angle_ranges, file_for
         "merged_fixed_30_plus_non_rotated": [base()] + [d(a) for a in fixed_30],
         "merged_fixed_45_plus_non_rotated": [base()] + [d(a) for a in fixed_45],
         "merged_range_0_180_plus_non_rotated": [base()] + range_paths(angle_ranges[:6]),
-        "merged_range_180_360_plus_non_rotrotated": [base()] + range_paths(angle_ranges[6:]),
+        "merged_range_180_360_plus_non_rotated": [base()] + range_paths(angle_ranges[6:]),
     }
 
     for name, paths in merge_configs.items():
