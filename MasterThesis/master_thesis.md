@@ -140,7 +140,15 @@ zastosowano następujące rozwiązania technologiczne:
 
   **Frameworki uczenia maszynowego:**
   - **PyTorch** - elastyczny framework do budowy, trenowania i wdrażania modeli
-    ML/DL (w tym własnych warstw, takich jak `CyConv`) [@pytorch-docs].
+  ML/DL (w tym własnych warstw, takich jak `CyConv`) [@pytorch-docs].
+  - **Optuna** - biblioteka do automatycznej optymalizacji hiperparametrów
+  (*HPO*) z obsługą efektywnych strategii próbkowania (**TPE**) oraz
+  mechanizmów wczesnego przerywania treningów (**MedianPruner** itp.).
+  Umożliwia ona definiowanie przestrzeni poszukiwań, rejestrowanie metryk,
+  zapisywanie wyników (np. do CSV/JSON) oraz łatwe odtwarzanie najlepszych
+  konfiguracji w postaci *study*. Integracja z PyTorchem odbywa się bez
+  zmian w architekturze modeli i pozwala skrócić czas eksperymentów bez
+  utraty jakości [@akiba2019optuna].
 
 - **Modele cykliczne (CyCNN).** W pracy zostało przyjęte podejście, w
   którym obraz został przemapowany do współrzędnych $(\rho,\varphi)$.
@@ -285,6 +293,34 @@ i dodatkowe wykresy.
 
 # Podstawy teoretyczne
 
+Celem tego rozdziału jest uporządkowanie pojęć, które są potrzebne do
+zrozumienia dalszych eksperymentów. Najpierw zostały przedstawione podstawy
+klasycznych sieci konwolucyjnych takich jak: idea splotu, lokalne pola recepcyjne,
+współdzielenie wag i wynikająca z tego ekwiwariancja względem translacji
+[@lecun1998gradient; @goodfellow2016deep; @dumoulin2016guide]. Następnie omawaine są
+parametry geometrii warstwy (stride, padding, dylacja), zależności rozmiarów
+wejścia i wyjścia oraz sposób, w jaki pooling buduje praktyczną inwariancję na
+przesunięcia.
+
+Następnie przedstawiona zostaje różnica między **ekwiwariancją** a
+**inwariancją** oraz pokazane są ograniczenia klasycznych CNN w kontekście
+rotacji. Ten brak zgodności grupowej dla obrotów motywuje dwie ścieżki
+rozwijane w literaturze, pierwsza  to mapowanie do układu biegunowego i operowanie na osi
+kąta w sposób cykliczny (linia **CyCNN**), zaś druga to konstrukcje oparte o sploty
+grupowe i jądra sterowalne w grupie $\mathrm{E}(2)$ (sieci **E(2)-equivariant**)
+[@bronstein2021gdl; @kim2020cycnn; @cohen2016group]. W tej pracy wykorzystywana
+jest pierwsza ścieżka, ponieważ pozwala zachować standardowy pipeline i
+porównywalny budżet parametrów, a jednocześnie wprowadzić kontrolowaną
+ekwiwariancję rotacyjną, która po agregacji orientacji przechodzi w inwariancję.
+
+Dla kompletności omówione zostaną też praktyczne aspekty przekształceń polarnych
+(linear-polar i log-polar), sposób liczenia pól recepcyjnych po takich
+mapowaniach oraz wpływ decyzji implementacyjnych (interpolacja, wybór środka,
+cykliczny padding po $\varphi$) na stabilność uczenia. Taki zestaw podstaw
+pozwala czytelnie oddzielić wpływ **augmentacji** od wpływu **architektury** i
+stanowi fundament pod analizę wyników w dalszych rozdziałach.
+
+
 ## Wprowadzenie do sieci konwolucyjnych (CNN)
 
 Sieci konwolucyjne (CNN) zostały zaprojektowane do pracy na danych o strukturze
@@ -342,12 +378,12 @@ Parametry „geometrii” warstwy:
 - **stride** $s$ - co ile pikseli przesuwamy okno;
 - **dylacja** $d$ - „rozciąga” jądro poprzez wstawienie przerw między próbkami.
 
-#### Uwaga o „same/valid/stride” a ekwiwariancji\
+#### Same/valid/stride, a ekwiwariancji\
 
 Dokładna ekwiwariancja translacyjna zachodzi przy splocie bez zmiany rozmiaru.
 W praktyce **padding „same”**, **stride $>1$** i **pooling** wprowadzają drobne
 odchylenia (aliasing na siatce próbkowania), co obniża „idealność”
-ekwiwariancji - efekt ten jest znany i opisywany w literaturze
+ekwiwariancji, efekt ten jest znany i opisywany w literaturze
 [@dumoulin2016guide; @azulay2019small].
 
 **Rozmiar wyjścia** (dla jądra $k\times k$):
@@ -627,8 +663,8 @@ VGG i ResNet oraz ze standardowymi komponentami, takimi jak BatchNorm,
 dropout i GAP.
 
 ### Wnioski w kontekście pracy 
-Wybrana została architektura z rodziny
-CyCNN, ponieważ ułatwia porównanie z modelami bazowymi i pozwala kontrolować
+Wybrana została architektura z rodziny CyCNN, ponieważ 
+ułatwia porównanie z modelami bazowymi i pozwala kontrolować
 informację o orientacji bez ingerencji w pozostałe elementy sieci. Mapowanie
 do $(\rho,\varphi)$ oraz cykliczne traktowanie osi kąta umożliwiają
 zrealizowanie ekwiwariancji na etapie ekstrakcji cech, a agregacja po
@@ -1044,43 +1080,42 @@ bindingi z `cycnn.cpp`.
 
 ### Automatyczna optymalizacja hiperparametrów z wykorzystaniem Optuny
 
-W celu poprawy jakości trenowanych modeli zastosowano automatyczną 
-optymalizację hiperparametrów. Ręczne dobieranie wartości takich jak 
-*learning rate*, *momentum* czy *weight decay* jest czasochłonne, 
-podatne na błędy i bardzo często prowadzi do nieoptymalnych rezultatów. 
-Optymalne ustawienia zależą od architektury sieci, charakteru zbioru 
-danych oraz użytych transformacji polarnych. Dlatego wykorzystano 
-bibliotekę **Optuna** [@akiba2019optuna], nowoczesne narzędzie do 
-strojenia hiperparametrów (*Hyperparameter Optimization, HPO*).
+W celu poprawy jakości trenowanych modeli zastosowana została automatyczna
+optymalizacja hiperparametrów. Ręczne dobieranie wartości takich jak *learning
+rate*, *momentum* czy *weight decay* jest czasochłonne, podatne na błędy i bardzo
+często prowadzi do ustawień dalekich od optimum. Optymalne parametry zależą od
+architektury sieci, charakteru zbioru danych oraz użytych przekształceń
+polarnych. Z tego powodu wykorzystana została biblioteka **Optuna**
+[@akiba2019optuna], nowoczesne narzędzie do strojenia hiperparametrów
+(*Hyperparameter Optimization, HPO*).
 
-W eksperymentach użyto algorytmu próbkowania **TPE (Tree-structured 
-Parzen Estimator)** oraz mechanizmu **pruning Median**, który pozwalał 
-na wczesne przerywanie eksperymentów z niską jakością wyników. Dzięki 
-temu czas obliczeń skrócony został nawet o 30%. Wyniki każdej próby były 
-zapisywane do plików CSV i JSON, co pozwalało na późniejszą analizę oraz
-łatwe odtworzenie najlepszych konfiguracji.
+W eksperymentach użyty został algorytm próbkowania **TPE (Tree structured
+Parzen Estimator)** oraz mechanizm **pruning Median**, który umożliwia
+wcześniejsze przerywanie prób o niskiej jakości. Dzięki temu czas potrzebnych obliczeń
+został skrócony nawet o trzydzieści procent. Wyniki każdej próby są zapisywane
+do plików **CSV** i **JSON**, co ułatwia późniejszą analizę oraz wierne
+odtworzenie najlepszych konfiguracji.
 
-Dla każdego z modeli (ResNet56, VGG19, CyResNet56, CyVGG19) oraz obu 
-wariantów transformacji (*linear polar*, *log polar*) uruchomiono proces 
-optymalizacji na zbiorach typu *non_rotated*. W każdym przypadku 
-wykonano 25 prób, z maksymalnie dziesięcioma epokami uczenia, aby ograniczyć 
-czas trwania eksperymentów. Wyszukiwane były wartości następujących 
-hiperparametrów: *learning rate* w zakresie [1e−4, 5e−2] (log-uniform), 
-*weight decay* w zakresie [1e−7, 1e−3] (log-uniform) oraz *momentum* w 
-zakresie [0.85, 0.99] (uniform).
+Proces optymalizacji uruchomiony został dla czterech modeli
+(**ResNet56**, **VGG19**, **CyResNet56**, **CyVGG19**) oraz dla dwóch wariantów
+transformacji (*linear polar*, *log polar*). Optymalizacja prowadzona była na
+zestawach oznaczonych jako *non_rotated*. W każdej konfiguracji wykonano
+25 prób z limitem 10 epok na próbę, aby ograniczyć czas trwania
+eksperymentów. Przeszukiwane były następujące zakresy:
+*learning rate* od `1e-4` do `5e-2` w skali logarytmicznej,
+*weight decay* od `1e-7` do `1e-3` w skali logarytmicznej,
+*momentum* od `0.85` do `0.99` w skali liniowej.
 
-Zastosowanie Optuny pozwoliło uzyskać wyższą dokładność w 
-porównaniu do wartości dobranych ręcznie. Algorytm najczęściej wybierał 
-*learning rate* w zakresie 0.001–0.01, co pokrywa się z doświadczeniem 
-z literatury. Automatyczna optymalizacja była korzystna także w 
-przypadku prostych zbiorów (MNIST, GTSRB), a przy bardziej złożonych 
-eksperymentach pozwoliła uniknąć arbitralnych decyzji i zaoszczędzić 
-czas obliczeń.
+Zastosowanie Optuny pozwoliło osiągnąć wyższą dokładność niż w ustawieniach
+dobieranych ręcznie. Najczęściej wybierane wartości *learning rate* mieściły
+się w przedziale od `0.001` do `0.01`, co jest spójne z obserwacjami występującymi w
+literaturze. Korzyści były widoczne także w prostszych zbiorach, takich jak
+MNIST oraz GTSRB, a w bardziej złożonych scenariuszach optymalizacja ograniczyła
+liczbę arbitralnych decyzji i obniżyła koszt obliczeń.
 
-Włączenie automatycznej optymalizacji do cyklu 
-eksperymentalnego zwiększyło wiarygodność wyników i zapewniło, że 
-otrzymane modele nie bazują na ręcznym zgadywaniu, lecz na systematycznym 
-dostrajaniu zgodnym z aktualnym stanem wiedzy.
+Włączenie automatycznej optymalizacji do cyklu eksperymentalnego zwiększyło
+wiarygodność wyników. Otrzymane wyniki dla modeli oparte są na systematycznym dostrajaniu
+zgodnym z aktualnym stanem wiedzy, a nie ślepych na pojedynczych ręcznych próbach.
 
 ## Obsługa GPU, Docker, WSL
 
