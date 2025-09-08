@@ -1036,7 +1036,21 @@ logarytmiczny kosztem większej troski o okolice środka.
 
 # Implementacja i środowisko eksperymentalne
 
-### Szczegóły implementacyjne: warstwa `CyConv2d` (CUDA)
+Wszystkie eksperymenty realizowane zostały w środowisku **PyTorch** z
+rozszerzeniem CUDA dla warstwy cylindrycznej, dodatkowo zrobiona została automatyczna
+optymalizacja hiperparametrów w **Optunie** dla wybranych modeli (w tym referencyjnego)
+[@pytorch-docs; @akiba2019optuna]. Pipeline danych obejmuje warianty
+IDX i NPY oraz generator zbiorów rotowanych i zbiorów połączonych ze sobą(merged).
+Wyniki treningu oraz testów dla każdego modelu są zapisywana w formacie txt wraz z
+macierzami pomyłek w fomratach png oraz npy. Następne dane są sprawdzane i automatyczne 
+generowane są heatmapy train-test oraz ranking modeli.
+Zapisy metryk i konfiguracji z optuny trafiają do plików **CSV** i **JSON**, co
+ułatwia powtarzalność oraz porównywanie konfiguracji. Dodakowo najlepsze checkpointy 
+dla danego przypadku są zapisane jako modele już przetrenowane .pt. 
+Wykorzystywany był otymalizator **SGD** wraz  z *momentum* i *weight decay*. 
+Zakresy i sposób doboru wartości hiperparametrów opisanostały w części poświęconej HPO.
+
+### Warstwa `CyConv2d` (CUDA) oraz jej implementacja
 
 Warstwa `CyConv2d` korzysta z rozszerzenia C++/CUDA kompilowanego jako `CyConv2d_cuda`.
 Pliki źródłowe wykorzystywane do kompilacji to `cycnn.cpp` i `cycnn_cuda.cu`, ich budowanie
