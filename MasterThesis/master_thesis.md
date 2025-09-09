@@ -1085,12 +1085,53 @@ po orientacjach. Z punktu widzenia PyTorch wagi mają klasyczny kształt
 ono realizowane w kodzie CUDA (`cycnn_cuda.cu`), do którego odwołują się
 bindingi z `cycnn.cpp`.
 
-
 ## Python, PyTorch
+
+Środowisko jest oparte na **Pythonie** i **PyTorchu** z akceleracją CUDA.
+Modele definiowane są w stylu modułów `nn.Module`, zaś pętle uczące
+korzystają z klasycznego układu: forward, obliczenie straty, backward,
+aktualizacja optymalizatora. Zastosowane zostały usprawnienia backendowe
+(`torch.backends.cudnn.benchmark = True`, czyli ustanienie F32 tam, gdzie jest to możliwe),
+co pozwala skrócić czas uczenia na nowszych GPU. W modelach jest używany optymalizator
+**SGD** z *momentum* i *weight decay*, a harmonogram uczenia opiera się
+na `ReduceLROnPlateau`. Kod modeli jest kompatybilny z ekosystemem i API
+PyTorcha, więc warstwy bazowe można bez problemowo wymieniać na odpowiedniki
+cylindryczne bez zmian w pozostałych fragmentach sieci neuronowej.
 
 ## Struktura projektu
 
+Projekt podzielony jest na dwie wzajemnie uzupełniające się części. Repozytorium
+treningowe zawiera modele (**VGG, ResNet** oraz **CyVGG, CyResNet**),
+warstwę `CyConv2d` z rozszerzeniem **C++/CUDA**, loader danych dla
+formatów **IDX** i **NPY**, transformacje i mapowania polarne oraz
+główny skrypt `main.py` oraz launchery dla poszczególnych datasetów. 
+Znajdują się tam także pliki uruchamiające Optunę i konfiguracje eksperymentów.
+
+Repozytorium zarządzające skupia narzędzia do przygotowania danych,
+rotacji i łączenia zbiorów, a także do analizy wyników. Dostępny jest
+interfejs CLI (Typer), który buduje zbiory, wczytuje logi i artefakty,
+zapisuje metryki do **SQLite** oraz generuje mapy ciepła train-test i
+zestawienia rankingowe. Artefakty są porządkowane w powtarzalnej
+strukturze katalogów: `logs/` dla przebiegów, `saves/` dla wag `.pt`,
+foldery z macierzami pomyłek w wariancie `.npy` i `.png`, a wyniki
+zbiorcze w `results/`.
+
 ## Automatyzacja: skrypty trenowania, testowania, ewaluacji
+
+Trenowanie modeli uruchamiane jest skryptem launcher_<dataset>.py który 
+wywołuje `main.py` z odpowiednimi parametrami dla danego
+modelu, zbioru, wariantu przekształceń i ustawień treningu. W trakcie
+ewaluacji zapisywana jest macierz pomyłek oraz podstawowe metryki
+dokładności. Repozytorium orkiestrujące dostarcza komendy CLI do pełnego
+przebiegu. Najpierw `preprocess` przygotowuje zbiory rotowane i zestawy
+połączone. Następnie uruchamiany jest trening i test, po czym `ingest`
+zbiera logi oraz wyniki i zapisuje je do bazy **SQLite**. Komenda
+`check-logs` weryfikuje kompletność przebiegów. Moduły `analyze` i
+`matrix-analyzer` tworzą mapy ciepła train-test, agregują macierze
+pomyłek, liczą statystyki i budują rankingi modeli. W wybranych
+konfiguracjach dołączona jest **Optuna**, która automatycznie stroi
+hiperparametry i zapisuje najlepsze konfiguracje wraz z wynikami do
+plików **CSV/JSON**.
 
 ### Automatyczna optymalizacja hiperparametrów z wykorzystaniem Optuny
 
