@@ -169,6 +169,18 @@ zastosowano następujące rozwiązania technologiczne:
   umożliwia efektywne wykorzystanie zasobów GPU [@cuda-docs; @cudnn-docs].
   Monitorowanie i diagnostyka zostały wykonane z użyciem narzędzia `nvidia-smi`.
 
+- **Rdzenie CUDA (CUDA Cores).** Podstawowe jednostki wykonawcze
+  multiprocesorów strumieniowych (SM) realizują obliczenia arytmetyczne
+  w precyzji **FP32/INT32**. Konwolucje oraz mnożenia macierzy są
+  wykonywane na rdzeniach CUDA zawsze wtedy, gdy nie są aktywowane
+  Tensor Cores (np. czysty FP32 bez **TF32**/AMP). Wydajność zależy od
+  obsadzenia SM-ów (occupancy), doboru rozmiaru bloków (wielokrotność
+  32 wątków — **warp**), koalescencji dostępu do pamięci globalnej oraz
+  wykorzystania pamięci współdzielonej. Warstwa `CyConv2d` wymusza
+  `contiguous()` i obecność tensora na CUDA przed wywołaniem jądra;
+  duży `workspace` sprzyja kafelkowaniu i ogranicza liczbę odczytów z
+  DRAM, co poprawia przepływ danych na SM-ach [@cuda-docs].
+
 - **Tensor Cores (Ampere).** Zastosowane karty graficzne RTX (3070 Ti, 3060) mają
   rdzenie Tensor, które sprzętowo przyspieszają operacje macierzowe
   (konwolucje/matmul). Biblioteki **cuDNN/cuBLAS** na architekturze
@@ -1118,7 +1130,7 @@ zbiorcze w `results/`.
 
 ## Automatyzacja: skrypty trenowania, testowania, ewaluacji
 
-Trenowanie modeli uruchamiane jest skryptem launcher_<dataset>.py który 
+Trenowanie modeli uruchamiane jest skryptem launcher_<dataset>.py, który 
 wywołuje `main.py` z odpowiednimi parametrami dla danego
 modelu, zbioru, wariantu przekształceń i ustawień treningu. W trakcie
 ewaluacji zapisywana jest macierz pomyłek oraz podstawowe metryki
