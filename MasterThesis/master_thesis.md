@@ -1193,7 +1193,97 @@ zgodnym z aktualnym stanem wiedzy, a nie ślepych na pojedynczych ręcznych pró
 
 ## Obsługa GPU, Docker, WSL
 
+Środowisko uruchomieniowe wykorzystuje akcelerację **CUDA** na kartach
+**RTX 3070 Ti 8 GB** oraz **RTX 3060 12 GB**. Włączone są optymalizacje
+backendowe: `torch.backends.cudnn.benchmark = True` oraz tryb **TF32**
+na architekturze Ampere. Transfery między CPU i GPU realizowane są z
+`pin_memory=True` w `DataLoader` oraz `non_blocking=True` przy
+kopiowaniu tensora na urządzenie, co zmniejsza narzut I/O. W miejscach,
+gdzie to bezpieczne, możliwa jest **mieszana precyzja** z
+`torch.cuda.amp` i `GradScaler`. Monitorowanie obciążenia i pamięci
+odbywa się przez `nvidia-smi`. Należy uwzględnić wymóg pamięci VRAM dla
+warstwy `CyConv2d` (bufor roboczy ~4 GiB na GPU).
+
+**Docker** zapewnia powtarzalne środowisko z obsługą GPU. Obraz zawiera
+**PyTorch**, **CUDA**, **cuDNN** i zależności projektu. Uruchomienie
+odbywa się z **nvidia-container-toolkit**; woluminy mapują katalogi z
+danymi i wynikami:
+
+```bash
+docker run --gpus all -it --rm   -v /path/to/data:/workspace/data   -v /path/to/results:/workspace/results   cycnn:latest
+```
+
+**WSL2** służy do pracy w środowisku Windows z dostępem do tego samego
+obrazu Dockera i tej samej konfiguracji. Artefakty mogą być kopiowane
+po ścieżkach `\wsl$` do lokalnych katalogów analityki. Zachowana jest
+spójność nazw katalogów i plików, co ułatwia późniejszą ingestie do bazy
+**SQLite** i generowanie raportów. W przypadku różnic w separatorach
+ścieżek logika narzędzi unika operacji zależnych od systemu, a ścieżki
+są przekazywane jawnie w CLI.
+
+
 ## Organizacja logów, modeli, confusion matrixów
+
+Artefakty eksperymentów są porządkowane w stałej strukturze katalogów.
+Dzięki temu skrypty analityczne mogą automatycznie odnajdywać logi,
+modele i macierze pomyłek, zestawiać wyniki i budować heatmapy
+train–test.
+
+```
+project-root/
+├─ data/                         # dane wejściowe (IDX/NPY)
+├─ logs/                         # przebiegi treningów i testów (.txt)
+│  └─ <model>/<train_set>/<test_set>.txt
+├─ saves/                        # najlepsze checkpointy (.pt)
+│  └─ <model>/<train_set>/<test_set>/best.pt
+├─ confusion_matrices/           # macierze pomyłek (.npy, .png)
+│  └─ <model>/<train_set>__test_<test_set>/
+│       ├─ confusion_matrix.npy
+│       └─ confusion_matrix.png
+├─ results/
+│  ├─ db/                        # baza SQLite z metrykami i ścieżkami
+│  │  └─ experiment_logs.db
+│  ├─ heatmaps/                  # mapy ciepła train–test
+│  ├─ reports/                   # zrzuty rankingów, tabele zbiorcze
+│  └─ optuna/                    # CSV/JSON z HPO (jeśli użyto)
+└─ configs/
+   └─ scenarios/                 # pliki JSON z parami train–test
+```
+
+**Logi (`logs/`)** zawierają przebieg epok, straty i dokładności
+treningu oraz walidacji. Nazewnictwo odpowiada parze zbiorów, co
+upraszcza późniejszą ingestie i łączenie wyników. Pliki są tekstowe,
+dzięki czemu łatwo je przeszukiwać i agregować.
+
+**Modele (`saves/`)** przechowują najlepsze checkpointy w formacie `.pt`.
+Każdy checkpoint leży w katalogu odpowiadającym parze train–test.
+Zawartość obejmuje wagi modelu oraz minimalny zestaw metadanych
+potrzebnych do odtworzenia inferencji.
+
+**Macierze pomyłek (`confusion_matrices/`)** zapisywane są równolegle
+w dwóch formatach: **`.npy`** (do analizy) i **`.png`** (do raportów).
+Katalog na macierze jest nazwany według wzorca:
+`<model>/<train_set>__test_<test_set>/`. Skrypty analityczne oczekują
+tam pliku `confusion_matrix.npy`.
+
+**Baza wyników (`results/db/experiment_logs.db`)** gromadzi metryki,
+konfiguracje i ścieżki do artefaktów. Przykładowe pola rekordu:
+`run_id`, `model`, `train_set`, `test_set`, `transform`, `lr`,
+`momentum`, `weight_decay`, `epochs`, `train_time`, `test_accuracy`,
+`log_path`, `checkpoint_path`, `cm_npy_path`, `cm_png_path`. Taka
+reprezentacja umożliwia filtrowanie i budowanie rankingów bez zaglądania
+w pliki.
+
+**Heatmapy i raporty (`results/heatmaps`, `results/reports`)** powstają
+na podstawie wpisów w bazie. Heatmapy prezentują dokładność „trenuj na
+X, testuj na Y” dla wszystkich par dostępnych w scenariuszu. Raporty
+zawierają tabele ze statystykami (średnia, mediana, min, max, odchylenie
+standardowe) oraz rankingi jakości i efektywności.
+
+**Scenariusze (`configs/scenarios/`)** to pliki JSON, które definiują
+zbiory treningowe i odpowiadające im zestawy testowe. Nazwy wpisów
+odwzorowują realne ścieżki katalogów z danymi i artefaktami, co
+umożliwia uruchamianie wsadowe i jednoznaczną ingestie wyników.
 
 \newpage
 # Eksperymenty
