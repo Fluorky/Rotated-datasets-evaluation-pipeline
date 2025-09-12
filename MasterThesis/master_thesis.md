@@ -770,6 +770,7 @@ W eksperymentach wykorzystano scenariusze kątowe opisane w rozdziale
 **pełen zakres 0-360°**. Pozwala to porównać **VGG/ResNet** z
 **CyVGG/CyResNet** przy identycznym budżecie obliczeń.
 
+\newpage
 
 ## GTSRB RGB (znaki drogowe w kolorze)
 
@@ -901,14 +902,18 @@ treningowych i testowych.
 
 Do porównań wykorzystywany jest plik JSON z opisem scenariuszy ewaluacji.
 Nazwy w tym pliku odpowiadają ścieżkom na dysku. Przykładowe klucze
-(wartości mają tę samą postać) to: `dataset_LEGO_non_rotated`,
-`merged_datasets/merged_fixed_30`,
-`merged_datasets/merged_fixed_30_plus_non_rotated`,
-`merged_datasets/merged_range_0_180`,
-`merged_datasets/merged_range_0_180_plus_non_rotated`,
-`merged_datasets/merged_range_180_360_plus_non_rotated`,
-`merged_datasets/merged_range_full_0_360_plus_non_rotated`,
-`rotated-30`, `rotated-45`, `rotated-0-30`, `rotated-90-120`.
+(wartości mają tę samą postać) to: 
+- `dataset_LEGO_non_rotated`,   
+- `merged_datasets/merged_fixed_30`,  
+- `merged_datasets/merged_fixed_30_plus_non_rotated`,   
+- `merged_datasets/merged_range_0_180`,  
+- `merged_datasets/merged_range_0_180_plus_non_rotated`,  
+- `merged_datasets/merged_range_180_360_plus_non_rotated`,  
+- `merged_datasets/merged_range_full_0_360_plus_non_rotated`,  
+- `rotated-30`,     
+- `rotated-45`,  
+- `rotated-0-30`,   
+- `rotated-90-120`.  
 Dla każdego zbioru treningowego przypisywana jest lista zbiorów testowych. Zawsze
 uwzględniany jest zbiór bazowy bez rotacji, sam zbiór treningowy oraz
 dodatkowe zbiory rotowane dobrane zgodnie z ustalonym limitem.
@@ -1062,7 +1067,7 @@ dla danego przypadku są zapisane jako modele już przetrenowane .pt.
 Wykorzystywany był otymalizator **SGD** wraz  z *momentum* i *weight decay*. 
 Zakresy i sposób doboru wartości hiperparametrów opisanostały w części poświęconej HPO.
 
-### Warstwa `CyConv2d` (CUDA) oraz jej implementacja
+## Warstwa `CyConv2d` (CUDA) oraz jej implementacja
 
 Warstwa `CyConv2d` korzysta z rozszerzenia C++/CUDA kompilowanego jako `CyConv2d_cuda`.
 Pliki źródłowe wykorzystywane do kompilacji to `cycnn.cpp` i `cycnn_cuda.cu`, ich budowanie
@@ -1144,6 +1149,8 @@ pomyłek, liczą statystyki i budują rankingi modeli. W wybranych
 konfiguracjach dołączona jest **Optuna**, która automatycznie stroi
 hiperparametry i zapisuje najlepsze konfiguracje wraz z wynikami do
 plików **CSV/JSON**.
+
+\newpage
 
 ### Automatyczna optymalizacja hiperparametrów z wykorzystaniem Optuny
 
