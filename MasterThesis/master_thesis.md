@@ -1193,97 +1193,138 @@ zgodnym z aktualnym stanem wiedzy, a nie ślepych na pojedynczych ręcznych pró
 
 ## Obsługa GPU, Docker, WSL
 
+### Obsługa GPU
 Środowisko uruchomieniowe wykorzystuje akcelerację **CUDA** na kartach
 **RTX 3070 Ti 8 GB** oraz **RTX 3060 12 GB**. Włączone są optymalizacje
 backendowe: `torch.backends.cudnn.benchmark = True` oraz tryb **TF32**
 na architekturze Ampere. Transfery między CPU i GPU realizowane są z
 `pin_memory=True` w `DataLoader` oraz `non_blocking=True` przy
 kopiowaniu tensora na urządzenie, co zmniejsza narzut I/O. W miejscach,
-gdzie to bezpieczne, możliwa jest **mieszana precyzja** z
+gdzie to bezpieczne do użycia, wykorzystywana jest **mieszana precyzja** z
 `torch.cuda.amp` i `GradScaler`. Monitorowanie obciążenia i pamięci
 odbywa się przez `nvidia-smi`. Należy uwzględnić wymóg pamięci VRAM dla
-warstwy `CyConv2d` (bufor roboczy ~4 GiB na GPU).
+warstwy `CyConv2d` (bufor roboczy ~4 GiB na GPU), co sprawia, że 
+minimalna wymagana ilośc VRAMu wynosi ~6GB.
 
+### Docker
 **Docker** zapewnia powtarzalne środowisko z obsługą GPU. Obraz zawiera
 **PyTorch**, **CUDA**, **cuDNN** i zależności projektu. Uruchomienie
 odbywa się z **nvidia-container-toolkit**; woluminy mapują katalogi z
 danymi i wynikami:
 
 ```bash
-docker run --gpus all -it --rm   -v /path/to/data:/workspace/data   -v /path/to/results:/workspace/results   cycnn:latest
-```
+docker run \
+  --gpus all \
+  -it --rm \
+  -v /path/to/data:/workspace/data \
+  -v /path/to/results:/workspace/results \
+  cycnn:latest
 
+```
+### WSL2
 **WSL2** służy do pracy w środowisku Windows z dostępem do tego samego
 obrazu Dockera i tej samej konfiguracji. Artefakty mogą być kopiowane
-po ścieżkach `\wsl$` do lokalnych katalogów analityki. Zachowana jest
+po ścieżkach `\wsl$` do lokalnych katalogów celem analityki. Zachowana zostaje
 spójność nazw katalogów i plików, co ułatwia późniejszą ingestie do bazy
-**SQLite** i generowanie raportów. W przypadku różnic w separatorach
-ścieżek logika narzędzi unika operacji zależnych od systemu, a ścieżki
-są przekazywane jawnie w CLI.
+**SQLite** i generowanie raportów. W przypadku różnic w separatorach wykorzystywanych
+do tworzenia ścieżek logika użytych narzędzi unika operacji zależnych od systemu, 
+zaś ścieżki są przekazywane jawnie w CLI.
 
 
 ## Organizacja logów, modeli, confusion matrixów
 
-Artefakty eksperymentów są porządkowane w stałej strukturze katalogów.
+Artefakty przeprowadzonych eksperymentów są porządkowane w stałej strukturze katalogów.
 Dzięki temu skrypty analityczne mogą automatycznie odnajdywać logi,
 modele i macierze pomyłek, zestawiać wyniki i budować heatmapy
 train–test.
 
 ```
-project-root/
-├─ data/                         # dane wejściowe (IDX/NPY)
-├─ logs/                         # przebiegi treningów i testów (.txt)
-│  └─ <model>/<train_set>/<test_set>.txt
-├─ saves/                        # najlepsze checkpointy (.pt)
-│  └─ <model>/<train_set>/<test_set>/best.pt
-├─ confusion_matrices/           # macierze pomyłek (.npy, .png)
-│  └─ <model>/<train_set>__test_<test_set>/
-│       ├─ confusion_matrix.npy
-│       └─ confusion_matrix.png
-├─ results/
-│  ├─ db/                        # baza SQLite z metrykami i ścieżkami
-│  │  └─ experiment_logs.db
-│  ├─ heatmaps/                  # mapy ciepła train–test
-│  ├─ reports/                   # zrzuty rankingów, tabele zbiorcze
-│  └─ optuna/                    # CSV/JSON z HPO (jeśli użyto)
-└─ configs/
-   └─ scenarios/                 # pliki JSON z parami train–test
+CyCNN-Enhanced-develop/
+|-- ReadMe.md
+|-- LICENSE
+|-- .gitignore
+|-- cycnn-extension/                  # rozszerzenie C++/CUDA dla CyConv2d
+|   |-- cycnn.cpp
+|   |-- cycnn_cuda.cu
+|   `-- setup.py
+`-- cycnn/                            # trenowanie i testowanie modeli
+    |-- main.py
+    |-- utils.py
+    |-- data.py
+    |-- custom_loader.py
+    |-- image_transforms.py
+    |-- requirements.txt
+    |-- launcher_MNIST.py
+    |-- launcher_GTSRB.py
+    |-- launcher_GTSRB_RGB.py
+    |-- launcher_LEGO.py
+    |-- optuna_launcher.py
+    |-- optuna_driver_universal.py
+    |-- optuna_checker.py
+    |-- optuna_mnist.py
+    |-- train_test_scenarios_MNIST.json
+    |-- train_test_scenarios_GTSRB.json
+    |-- train_test_scenarios_GTSRB_RGB.json
+    |-- train_test_scenarios_LEGO.json
+    |-- models/
+    |   |-- getmodel.py
+    |   |-- cyconvlayer.py
+    |   |-- cyresnet.py
+    |   |-- cyvgg.py
+    |   |-- resnet.py
+    |   `-- vgg.py
+    |-- logs/                         # logi i (domyślnie) macierze pomyłek
+    |   `-- .gitkeep
+    `-- saves/                        # checkpointy (.pt)
+        |-- .gitkeep
+        `-- MNIST/                    # przykładowy podkatalog (opcjonalny)
+
+
 ```
 
-**Logi (`logs/`)** zawierają przebieg epok, straty i dokładności
-treningu oraz walidacji. Nazewnictwo odpowiada parze zbiorów, co
-upraszcza późniejszą ingestie i łączenie wyników. Pliki są tekstowe,
-dzięki czemu łatwo je przeszukiwać i agregować.
+**Logi (`logs/`)** zapisywane są podczas uruchomienia z flagą `--redirect`.
+Plik trafia na dysk pod wzorcem:
+```
+cycnn/logs/<fname>.txt
+```
+gdzie nazwa `<fname>` budowana jest z następujących składników:
+```
+<dataset>-<model>[-<polar_transform>][-<augmentation>][-rotation_from_scenarios]
+```
+Przykład używany w eksperymentach:
+\path{cycnn/logs/mnist-custom-cyresnet56-linearpolar_merged_datasets_merged_range_0_180_plus_non_rotated_train.txt}
 
-**Modele (`saves/`)** przechowują najlepsze checkpointy w formacie `.pt`.
-Każdy checkpoint leży w katalogu odpowiadającym parze train–test.
-Zawartość obejmuje wagi modelu oraz minimalny zestaw metadanych
-potrzebnych do odtworzenia inferencji.
+**Modele (`saves/`)** zawierra on najlepsze checkpointy w formacie `.pt`.
+Zapis następuje przy poprawie wyniku lub zgodnie z polityką zapisu w skrypcie.
+Domyślna ścieżka ma postać:
+```
+cycnn/saves/<fname>.pt
+```
+Jeśli podano `--model-save-path`, checkpoint zostaje zapisany dokładnie w tej
+ścieżce, z pominięciem wzorca domyślnego.
 
-**Macierze pomyłek (`confusion_matrices/`)** zapisywane są równolegle
-w dwóch formatach: **`.npy`** (do analizy) i **`.png`** (do raportów).
-Katalog na macierze jest nazwany według wzorca:
-`<model>/<train_set>__test_<test_set>/`. Skrypty analityczne oczekują
-tam pliku `confusion_matrix.npy`.
+**Macierze pomyłek (PNG i NPY)** zapisywane są razem z wynikiem testu.
+Gdy nie podano `--output-dir`, używany jest katalog zależny od pary train–test:
+```
+cycnn/logs/<train_set>_test_on_<test_set>/
+    confusion_matrix.npy
+    confusion_matrix.png
+```
+W przypadku, gdy jest podany parametr `--output-dir <DIR>`, pliki trafiają do wskazanej lokalizacji:
+```
+<DIR>/confusion_matrix.npy
+<DIR>/confusion_matrix.png
+```
 
-**Baza wyników (`results/db/experiment_logs.db`)** gromadzi metryki,
-konfiguracje i ścieżki do artefaktów. Przykładowe pola rekordu:
-`run_id`, `model`, `train_set`, `test_set`, `transform`, `lr`,
-`momentum`, `weight_decay`, `epochs`, `train_time`, `test_accuracy`,
-`log_path`, `checkpoint_path`, `cm_npy_path`, `cm_png_path`. Taka
-reprezentacja umożliwia filtrowanie i budowanie rankingów bez zaglądania
-w pliki.
+**Scenariusze train–test (JSON)** zawierają gotowe listy par zbiorów, których
+nazwy odpowiadają rzeczywistym ścieżkom na dysku. W repozytorium znajdują się następujące scenariusze:
+```
+cycnn/train_test_scenarios_MNIST.json
+cycnn/train_test_scenarios_GTSRB.json
+cycnn/train_test_scenarios_GTSRB_RGB.json
+cycnn/train_test_scenarios_LEGO.json
+```
 
-**Heatmapy i raporty (`results/heatmaps`, `results/reports`)** powstają
-na podstawie wpisów w bazie. Heatmapy prezentują dokładność „trenuj na
-X, testuj na Y” dla wszystkich par dostępnych w scenariuszu. Raporty
-zawierają tabele ze statystykami (średnia, mediana, min, max, odchylenie
-standardowe) oraz rankingi jakości i efektywności.
-
-**Scenariusze (`configs/scenarios/`)** to pliki JSON, które definiują
-zbiory treningowe i odpowiadające im zestawy testowe. Nazwy wpisów
-odwzorowują realne ścieżki katalogów z danymi i artefaktami, co
-umożliwia uruchamianie wsadowe i jednoznaczną ingestie wyników.
 
 \newpage
 # Eksperymenty
