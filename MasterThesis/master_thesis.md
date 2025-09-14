@@ -1192,6 +1192,19 @@ wiarygodność wyników. Otrzymane wyniki dla modeli oparte są na systematyczny
 zgodnym z aktualnym stanem wiedzy, a nie ślepych na pojedynczych ręcznych próbach.
 
 ## Obsługa GPU, Docker, WSL
+Środowisko uruchomieniowe zostało zorganizowane tak, aby połączyć
+**wydajność GPU**, **powtarzalność kontenerów** oraz **spójność pracy w 
+przypadku pracy na Windows przez WSL2**. 
+Treningi i testy uruchamiane są w obrazie Dockera
+z przypiętymi wersjami **CUDA** i **cuDNN**, a ten sam obraz jest
+wykorzystywany w **WSL2**, co eliminuje różnice między stacjami roboczymi.
+Dane i artefakty (logi, checkpointy, macierze pomyłek) są montowane jako
+woluminy, więc katalogi z wynikami pozostają niezmienne między sesjami i
+hostami. Dobór urządzeń kontrolowany jest przez `CUDA_VISIBLE_DEVICES`,
+a ścieżki wejścia i wyjścia mają jednolitą konwencję, co upraszcza
+późniejszą analizę i replikację. Monitorowanie obciążenia oraz VRAM
+odbywa się narzędziem `nvidia-smi`, natomiast szczegóły konfiguracji
+przepływu danych i precyzji obliczeń opisane zostały poniżej.
 
 ### Obsługa GPU
 Środowisko uruchomieniowe wykorzystuje akcelerację **CUDA** na kartach
