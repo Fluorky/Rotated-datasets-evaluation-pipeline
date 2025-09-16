@@ -1344,6 +1344,56 @@ cycnn/train_test_scenarios_LEGO.json
 
 ## Scenariusze trenowania/testowania (opis JSON)
 
+Scenariusze definiowane są przez plik JSON, który mapuje **zestaw
+treningowy** na listę **zestawów testowych**. Klucze i wartości są
+po prostu ścieżkami katalogów w strukturze danych. Dzięki temu łatwo
+powiązać nazwy w JSON z realnymi miejscami na dysku i uruchomić serię
+eksperymentów bez ręcznych zmian.
+
+Przykładowy fragment JSON:
+
+```json
+{
+  "dataset_LEGO_non_rotated": [
+    "dataset_LEGO_non_rotated",
+    "merged_datasets/merged_fixed_30",
+    "merged_datasets/merged_fixed_45_plus_non_rotated",
+    "rotated-90",
+    "rotated-90-120"
+  ],
+  "merged_datasets/merged_range_full_0_360_plus_non_rotated": [
+    "dataset_LEGO_non_rotated",
+    "merged_datasets/merged_range_0_180",
+    "merged_datasets/merged_range_180_360",
+    "rotated-120",
+    "rotated-210-240"
+  ]
+}
+```
+
+Listy testowe budowane są według reguł generatora. Zawsze zawierają
+co najmniej zestaw bazowy bez rotacji oraz sam zestaw treningowy.
+Pozostałe pozycje dobierane są z puli wariantów obrotowych i presetów
+łączonych do ustalonego limitu. Wygenerowane nazwy są zgodne
+z konwencjami katalogów, które powstają w preprocessingu.
+
+Pętla uruchomieniowa czyta scenariusz i wykonuje spójną sekwencję:
+trening na danym **train_set**, a następnie testy na wszystkich
+**test_set** z listy. Poniżej szkic logiki, którą realizują skrypty:
+
+```text
+for train_set in scenarios:
+  model = build_model(...)
+  fit(model, train_set, ...)
+  for test_set in scenarios[train_set]:
+    acc, cm = evaluate(model, test_set)
+    save_metrics_and_artifacts(acc, cm, train_set, test_set, model)
+```
+
+Takie podejście porządkuje eksperymenty. Pozwala też tworzyć mapy
+„trenuj na X, testuj na Y” oraz automatycznie budować rankingi modeli
+wspólne dla całego zbioru scenariuszy.
+
 ## Pomiar skuteczności (accuracy, macierze pomyłek)
 
 ## Śledzenie metryk: średnia, mediana, odchylenie standardowe
