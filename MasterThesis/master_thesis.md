@@ -1344,11 +1344,11 @@ cycnn/train_test_scenarios_LEGO.json
 
 ## Scenariusze trenowania/testowania (opis JSON)
 
-Scenariusze definiowane są przez plik JSON, który mapuje **zestaw
+Scenariusze zdefiniowane są przez pliki JSON, który mapują **zestawy
 treningowy** na listę **zestawów testowych**. Klucze i wartości są
-po prostu ścieżkami katalogów w strukturze danych. Dzięki temu łatwo
-powiązać nazwy w JSON z realnymi miejscami na dysku i uruchomić serię
-eksperymentów bez ręcznych zmian.
+po prostu ścieżkami katalogów w strukturze danych. Dzięki temu w łatwy sposób
+powiązane zostały nazwy w  pliku JSON z realnymi ścieżkami na dysku 
+i można było przeprowadzić serię eksperymentów bez ręcznej konfiguracji czy uruchamiania.
 
 Przykładowy fragment JSON:
 
@@ -1371,15 +1371,16 @@ Przykładowy fragment JSON:
 }
 ```
 
-Listy testowe budowane są według reguł generatora. Zawsze zawierają
-co najmniej zestaw bazowy bez rotacji oraz sam zestaw treningowy.
+Listy testowe budowane zostały według określonych reguł ich generatorowania. 
+Zawsze zawierają one co najmniej zestaw bazowy bez rotacji oraz sam zestaw treningowy.
 Pozostałe pozycje dobierane są z puli wariantów obrotowych i presetów
 łączonych do ustalonego limitu. Wygenerowane nazwy są zgodne
-z konwencjami katalogów, które powstają w preprocessingu.
+z konwencjami katalogów, które powstają podczas preprocessingu.
 
-Pętla uruchomieniowa czyta scenariusz i wykonuje spójną sekwencję:
+Podczas procedury treningu-testowania pętla uruchomieniowa 
+odczytuje scenariusz, a następnie wykonuje następujaca sekwencję:
 trening na danym **train_set**, a następnie testy na wszystkich
-**test_set** z listy. Poniżej szkic logiki, którą realizują skrypty:
+**test_set** z listy. Poniżej uproszczony szkic logiki, którą realizują skrypty:
 
 ```text
 for train_set in scenarios:
