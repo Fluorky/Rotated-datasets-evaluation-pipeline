@@ -1342,6 +1342,56 @@ cycnn/train_test_scenarios_LEGO.json
 \newpage
 # Eksperymenty
 
+Część eksperymentalna została zbudowana tak, aby wprost porównać wersje
+bazowe (VGG-19 E, ResNet-56) z ich odpowiednikami rotacyjnymi (CyVGG-E,
+CyResNet-56) przy niezmienionym budżecie parametrów i podobnym FLOPs. Głównym
+celem jest sprawdzenie, jak wprowadzenie osi „kąt” i cyklicznego
+dopełniania po $\varphi$ wpływa na jakość i stabilność względem obrotów,
+a także czy zyski utrzymują się przy zmianie rozkładu kątów między
+treningiem a testem.
+
+Zakres obejmuje cztery zbiory: **MNIST**, **GTSRB Gray**, **GTSRB RGB**
+i **LEGO**. Dla wszystkich zastosowano spójny preprocessing, ustaloną
+rozdzielczość wejścia oraz normalizację. Dane przygotowano w dwóch
+formatach wejściowych (IDX i NPY), a następnie wygenerowano warianty
+obrotowe w dwóch trybach: **kąty stałe** oraz **przedziały kątowe**.
+Na tej podstawie zbudowano również presety złączone (np.
+`merged_fixed_30`, `merged_range_full_0_360` oraz wersje z dopiskiem
+`+ non_rotated`) tak, aby systematycznie zbadać uogólnianie „trenuj na
+X, testuj na Y”.
+
+Aby wyeliminować wpływ przypadkowego doboru hiperparametrów, kolejnym kroku
+kroku wykonano **automatyczną optymalizację** (Optuna, TPE + pruning) na
+przypadkach *non_rotated*. Pokazuje ona, że początkowo ustawione parametry właściwie
+służą jako w kolejnych eksperymentach. Protokół trenowania jest stały w
+całej serii (liczba epok, rozmiar batcha, scheduler, optymalizator
+`SGD` z `momentum` i `weight_decay`), a różnice dotyczą wyłącznie
+architektury splotu (`Conv2d` → `CyConv2d`) i przygotowania danych
+pod rotacje.
+
+Uruchomienia są orkiestrane przez pliki **JSON** opisujące scenariusze:
+każdy zestaw treningowy ma przypisaną listę zestawów testowych
+(ścieżki 1:1 z drzewem katalogów). Rozwiązanie to upraszcza replikację,
+pozwala uruchamiać całe macierze porównań oraz zasila późniejsze
+wizualizacje w postaci map ciepła „train–test”.
+
+Obliczenia realizowane są na GPU **NVIDIA RTX 3070 Ti** i **RTX 3060**.
+Akceleracja opiera się na **CUDA**, **cuDNN** i **cuBLAS**; włączony jest
+tryb **TF32** (Ampere), a tam gdzie to bezpieczne używana jest mieszana
+precyzja przez `torch.cuda.amp`. Należy uwzględnić bufor roboczy
+`CyConv2d` (~4 GiB VRAM). Ziarna generatorów pseudolosowych są ustawiane
+dla Pythona, NumPy i PyTorcha; `cudnn.benchmark = True` pozostaje aktywny
+ze względu na czas trenowania, co nie zaburza porównywalności wyników.
+
+Wyniki zapisywane są w spójnej strukturze: logi z przebiegów, najlepsze
+checkpointy `.pt`, macierze pomyłek w formatach `.npy` i `.png`,
+zestawienia CSV oraz wpisy w bazie **SQLite**. Na tej podstawie
+budowane są rankingi oraz statystyki zbiorcze (średnia, mediana,
+odchylenie standardowe). Poniżej opisano sposób definiowania scenariuszy,
+procedurę pomiaru skuteczności oraz metodę agregacji metryk.
+
+\newpage
+
 ## Scenariusze trenowania/testowania (opis JSON)
 
 Scenariusze zdefiniowane są przez pliki JSON, który mapują **zestawy
