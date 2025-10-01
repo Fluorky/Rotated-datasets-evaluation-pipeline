@@ -1449,29 +1449,32 @@ wspólne dla całego zbioru scenariuszy.
 
 Skuteczność raportowana jest jako **dokładność top-1** dla każdej pary
 **train → test**:
-\[
-\text{Acc} \;=\; \frac{1}{N}\sum_{i=1}^{N}\mathbf{1}\{\hat y_i = y_i\}.
-\]
+$$
+Acc \;=\; \frac{1}{N}\sum_{i=1}^{N}\mathbf{1}\{\hat y_i = y_i\}.
+$$
 Oprócz wartości globalnej zapisywana jest **dokładność per-klasa** oraz
-**macro-average** (średnia arytmetyczna z dokładności klas), co pomaga
-kontrolować wpływ niezbalansowania.
+**macro-average** (średnia z dokładności klas), co ogranicza wpływ
+niezbalansowania danych.
 
-Dla każdej pary generowana jest **macierz pomyłek** \(C\times C\)
-(rząd = klasa rzeczywista, kolumna = klasa przewidziana). Wariant
-`.npy` służy do dalszej analizy i agregacji, a wariant `.png` trafia do
-raportów. Wizualizacja może być normalizowana wierszowo lub globalnie
-— zgodnie z ustawieniami ewaluacji. Artefakty (logi, macierze,
-checkpointy) trafiają do katalogu odpowiadającego parze train/test,
-co upraszcza późniejszą ingestie i budowę map „trenuj na X, testuj na Y”.
+Dla każdej pary generowana jest **macierz pomyłek** o rozmiarze
+$C \times C$ (wiersz = klasa rzeczywista, kolumna = klasa przewidziana).
+Pliki zapisywane są w dwóch formatach:
+- **`.npy`** — surowe wartości do analizy i agregacji,
+- **`.png`** — wizualizacja do raportów (normalizacja wierszowa lub globalna).
 
+Artefakty (logi, macierze, checkpointy) trafiają do katalogu odpowiadającego
+parze train/test, co upraszcza późniejszą ingestie i budowę map
+„trenuj na X, testuj na Y”.
+
+---
 
 ## Śledzenie metryk: średnia, mediana, odchylenie standardowe
 
-Wyniki są agregowane **po wszystkich zestawach testowych** przypisanych
-do danego train. Na tej podstawie liczone są statystyki zbiorcze:
-- **średnia** dokładność (mean) — poziom centralny,
-- **mediana** — odporna na skrajne odchylenia,
-- **odchylenie standardowe** — zmienność między testami,
+Wyniki są agregowane po wszystkich **zestawach testowych** przypisanych do
+danego train. Na tej podstawie liczone są statystyki zbiorcze:
+- **mean** — średnia dokładność,
+- **median** — odporna na wartości skrajne,
+- **std** — odchylenie standardowe między testami,
 - **min / max** — zakres jakości w całym scenariuszu.
 
 Dodatkowe miary stabilności:
@@ -1480,55 +1483,51 @@ Dodatkowe miary stabilności:
 - **gap train–test** (różnica między wynikiem na zbiorze użytym w treningu
   a średnią po zbiorach „spoza rozkładu”).
 
-Statystyki i metadane zapisywane są do **SQLite** oraz do plików **CSV**,
-co ułatwia filtrowanie (po modelu, transformacji, zbiorze) i zasila
-późniejsze panele oraz rankingi.
+Statystyki i metadane zapisywane są do **SQLite** oraz do **CSV**, co ułatwia
+filtrowanie (po modelu, transformacji, zbiorze) i zasila panele analityczne
+oraz rankingi.
 
+---
 
 ## Analiza skuteczności względem rotacji
 
 **Heatmapa train–test.**  
 Macierz, w której wiersze odpowiadają rozkładom kątów w treningu
 (*non_rotated*, *fixed_30*, *range_0_180*, …), a kolumny rozkładom kątów
-w teście (*rotated-30*, *rotated-90-120*, *range_full*). Każda komórka to
-dokładność top-1. Heatmapa pokazuje, gdzie model uogólnia, a gdzie traci
+w teście (*rotated-30*, *rotated-90-120*, *range_full*). Każda komórka
+to dokładność top-1. Heatmapa pokazuje, gdzie model uogólnia, a gdzie traci
 jakość przy zmianie rozkładu kątów.
 
-**Krzywe stabilności względem \(\Delta\theta\).**  
-Wyniki grupowane są według „mismatchu” \(\Delta\theta\) między rozkładem
-kątów w treningu i w teście (z cyklicznością \(2\pi\)). Raportowane są:
-\[
-\text{Acc}(\Delta\theta),\quad
-\text{AUC}_{\theta},\quad
-\text{Acc}_{\text{worst}},\quad
-\text{SD}_{\theta}.
-\]
-- \(\text{AUC}_{\theta}\) — pole pod krzywą stabilności,
-- \(\text{Acc}_{\text{worst}}\) — najniższa dokładność w badanym zakresie,
-- \(\text{SD}_{\theta}\) — odchylenie między koszykami \(\Delta\theta\).
+**Krzywe stabilności względem $\Delta\theta$.**  
+Wyniki grupowane są według „mismatchu” $\Delta\theta$ między rozkładem
+kątów w treningu i w teście (z cyklicznością $2\pi$). Raportowane są:
+- `Acc(Δθ)` — dokładność w funkcji różnicy kątów,
+- `AUC_theta` — pole pod krzywą stabilności,
+- `Acc_worst` — najniższa dokładność w badanym zakresie,
+- `SD_theta` — odchylenie standardowe między koszykami $\Delta\theta$.
 
 **Per-klasa a rotacja.**  
 Z macierzy pomyłek wyprowadzane są dokładności per-klasa w funkcji
-rozkładu kątów. Ułatwia to wskazanie klas szczególnie wrażliwych
+rozkładu kątów. Pozwala to wskazać klasy szczególnie wrażliwe
 (np. z symetriami mylącymi pary etykiet).
 
+---
 
 ## Ranking modeli
 
 Ranking budowany jest na podstawie **średniej dokładności** po całym
 scenariuszu testowym dla danej konfiguracji (model + transformacja).
-Jako rozstrzygnięcia przy remisie stosowane są kolejno:
-1) **odchylenie standardowe** (niższe lepsze),
-2) \(\text{Acc}_{\text{worst}}\) po koszykach \(\Delta\theta\) (wyższe lepsze),
-3) liczba parametrów / **FLOPs** (mniejszy koszt preferowany przy
-   porównywalnej jakości).
+Przy remisie kolejno rozstrzygają:
+1. **std** — niższe lepsze,
+2. `Acc_worst` — wyższe lepsze,
+3. **params / FLOPs** — mniejszy koszt preferowany przy porównywalnej jakości.
 
-W tabelach rankingowych pokazywane są kolumny:
-`mean`, `median`, `std`, `min`, `max`, opcjonalnie \(\text{AUC}_{\theta}\),
-\(\text{Acc}_{\text{worst}}\), a także `params` i `FLOPs` (jeśli dostępne).
-Wyniki eksportowane są do **CSV** i do bazy **SQLite**, co ułatwia
-porównanie wariantów bazowych i rotacyjnych w poprzek zbiorów oraz
-ustawień rotacji.
+W tabelach rankingowych pokazywane są kolumny: `mean`, `median`, `std`,
+`min`, `max`, opcjonalnie `AUC_theta`, `Acc_worst`, a także `params`
+i `FLOPs` (jeśli dostępne). Wyniki eksportowane są do **CSV** i do bazy
+**SQLite**, co ułatwia porównanie wariantów bazowych i rotacyjnych w poprzek
+zbiorów oraz ustawień rotacji.
+
 
 
 \newpage
