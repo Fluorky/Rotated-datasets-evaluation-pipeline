@@ -175,7 +175,7 @@ zastosowano następujące rozwiązania technologiczne:
   wykonywane na rdzeniach CUDA zawsze wtedy, gdy nie są aktywowane
   Tensor Cores (np. czysty FP32 bez **TF32**/AMP). Wydajność zależy od
   obsadzenia SM-ów (occupancy), doboru rozmiaru bloków (wielokrotność
-  32 wątków — **warp**), koalescencji dostępu do pamięci globalnej oraz
+  32 wątków - **warp**), koalescencji dostępu do pamięci globalnej oraz
   wykorzystania pamięci współdzielonej. Warstwa `CyConv2d` wymusza
   `contiguous()` i obecność tensora na CUDA przed wywołaniem jądra;
   duży `workspace` sprzyja kafelkowaniu i ogranicza liczbę odczytów z
@@ -1459,23 +1459,22 @@ niezbalansowania danych.
 Dla każdej pary generowana jest **macierz pomyłek** o rozmiarze
 $C \times C$ (wiersz = klasa rzeczywista, kolumna = klasa przewidziana).
 Pliki zapisywane są w dwóch formatach:
-- **`.npy`** — surowe wartości do analizy i agregacji,
-- **`.png`** — wizualizacja do raportów (normalizacja wierszowa lub globalna).
+- **`.npy`** - surowe wartości do analizy i agregacji,
+- **`.png`** - wizualizacja do raportów (normalizacja wierszowa lub globalna).
 
 Artefakty (logi, macierze, checkpointy) trafiają do katalogu odpowiadającego
 parze train/test, co upraszcza późniejszą ingestie i budowę map
 „trenuj na X, testuj na Y”.
 
----
 
 ## Śledzenie metryk: średnia, mediana, odchylenie standardowe
 
 Wyniki są agregowane po wszystkich **zestawach testowych** przypisanych do
 danego train. Na tej podstawie liczone są statystyki zbiorcze:
-- **mean** — średnia dokładność,
-- **median** — odporna na wartości skrajne,
-- **std** — odchylenie standardowe między testami,
-- **min / max** — zakres jakości w całym scenariuszu.
+- **mean** - średnia dokładność,
+- **median** - odporna na wartości skrajne,
+- **std** - odchylenie standardowe między testami,
+- **min / max** - zakres jakości w całym scenariuszu.
 
 Dodatkowe miary stabilności:
 - **robust mean** (średnia ucięta, np. 10%),
@@ -1487,7 +1486,6 @@ Statystyki i metadane zapisywane są do **SQLite** oraz do **CSV**, co ułatwia
 filtrowanie (po modelu, transformacji, zbiorze) i zasila panele analityczne
 oraz rankingi.
 
----
 
 ## Analiza skuteczności względem rotacji
 
@@ -1495,39 +1493,37 @@ oraz rankingi.
 Macierz, w której wiersze odpowiadają rozkładom kątów w treningu
 (*non_rotated*, *fixed_30*, *range_0_180*, …), a kolumny rozkładom kątów
 w teście (*rotated-30*, *rotated-90-120*, *range_full*). Każda komórka
-to dokładność top-1. Heatmapa pokazuje, gdzie model uogólnia, a gdzie traci
-jakość przy zmianie rozkładu kątów.
+to dokładność top-1.
 
-**Krzywe stabilności względem $\Delta\theta$.**  
+**Krzywe stabilności względem** $\Delta\theta$.  
 Wyniki grupowane są według „mismatchu” $\Delta\theta$ między rozkładem
 kątów w treningu i w teście (z cyklicznością $2\pi$). Raportowane są:
-- `Acc(Δθ)` — dokładność w funkcji różnicy kątów,
-- `AUC_theta` — pole pod krzywą stabilności,
-- `Acc_worst` — najniższa dokładność w badanym zakresie,
-- `SD_theta` — odchylenie standardowe między koszykami $\Delta\theta$.
+- $Acc(\Delta\theta)$ - dokładność w funkcji różnicy kątów,
+- `AUC_theta` - pole pod krzywą stabilności,
+- $Acc_{\text{worst}}$ - najniższa dokładność w badanym zakresie,
+- $SD_{\theta}$ - odchylenie standardowe między koszykami $\Delta\theta$.
 
 **Per-klasa a rotacja.**  
 Z macierzy pomyłek wyprowadzane są dokładności per-klasa w funkcji
 rozkładu kątów. Pozwala to wskazać klasy szczególnie wrażliwe
 (np. z symetriami mylącymi pary etykiet).
 
----
+
 
 ## Ranking modeli
 
 Ranking budowany jest na podstawie **średniej dokładności** po całym
 scenariuszu testowym dla danej konfiguracji (model + transformacja).
 Przy remisie kolejno rozstrzygają:
-1. **std** — niższe lepsze,
-2. `Acc_worst` — wyższe lepsze,
-3. **params / FLOPs** — mniejszy koszt preferowany przy porównywalnej jakości.
+1. **std** - niższe lepsze,
+2. `Acc_worst` - wyższe lepsze,
+3. **params / FLOPs** - mniejszy koszt preferowany przy porównywalnej jakości.
 
 W tabelach rankingowych pokazywane są kolumny: `mean`, `median`, `std`,
 `min`, `max`, opcjonalnie `AUC_theta`, `Acc_worst`, a także `params`
 i `FLOPs` (jeśli dostępne). Wyniki eksportowane są do **CSV** i do bazy
 **SQLite**, co ułatwia porównanie wariantów bazowych i rotacyjnych w poprzek
 zbiorów oraz ustawień rotacji.
-
 
 
 \newpage
