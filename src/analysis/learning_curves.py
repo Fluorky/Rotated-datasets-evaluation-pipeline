@@ -1,14 +1,4 @@
 # src/analysis/learning_curves.py
-"""
-Combined learning curves per run:
-- Left Y: train loss + val loss (blue)
-- Right Y: train accuracy + val accuracy (orange)
-
-Supports logs like:
-[Epoch 0] Train Loss: 2.543264
-[Epoch 0] Validation loss: 1.5438, Accuracy: 1855/3920 (47.32%)
-"""
-
 from __future__ import annotations
 
 import re
@@ -19,11 +9,13 @@ from collections import defaultdict
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# --- Colors -----------------------------------------------------------------
-LOSS_COLOR = "#1f77b4"   # blue
-ACC_COLOR  = "#ff7f0e"   # orange
+# --- Colors (distinct) ------------------------------------------------------
+TRAIN_LOSS_COLOR = "#2ca02c"  # green
+VAL_LOSS_COLOR   = "#1f77b4"  # blue
+TRAIN_ACC_COLOR  = "#ff7f0e"  # orange
+VAL_ACC_COLOR    = "#d62728"  # red
 
-# Supported groups (no canonicalization)
+# Supported groups
 MODEL_KEYS: List[str] = [
     "cyresnet56_logpolar", "cyresnet56_linearpolar",
     "cyvgg19_logpolar",    "cyvgg19_linearpolar",
@@ -39,7 +31,7 @@ EPOCH_RE = re.compile(r"(?i)\bepoch(?:\s*[:#]|\s+)?\s*(\d+)(?:\s*/\s*\d+)?")
 NUM  = r"[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?"
 FRAC = rf"({NUM})\s*/\s*({NUM})"
 
-# losses
+# val_loss / train_loss / generic loss
 VAL_LOSS_RE   = re.compile(rf"(?i)\b(?:val(?:idation)?[_\s-]?)loss\s*[:=]\s*({NUM})")
 TRAIN_LOSS_RE = re.compile(rf"(?i)\b(?:trn|train(?:ing)?)[_\s-]?loss\s*[:=]\s*({NUM})")
 LOSS_RE       = re.compile(
@@ -48,16 +40,25 @@ LOSS_RE       = re.compile(
     rf"\bloss\s*[:=]\s*({NUM})"
 )
 
-# accuracy (fraction A/B and numeric with/without %)
+# accuracy as fraction A/B
 VAL_ACC_FRAC_RE = re.compile(rf"(?i)\b(?:val(?:idation)?[_\s-]?(?:acc|accuracy|top1|top-1))[^0-9]*{FRAC}")
 ACC_FRAC_RE     = re.compile(rf"(?i)(?<!val_)(?<!val-)(?<!val\s)(?<!val)"
                              rf"(?<!validation_)(?<!validation-)(?<!validation\s)(?<!validation)"
                              rf"\b(?:acc|accuracy|top1|top-1)[^0-9]*{FRAC}")
 
-VAL_ACC_RE = re.compile(rf"(?i)\b(?:val(?:idation)?[_\s-]?(?:acc|accuracy|top1|top-1))\s*[:=]\s*({NUM})%?")
-ACC_RE     = re.compile(rf"(?i)(?<!val_)(?<!val-)(?<!val\s)(?<!val)"
-                        rf"(?<!validation_)(?<!validation-)(?<!validation\s)(?<!validation)"
-                        rf"\b(?:acc|accuracy|top1|top-1)\s*[:=]\s*({NUM})%?")
+# accuracy as single number (block fractions with negative lookahead)
+VAL_ACC_RE = re.compile(
+    rf"(?i)\b(?:val(?:idation)?[_\s-]?(?:acc|accuracy|top1|top-1))\s*[:=]\s*(?!{NUM}\s*/)\s*({NUM})%?"
+)
+ACC_RE = re.compile(
+    rf"(?i)(?<!val_)(?<!val-)(?<!val\s)(?<!val)"
+    rf"(?<!validation_)(?<!validation-)(?<!validation\s)(?<!validation)"
+    rf"\b(?:acc|accuracy|top1|top-1)\s*[:=]\s*(?!{NUM}\s*/)\s*({NUM})%?"
+)
+
+VAL_KEYWORD_RE = re.compile(r"(?i)\bval(?:idation)?\b")  # heuristic
+
+# ---------------------------------------------------------------------------
 
 def resolve_train_path(logs_base: Path, dataset_name: str) -> Optional[Path]:
     for p in [
@@ -91,31 +92,51 @@ def shorten_label(label: str) -> str:
     return re.sub(r'^.+?-[^-]+-[^_]+_', '', label)
 
 def _to_percent_if_fraction(x: float) -> float:
+    """If 0..1 -> %, else leave as-is."""
     return x * 100.0 if x <= 1.5 else x
 
-def _parse_acc_from_line(line: str) -> Tuple[Optional[float], Optional[float]]:
-    """Return (acc, val_acc) in percent if possible. Handles A/B and numeric forms."""
+def _parse_acc_from_line(line: str, prefer_val: bool) -> Tuple[Optional[float], Optional[float]]:
+    """
+    Return (acc, val_acc) in percent if possible.
+    If prefer_val is True and we see a plain 'Accuracy/acc' without 'val',
+    we treat it as val_acc (for lines like 'Validation loss: ..., Accuracy: ...').
+    """
     acc = val_acc = None
+    acc_frac_found = val_acc_frac_found = False
 
+    # Fraction first (A/B)
     m = VAL_ACC_FRAC_RE.search(line)
     if m:
         num, den = float(m.group(1)), float(m.group(2))
         if den != 0:
             val_acc = (num / den) * 100.0
+            val_acc_frac_found = True
+
     m = ACC_FRAC_RE.search(line)
     if m:
         num, den = float(m.group(1)), float(m.group(2))
         if den != 0:
-            acc = (num / den) * 100.0
+            if prefer_val:
+                val_acc = (num / den) * 100.0
+                val_acc_frac_found = True
+            else:
+                acc = (num / den) * 100.0
+                acc_frac_found = True
 
-    if val_acc is None:
+    # Plain numeric (maybe already %), but only if NOT a fraction already found
+    if not val_acc_frac_found:
         m = VAL_ACC_RE.search(line)
         if m:
             val_acc = _to_percent_if_fraction(float(m.group(1)))
-    if acc is None:
+
+    if not acc_frac_found:
         m = ACC_RE.search(line)
         if m:
-            acc = _to_percent_if_fraction(float(m.group(1)))
+            value = _to_percent_if_fraction(float(m.group(1)))
+            if prefer_val and val_acc is None:
+                val_acc = value
+            elif acc is None:
+                acc = value
 
     return acc, val_acc
 
@@ -123,7 +144,7 @@ def parse_training_log(path: Path) -> pd.DataFrame:
     """
     Parse a training log into a DataFrame with columns:
     epoch, loss, val_loss, acc, val_acc (accuracy in percent if possible).
-    Aggregates multiple lines per epoch and prefers train-specific loss.
+    Aggregates multiple lines per epoch; prefers explicit train-loss if present.
     """
     try:
         text = path.read_text(encoding="utf-8", errors="ignore")
@@ -145,6 +166,7 @@ def parse_training_log(path: Path) -> pd.DataFrame:
             })
 
     for line in text.splitlines():
+        # Epoch boundary
         m_ep = EPOCH_RE.search(line)
         if m_ep:
             if current_epoch is not None:
@@ -156,20 +178,23 @@ def parse_training_log(path: Path) -> pd.DataFrame:
             current_epoch = 1
             current["epoch"] = current_epoch
 
-        # --- losses: val first, then explicit train, then generic
+        # Losses (val first, then explicit train, then generic)
         m_vl = VAL_LOSS_RE.search(line)
         if m_vl:
             current["val_loss"] = float(m_vl.group(1))
+
         m_tl = TRAIN_LOSS_RE.search(line)
         if m_tl:
             current["loss"] = float(m_tl.group(1))
+
         if current["loss"] is None:
             m_l = LOSS_RE.search(line)
             if m_l:
                 current["loss"] = float(m_l.group(1))
 
-        # --- accuracy
-        acc, val_acc = _parse_acc_from_line(line)
+        # Accuracy (with context heuristic)
+        prefer_val = bool(m_vl) or bool(VAL_KEYWORD_RE.search(line))
+        acc, val_acc = _parse_acc_from_line(line, prefer_val=prefer_val)
         if acc is not None:
             current["acc"] = acc
         if val_acc is not None:
@@ -187,8 +212,8 @@ def parse_training_log(path: Path) -> pd.DataFrame:
 def _plot_combined(df: pd.DataFrame, title: str, out_path: Path):
     """
     One figure per run:
-      - Left Y-axis (blue): loss + val_loss
-      - Right Y-axis (orange): acc + val_acc  (in %)
+      - Left Y-axis: train_loss (green) + val_loss (blue)
+      - Right Y-axis: train_acc (orange) + val_acc (red)
     Train = solid, Val = dashed.
     """
     if df.empty:
@@ -197,38 +222,45 @@ def _plot_combined(df: pd.DataFrame, title: str, out_path: Path):
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    # LOSS (left)
     lines, labels = [], []
-    if df["loss"].notna().any():
-        l1, = ax.plot(df["epoch"], df["loss"], marker="o", color=LOSS_COLOR, label="loss")
-        lines.append(l1); labels.append("loss")
-    if df["val_loss"].notna().any():
-        l2, = ax.plot(df["epoch"], df["val_loss"], marker="o", linestyle="--", alpha=0.9,
-                      color=LOSS_COLOR, label="val_loss")
+
+    # --- LOSS (left axis) ---
+    if "loss" in df and df["loss"].notna().any():
+        l1, = ax.plot(df["epoch"], df["loss"], marker="o",
+                      color=TRAIN_LOSS_COLOR, label="train_loss")
+        lines.append(l1); labels.append("train_loss")
+
+    if "val_loss" in df and df["val_loss"].notna().any():
+        l2, = ax.plot(df["epoch"], df["val_loss"], marker="o", linestyle="--", alpha=0.95,
+                      color=VAL_LOSS_COLOR, label="val_loss")
         lines.append(l2); labels.append("val_loss")
+
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Loss")
     ax.grid(True, which="both", alpha=0.3)
 
-    # ACC (right)
+    # --- ACCURACY (right axis) ---
     ax2 = ax.twinx()
-    if "acc" in df and df["acc"].notna().any():
-        l3, = ax2.plot(df["epoch"], df["acc"], marker="s", color=ACC_COLOR, label="acc")
-        lines.append(l3); labels.append("acc")
-    if "val_acc" in df and df["val_acc"].notna().any():
-        l4, = ax2.plot(df["epoch"], df["val_acc"], marker="s", linestyle="--", alpha=0.9,
-                       color=ACC_COLOR, label="val_acc")
-        lines.append(l4); labels.append("val_acc")
-    ax2.set_ylabel("Accuracy [%]")
-
     acc_series = pd.concat(
         [df.get("acc", pd.Series(dtype=float)), df.get("val_acc", pd.Series(dtype=float))],
         ignore_index=True
     ).dropna()
+
+    if "acc" in df and df["acc"].notna().any():
+        l3, = ax2.plot(df["epoch"], df["acc"], marker="s",
+                       color=TRAIN_ACC_COLOR, label="train_acc")
+        lines.append(l3); labels.append("train_acc")
+
+    if "val_acc" in df and df["val_acc"].notna().any():
+        l4, = ax2.plot(df["epoch"], df["val_acc"], marker="s", linestyle="--", alpha=0.95,
+                       color=VAL_ACC_COLOR, label="val_acc")
+        lines.append(l4); labels.append("val_acc")
+
+    ax2.set_ylabel("Accuracy [%]")
     if not acc_series.empty and acc_series.max() <= 100.0 and acc_series.min() >= 0.0:
         ax2.set_ylim(0, 100)
 
-    # Legend below (single)
+    # --- Legend below ---
     ncols = min(4, max(1, len(labels)))
     fig.legend(handles=lines, labels=labels,
                loc="upper center", bbox_to_anchor=(0.5, -0.08),
