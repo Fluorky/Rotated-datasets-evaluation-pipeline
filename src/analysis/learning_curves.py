@@ -1,8 +1,8 @@
 # src/analysis/learning_curves.py
 """
 Parse training logs and generate combined learning curves:
-- Left Y: train loss + val loss
-- Right Y: accuracy (train and/or val if available)
+- Left Y: train loss + val loss (one color)
+- Right Y: train accuracy + val accuracy (second color)
 
 Notes:
 - Distinguishes arches: cyresnet56, resnet56, cyvgg19, vgg19 (no canonicalization).
@@ -25,6 +25,11 @@ from collections import defaultdict
 
 import pandas as pd
 import matplotlib.pyplot as plt
+
+# --- Config: two-color scheme -----------------------------------------------
+
+LOSS_COLOR = "#1f77b4"   # blue for loss (train/val share color; styles differ)
+ACC_COLOR  = "#ff7f0e"   # orange for accuracy (train/val share color; styles differ)
 
 # Distinct groups we support
 MODEL_KEYS: List[str] = [
@@ -67,20 +72,20 @@ def resolve_train_path(logs_base: Path, dataset_name: str) -> Optional[Path]:
 
 def detect_arch(train_label: str) -> Optional[str]:
     t = train_label.lower()
-    for token in ARCH_TOKENS:  # cy* first, then bare
+    for token in ["cyresnet56", "cyvgg19", "resnet56", "vgg19"]:  # longer tokens first
         if token in t:
             return token
     return None
 
 def detect_activation(train_label: str) -> Optional[str]:
     t = train_label.lower()
-    for act in ACTIVATIONS:
+    for act in ["linearpolar", "logpolar"]:
         if act in t:
             return act
     return None
 
 def shorten_label(label: str) -> str:
-    # Similar shortening as in heatmaps (drop long prefixes like "...-xxx-yyy_")
+    # Drop prefixes like "...-xxx-yyy_" to keep plot titles readable
     return re.sub(r'^.+?-[^-]+-[^_]+_', '', label)
 
 def _to_percent(x: Optional[float]) -> Optional[float]:
@@ -93,7 +98,6 @@ def parse_training_log(path: Path) -> pd.DataFrame:
     """
     Parse a single training log into a tidy DataFrame with columns:
     epoch, loss, val_loss, acc, val_acc  (accuracy in percent if possible).
-    We collect both train and val metrics even if they appear on the same line.
     """
     rows: List[Dict[str, float]] = []
     epoch_counter = 0
@@ -154,9 +158,10 @@ def parse_training_log(path: Path) -> pd.DataFrame:
 
 def _plot_combined(df: pd.DataFrame, title: str, out_path: Path):
     """
-    One figure per run:
-      - Left Y-axis: loss + val_loss
-      - Right Y-axis: acc + val_acc  (in %)
+    One figure per run with two colors:
+      - Left Y-axis (LOSS_COLOR): loss + val_loss
+      - Right Y-axis (ACC_COLOR): acc + val_acc  (in %)
+    Train = solid, Val = dashed, same color family.
     """
     if df.empty:
         return
@@ -169,27 +174,33 @@ def _plot_combined(df: pd.DataFrame, title: str, out_path: Path):
     lines = []
     labels = []
     if "loss" in df and df["loss"].notna().any():
-        l1, = ax.plot(df["epoch"], df["loss"], marker="o", label="loss")
+        l1, = ax.plot(df["epoch"], df["loss"], marker="o", color=LOSS_COLOR, label="loss")
         lines.append(l1); labels.append("loss")
     if "val_loss" in df and df["val_loss"].notna().any():
-        l2, = ax.plot(df["epoch"], df["val_loss"], marker="o", linestyle="--", label="val_loss")
+        l2, = ax.plot(df["epoch"], df["val_loss"], marker="o", linestyle="--", alpha=0.8,
+                      color=LOSS_COLOR, label="val_loss")
         lines.append(l2); labels.append("val_loss")
 
     ax.set_xlabel("Epoch")
-    ax.set_ylabel("Loss")
+    ax.set_ylabel("Loss", color=LOSS_COLOR)
+    ax.tick_params(axis="y", colors=LOSS_COLOR)
+    ax.spines["left"].set_color(LOSS_COLOR)
     ax.grid(True, which="both", alpha=0.3)
 
     # ACC curves (right axis)
     ax2 = ax.twinx()
     if "acc" in df and df["acc"].notna().any():
-        l3, = ax2.plot(df["epoch"], df["acc"], marker="s", label="acc")
+        l3, = ax2.plot(df["epoch"], df["acc"], marker="s", color=ACC_COLOR, label="acc")
         lines.append(l3); labels.append("acc")
     if "val_acc" in df and df["val_acc"].notna().any():
-        l4, = ax2.plot(df["epoch"], df["val_acc"], marker="s", linestyle="--", label="val_acc")
+        l4, = ax2.plot(df["epoch"], df["val_acc"], marker="s", linestyle="--", alpha=0.8,
+                       color=ACC_COLOR, label="val_acc")
         lines.append(l4); labels.append("val_acc")
-    ax2.set_ylabel("Accuracy [%]")
+    ax2.set_ylabel("Accuracy [%]", color=ACC_COLOR)
+    ax2.tick_params(axis="y", colors=ACC_COLOR)
+    ax2.spines["right"].set_color(ACC_COLOR)
 
-    # Single legend for both axes
+    # Legend (single, for both axes)
     ax.legend(lines, labels, loc="center left", bbox_to_anchor=(1.02, 0.5), title="Metrics")
 
     fig.suptitle(title)
@@ -247,7 +258,7 @@ def generate_learning_curves(dataset_name: str, logs_base: Path, output_base: Pa
             df = parse_training_log(path)
             short = shorten_label(train_label)
 
-            # Combined plot: loss/val_loss + acc/val_acc
+            # Combined plot: loss/val_loss (left, LOSS_COLOR) + acc/val_acc (right, ACC_COLOR)
             _plot_combined(
                 df,
                 title=f"Learning Curve – {short}",
