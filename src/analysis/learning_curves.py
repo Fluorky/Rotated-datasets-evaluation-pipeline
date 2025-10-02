@@ -4,9 +4,9 @@ Combined learning curves per run:
 - Left Y: train loss + val loss (blue)
 - Right Y: train accuracy + val accuracy (orange)
 
-Fixes:
-- Detect accuracy given as fraction A/B and convert to percent.
-- Keep axis labels black; legend below; robust epoch aggregation.
+Supports logs like:
+[Epoch 0] Train Loss: 2.543264
+[Epoch 0] Validation loss: 1.5438, Accuracy: 1855/3920 (47.32%)
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 LOSS_COLOR = "#1f77b4"   # blue
 ACC_COLOR  = "#ff7f0e"   # orange
 
-# Supported groups
+# Supported groups (no canonicalization)
 MODEL_KEYS: List[str] = [
     "cyresnet56_logpolar", "cyresnet56_linearpolar",
     "cyvgg19_logpolar",    "cyvgg19_linearpolar",
@@ -36,29 +36,31 @@ ACTIVATIONS: List[str] = ["linearpolar", "logpolar"]
 # --- Regexes (case-insensitive) ---------------------------------------------
 EPOCH_RE = re.compile(r"(?i)\bepoch(?:\s*[:#]|\s+)?\s*(\d+)(?:\s*/\s*\d+)?")
 
-NUM = r"[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?"
+NUM  = r"[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?"
 FRAC = rf"({NUM})\s*/\s*({NUM})"
 
-# val_loss / loss
-VAL_LOSS_RE = re.compile(rf"(?i)\b(?:val(?:idation)?[_\s-]?)loss\s*[:=]\s*({NUM})")
-LOSS_RE     = re.compile(rf"(?i)(?<!val_)(?<!val-)(?<!val\s)(?<!val)"
-                         rf"(?<!validation_)(?<!validation-)(?<!validation\s)(?<!validation)"
-                         rf"\bloss\s*[:=]\s*({NUM})")
+# losses
+VAL_LOSS_RE   = re.compile(rf"(?i)\b(?:val(?:idation)?[_\s-]?)loss\s*[:=]\s*({NUM})")
+TRAIN_LOSS_RE = re.compile(rf"(?i)\b(?:trn|train(?:ing)?)[_\s-]?loss\s*[:=]\s*({NUM})")
+LOSS_RE       = re.compile(
+    rf"(?i)(?<!val_)(?<!val-)(?<!val\s)(?<!val)"
+    rf"(?<!validation_)(?<!validation-)(?<!validation\s)(?<!validation)"
+    rf"\bloss\s*[:=]\s*({NUM})"
+)
 
-# acc / val_acc as fraction A/B
+# accuracy (fraction A/B and numeric with/without %)
 VAL_ACC_FRAC_RE = re.compile(rf"(?i)\b(?:val(?:idation)?[_\s-]?(?:acc|accuracy|top1|top-1))[^0-9]*{FRAC}")
 ACC_FRAC_RE     = re.compile(rf"(?i)(?<!val_)(?<!val-)(?<!val\s)(?<!val)"
                              rf"(?<!validation_)(?<!validation-)(?<!validation\s)(?<!validation)"
                              rf"\b(?:acc|accuracy|top1|top-1)[^0-9]*{FRAC}")
 
-# acc / val_acc as single number (maybe with %)
-VAL_ACC_RE  = re.compile(rf"(?i)\b(?:val(?:idation)?[_\s-]?(?:acc|accuracy|top1|top-1))\s*[:=]\s*({NUM})%?")
-ACC_RE      = re.compile(rf"(?i)(?<!val_)(?<!val-)(?<!val\s)(?<!val)"
-                         rf"(?<!validation_)(?<!validation-)(?<!validation\s)(?<!validation)"
-                         rf"\b(?:acc|accuracy|top1|top-1)\s*[:=]\s*({NUM})%?")
+VAL_ACC_RE = re.compile(rf"(?i)\b(?:val(?:idation)?[_\s-]?(?:acc|accuracy|top1|top-1))\s*[:=]\s*({NUM})%?")
+ACC_RE     = re.compile(rf"(?i)(?<!val_)(?<!val-)(?<!val\s)(?<!val)"
+                        rf"(?<!validation_)(?<!validation-)(?<!validation\s)(?<!validation)"
+                        rf"\b(?:acc|accuracy|top1|top-1)\s*[:=]\s*({NUM})%?")
 
 def resolve_train_path(logs_base: Path, dataset_name: str) -> Optional[Path]:
-    candidates = [
+    for p in [
         logs_base / "train",
         logs_base / f"json_{dataset_name}" / "train",
         logs_base / f"json_{dataset_name.lower()}" / "train",
@@ -66,15 +68,14 @@ def resolve_train_path(logs_base: Path, dataset_name: str) -> Optional[Path]:
         logs_base / dataset_name / "train",
         logs_base / dataset_name.lower() / "train",
         logs_base / dataset_name.upper() / "train",
-    ]
-    for p in candidates:
+    ]:
         if p.exists() and p.is_dir():
             return p
     return None
 
 def detect_arch(train_label: str) -> Optional[str]:
     t = train_label.lower()
-    for token in ARCH_TOKENS:  # cy* first, then bare
+    for token in ARCH_TOKENS:
         if token in t:
             return token
     return None
@@ -90,17 +91,12 @@ def shorten_label(label: str) -> str:
     return re.sub(r'^.+?-[^-]+-[^_]+_', '', label)
 
 def _to_percent_if_fraction(x: float) -> float:
-    """If 0..1 -> %, else leave as-is (already percent or count)."""
     return x * 100.0 if x <= 1.5 else x
 
 def _parse_acc_from_line(line: str) -> Tuple[Optional[float], Optional[float]]:
-    """
-    Return (acc, val_acc) in percent if possible.
-    Handles both numeric and fraction forms.
-    """
+    """Return (acc, val_acc) in percent if possible. Handles A/B and numeric forms."""
     acc = val_acc = None
 
-    # Fraction first (A/B)
     m = VAL_ACC_FRAC_RE.search(line)
     if m:
         num, den = float(m.group(1)), float(m.group(2))
@@ -112,7 +108,6 @@ def _parse_acc_from_line(line: str) -> Tuple[Optional[float], Optional[float]]:
         if den != 0:
             acc = (num / den) * 100.0
 
-    # Plain numeric
     if val_acc is None:
         m = VAL_ACC_RE.search(line)
         if m:
@@ -128,7 +123,7 @@ def parse_training_log(path: Path) -> pd.DataFrame:
     """
     Parse a training log into a DataFrame with columns:
     epoch, loss, val_loss, acc, val_acc (accuracy in percent if possible).
-    Aggregates multiple lines per epoch.
+    Aggregates multiple lines per epoch and prefers train-specific loss.
     """
     try:
         text = path.read_text(encoding="utf-8", errors="ignore")
@@ -161,15 +156,19 @@ def parse_training_log(path: Path) -> pd.DataFrame:
             current_epoch = 1
             current["epoch"] = current_epoch
 
-        # losses (val first to avoid misclass)
+        # --- losses: val first, then explicit train, then generic
         m_vl = VAL_LOSS_RE.search(line)
         if m_vl:
             current["val_loss"] = float(m_vl.group(1))
-        m_l = LOSS_RE.search(line)
-        if m_l:
-            current["loss"] = float(m_l.group(1))
+        m_tl = TRAIN_LOSS_RE.search(line)
+        if m_tl:
+            current["loss"] = float(m_tl.group(1))
+        if current["loss"] is None:
+            m_l = LOSS_RE.search(line)
+            if m_l:
+                current["loss"] = float(m_l.group(1))
 
-        # accuracy (handles both numeric and fraction)
+        # --- accuracy
         acc, val_acc = _parse_acc_from_line(line)
         if acc is not None:
             current["acc"] = acc
@@ -189,35 +188,30 @@ def _plot_combined(df: pd.DataFrame, title: str, out_path: Path):
     """
     One figure per run:
       - Left Y-axis (blue): loss + val_loss
-      - Right Y-axis (orange): acc + val_acc  (in %, if available)
+      - Right Y-axis (orange): acc + val_acc  (in %)
     Train = solid, Val = dashed.
     """
     if df.empty:
         return
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
-
     fig, ax = plt.subplots(figsize=(10, 6))
 
     # LOSS (left)
     lines, labels = [], []
-    if "loss" in df and df["loss"].notna().any():
+    if df["loss"].notna().any():
         l1, = ax.plot(df["epoch"], df["loss"], marker="o", color=LOSS_COLOR, label="loss")
         lines.append(l1); labels.append("loss")
-    if "val_loss" in df and df["val_loss"].notna().any():
+    if df["val_loss"].notna().any():
         l2, = ax.plot(df["epoch"], df["val_loss"], marker="o", linestyle="--", alpha=0.9,
                       color=LOSS_COLOR, label="val_loss")
         lines.append(l2); labels.append("val_loss")
-
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Loss")
     ax.grid(True, which="both", alpha=0.3)
 
     # ACC (right)
     ax2 = ax.twinx()
-    acc_series = pd.concat([df.get("acc", pd.Series(dtype=float)),
-                            df.get("val_acc", pd.Series(dtype=float))], ignore_index=True).dropna()
-
     if "acc" in df and df["acc"].notna().any():
         l3, = ax2.plot(df["epoch"], df["acc"], marker="s", color=ACC_COLOR, label="acc")
         lines.append(l3); labels.append("acc")
@@ -225,9 +219,12 @@ def _plot_combined(df: pd.DataFrame, title: str, out_path: Path):
         l4, = ax2.plot(df["epoch"], df["val_acc"], marker="s", linestyle="--", alpha=0.9,
                        color=ACC_COLOR, label="val_acc")
         lines.append(l4); labels.append("val_acc")
-
     ax2.set_ylabel("Accuracy [%]")
-    # If accuracy looks like percentages, clamp to 0..100
+
+    acc_series = pd.concat(
+        [df.get("acc", pd.Series(dtype=float)), df.get("val_acc", pd.Series(dtype=float))],
+        ignore_index=True
+    ).dropna()
     if not acc_series.empty and acc_series.max() <= 100.0 and acc_series.min() >= 0.0:
         ax2.set_ylim(0, 100)
 
