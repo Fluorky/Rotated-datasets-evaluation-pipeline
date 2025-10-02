@@ -2,10 +2,13 @@
 """
 Build accuracy matrices and heatmaps from test log files.
 
-Fixes:
+Changes in this version:
 - Do NOT canonicalize arches: cyresnet56, resnet56, cyvgg19, vgg19 are distinct.
 - Detect (arch, activation) ONLY from the TRAIN label (before "_test_on_").
 - Case-insensitive, recursive scan; supports flat and nested test layouts.
+- Color scale is GLOBAL per dataset (across all model groups): vmin = global min,
+  vmax = global max, so the gradient always starts at the smallest value.
+- Heatmap tiles are SQUARE (square=True + equal aspect).
 """
 
 from __future__ import annotations
@@ -13,11 +16,12 @@ from __future__ import annotations
 import re
 from pathlib import Path
 from collections import defaultdict
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Tuple
 
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+
 
 # Distinct groups we want to output
 MODEL_KEYS: List[str] = [
@@ -36,7 +40,7 @@ ACCURACY_PATTERN = re.compile(r"\(\s*([0-9]+(?:\.[0-9]+)?)%\s*\)")
 
 # Order matters (avoid 'vgg19' catching 'cyvgg19', etc.)
 ARCH_TOKENS: List[str] = ["cyresnet56", "cyvgg19", "resnet56", "vgg19"]
-ACTIVATIONS: List[str] = ["linearpolar", "logpolar"]  # no overlap, deterministic order
+ACTIVATIONS: List[str] = ["linearpolar", "logpolar"]  # deterministic order
 
 
 # --------------------------- helpers ---------------------------------------
@@ -74,10 +78,7 @@ def extract_train_label(stem: str) -> str:
 
 
 def detect_arch_from_train_label(train_label: str) -> Optional[str]:
-    """
-    Detect architecture token from the TRAIN label.
-    Checks longer tokens first to avoid substring collisions.
-    """
+    """Detect architecture token from the TRAIN label (checks longer tokens first)."""
     t = train_label.lower()
     for token in ARCH_TOKENS:  # cy* first, then bare
         if token in t:
@@ -94,7 +95,7 @@ def detect_activation_from_train_label(train_label: str) -> Optional[str]:
     return None
 
 
-def rotation_sort_key(name: str):
+def rotation_sort_key(name: str) -> Tuple[int, int]:
     """
     Sort key for dataset/test-case names:
       dataset < merged < rotated < other
@@ -126,7 +127,7 @@ def process_dataset(dataset_name: str, logs_base: Path, output_base: Path):
     """
     Process test logs for the given dataset and produce:
       - CSV accuracy matrices for each group in MODEL_KEYS
-      - Heatmap PNGs
+      - Heatmap PNGs (all using the same vmin/vmax within the dataset)
     """
     # Locate /test
     log_path = resolve_log_path(Path(logs_base), dataset_name)
@@ -155,6 +156,9 @@ def process_dataset(dataset_name: str, logs_base: Path, output_base: Path):
         print(f"⚠️ No log files found under: {log_path}")
         return
 
+    # Collect values and track global min/max for a unified color scale
+    all_values: List[float] = []
+
     for log_file in sorted(log_files):
         if not log_file.is_file():
             continue
@@ -164,7 +168,7 @@ def process_dataset(dataset_name: str, logs_base: Path, output_base: Path):
             if not m:
                 continue
 
-            accuracy = float(m.group(1))
+            accuracy = float(m.group(1))  # e.g., 98.1234 (percent)
             stem = log_file.stem
 
             train_label = extract_train_label(stem)
@@ -178,13 +182,18 @@ def process_dataset(dataset_name: str, logs_base: Path, output_base: Path):
 
             group_key = f"{arch}_{act}"
             if group_key not in results:
-                # If it's an unexpected combination, ignore it (keeps outputs consistent)
+                # Ignore unexpected groups (keeps outputs consistent)
                 continue
 
             results[group_key][train_label][test_case] = accuracy
+            all_values.append(accuracy)
 
         except Exception as e:
             print(f"⚠️ Error processing {log_file}: {e}")
+
+    # Determine a GLOBAL color scale per dataset
+    vmin = min(all_values) if all_values else None
+    vmax = max(all_values) if all_values else None
 
     # Build CSVs and heatmaps per model group
     for group_key, data in results.items():
@@ -213,18 +222,25 @@ def process_dataset(dataset_name: str, logs_base: Path, output_base: Path):
         df.to_csv(csv_path)
         print(f"✅ Saved CSV: {csv_path}")
 
-        # --- Heatmap
+        # --- Heatmap (square tiles)
         n_rows, n_cols = df.shape
+        # Figure size can stay generous; square=True forces square cells in the Axes
         figsize = (max(20, n_cols * 1.5), max(8, n_rows * 1.5))
 
         plt.figure(figsize=figsize)
-        sns.heatmap(
+        ax = sns.heatmap(
             df.astype(float),
             annot=True,
             fmt=".4f",
             cmap="Purples",
+            vmin=vmin,   # global minimum across the dataset
+            vmax=vmax,   # global maximum across the dataset
+            square=True,  # <-- make tiles square
             cbar_kws={"label": "Accuracy [%]"},
         )
+        # Ensure equal aspect for safety (helps with very rectangular matrices)
+        ax.set_aspect("equal", adjustable="box")
+
         plt.title(f"Accuracy Heatmap – {group_key.replace('_', ' ').title()}")
         plt.ylabel("Train Model")
         plt.xlabel("Test Dataset")
@@ -233,7 +249,7 @@ def process_dataset(dataset_name: str, logs_base: Path, output_base: Path):
         plt.tight_layout()
 
         heatmap_path = output_path / f"heatmap_{group_key}.png"
-        plt.savefig(heatmap_path)
+        plt.savefig(heatmap_path, dpi=150)
         plt.close()
         print(f"🖼️ Saved heatmap: {heatmap_path}")
 
