@@ -175,7 +175,7 @@ zastosowano następujące rozwiązania technologiczne:
   wykonywane na rdzeniach CUDA zawsze wtedy, gdy nie są aktywowane
   Tensor Cores (np. czysty FP32 bez **TF32**/AMP). Wydajność zależy od
   obsadzenia SM-ów (occupancy), doboru rozmiaru bloków (wielokrotność
-  32 wątków — **warp**), koalescencji dostępu do pamięci globalnej oraz
+  32 wątków - **warp**), koalescencji dostępu do pamięci globalnej oraz
   wykorzystania pamięci współdzielonej. Warstwa `CyConv2d` wymusza
   `contiguous()` i obecność tensora na CUDA przed wywołaniem jądra;
   duży `workspace` sprzyja kafelkowaniu i ogranicza liczbę odczytów z
@@ -1342,6 +1342,56 @@ cycnn/train_test_scenarios_LEGO.json
 \newpage
 # Eksperymenty
 
+Część eksperymentalna została zbudowana tak, aby wprost porównać wersje
+bazowe (VGG-19 E, ResNet-56) z ich odpowiednikami rotacyjnymi (CyVGG-E,
+CyResNet-56) przy niezmienionym budżecie parametrów i podobnym FLOPs. Głównym
+celem jest sprawdzenie, jak wprowadzenie osi „kąt” i cyklicznego
+dopełniania po $\varphi$ wpływa na jakość i stabilność względem obrotów,
+a także czy zyski utrzymują się przy zmianie rozkładu kątów między
+treningiem a testem.
+
+Zakres obejmuje cztery zbiory: **MNIST**, **GTSRB Gray**, **GTSRB RGB**
+i **LEGO**. Dla wszystkich zastosowano spójny preprocessing, ustaloną
+rozdzielczość wejścia oraz normalizację. Dane przygotowano w dwóch
+formatach wejściowych (IDX i NPY), a następnie wygenerowano warianty
+obrotowe w dwóch trybach: **kąty stałe** oraz **przedziały kątowe**.
+Na tej podstawie zbudowano również presety złączone (np.
+`merged_fixed_30`, `merged_range_full_0_360` oraz wersje z dopiskiem
+`+ non_rotated`) tak, aby systematycznie zbadać uogólnianie „trenuj na
+X, testuj na Y”.
+
+Aby wyeliminować wpływ przypadkowego doboru hiperparametrów, kolejnym kroku
+kroku wykonano **automatyczną optymalizację** (Optuna, TPE + pruning) na
+przypadkach *non_rotated*. Pokazuje ona, że początkowo ustawione parametry właściwie
+służą jako w kolejnych eksperymentach. Protokół trenowania jest stały w
+całej serii (liczba epok, rozmiar batcha, scheduler, optymalizator
+`SGD` z `momentum` i `weight_decay`), a różnice dotyczą wyłącznie
+architektury splotu (`Conv2d` → `CyConv2d`) i przygotowania danych
+pod rotacje.
+
+Uruchomienia są orkiestrane przez pliki **JSON** opisujące scenariusze:
+każdy zestaw treningowy ma przypisaną listę zestawów testowych
+(ścieżki 1:1 z drzewem katalogów). Rozwiązanie to upraszcza replikację,
+pozwala uruchamiać całe macierze porównań oraz zasila późniejsze
+wizualizacje w postaci map ciepła „train–test”.
+
+Obliczenia realizowane są na GPU **NVIDIA RTX 3070 Ti** i **RTX 3060**.
+Akceleracja opiera się na **CUDA**, **cuDNN** i **cuBLAS**; włączony jest
+tryb **TF32** (Ampere), a tam gdzie to bezpieczne używana jest mieszana
+precyzja przez `torch.cuda.amp`. Należy uwzględnić bufor roboczy
+`CyConv2d` (~4 GiB VRAM). Ziarna generatorów pseudolosowych są ustawiane
+dla Pythona, NumPy i PyTorcha; `cudnn.benchmark = True` pozostaje aktywny
+ze względu na czas trenowania, co nie zaburza porównywalności wyników.
+
+Wyniki zapisywane są w spójnej strukturze: logi z przebiegów, najlepsze
+checkpointy `.pt`, macierze pomyłek w formatach `.npy` i `.png`,
+zestawienia CSV oraz wpisy w bazie **SQLite**. Na tej podstawie
+budowane są rankingi oraz statystyki zbiorcze (średnia, mediana,
+odchylenie standardowe). Poniżej opisano sposób definiowania scenariuszy,
+procedurę pomiaru skuteczności oraz metodę agregacji metryk.
+
+\newpage
+
 ## Scenariusze trenowania/testowania (opis JSON)
 
 Scenariusze zdefiniowane są przez pliki JSON, który mapują **zestawy
@@ -1397,11 +1447,84 @@ wspólne dla całego zbioru scenariuszy.
 
 ## Pomiar skuteczności (accuracy, macierze pomyłek)
 
+Skuteczność raportowana jest jako **dokładność top-1** dla każdej pary
+**train → test**:
+$$
+Acc \;=\; \frac{1}{N}\sum_{i=1}^{N}\mathbf{1}\{\hat y_i = y_i\}.
+$$
+Oprócz wartości globalnej zapisywana jest **dokładność per-klasa** oraz
+**macro-average** (średnia z dokładności klas), co ogranicza wpływ
+niezbalansowania danych.
+
+Dla każdej pary generowana jest **macierz pomyłek** o rozmiarze
+$C \times C$ (wiersz = klasa rzeczywista, kolumna = klasa przewidziana).
+Pliki zapisywane są w dwóch formatach:
+- **`.npy`** - surowe wartości do analizy i agregacji,
+- **`.png`** - wizualizacja do raportów (normalizacja wierszowa lub globalna).
+
+Artefakty (logi, macierze, checkpointy) trafiają do katalogu odpowiadającego
+parze train/test, co upraszcza późniejszą ingestie i budowę map
+„trenuj na X, testuj na Y”.
+
+
 ## Śledzenie metryk: średnia, mediana, odchylenie standardowe
+
+Wyniki są agregowane po wszystkich **zestawach testowych** przypisanych do
+danego train. Na tej podstawie liczone są statystyki zbiorcze:
+- **mean** - średnia dokładność,
+- **median** - odporna na wartości skrajne,
+- **std** - odchylenie standardowe między testami,
+- **min / max** - zakres jakości w całym scenariuszu.
+
+Dodatkowe miary stabilności:
+- **robust mean** (średnia ucięta, np. 10%),
+- **IQR** (rozstęp międzykwartylowy po zestawach testowych),
+- **gap train–test** (różnica między wynikiem na zbiorze użytym w treningu
+  a średnią po zbiorach „spoza rozkładu”).
+
+Statystyki i metadane zapisywane są do **SQLite** oraz do **CSV**, co ułatwia
+filtrowanie (po modelu, transformacji, zbiorze) i zasila panele analityczne
+oraz rankingi.
+
 
 ## Analiza skuteczności względem rotacji
 
+**Heatmapa train–test.**  
+Macierz, w której wiersze odpowiadają rozkładom kątów w treningu
+(*non_rotated*, *fixed_30*, *range_0_180*, …), a kolumny rozkładom kątów
+w teście (*rotated-30*, *rotated-90-120*, *range_full*). Każda komórka
+to dokładność top-1.
+
+**Krzywe stabilności względem** $\Delta\theta$.  
+Wyniki grupowane są według „mismatchu” $\Delta\theta$ między rozkładem
+kątów w treningu i w teście (z cyklicznością $2\pi$). Raportowane są:
+- $Acc(\Delta\theta)$ - dokładność w funkcji różnicy kątów,
+- `AUC_theta` - pole pod krzywą stabilności,
+- $Acc_{\text{worst}}$ - najniższa dokładność w badanym zakresie,
+- $SD_{\theta}$ - odchylenie standardowe między koszykami $\Delta\theta$.
+
+**Per-klasa a rotacja.**  
+Z macierzy pomyłek wyprowadzane są dokładności per-klasa w funkcji
+rozkładu kątów. Pozwala to wskazać klasy szczególnie wrażliwe
+(np. z symetriami mylącymi pary etykiet).
+
+
+
 ## Ranking modeli
+
+Ranking budowany jest na podstawie **średniej dokładności** po całym
+scenariuszu testowym dla danej konfiguracji (model + transformacja).
+Przy remisie kolejno rozstrzygają:
+1. **std** - niższe lepsze,
+2. `Acc_worst` - wyższe lepsze,
+3. **params / FLOPs** - mniejszy koszt preferowany przy porównywalnej jakości.
+
+W tabelach rankingowych pokazywane są kolumny: `mean`, `median`, `std`,
+`min`, `max`, opcjonalnie `AUC_theta`, `Acc_worst`, a także `params`
+i `FLOPs` (jeśli dostępne). Wyniki eksportowane są do **CSV** i do bazy
+**SQLite**, co ułatwia porównanie wariantów bazowych i rotacyjnych w poprzek
+zbiorów oraz ustawień rotacji.
+
 
 \newpage
 
