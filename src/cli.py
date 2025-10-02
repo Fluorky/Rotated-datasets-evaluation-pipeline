@@ -6,6 +6,7 @@ from src.analysis.learning_matrix import process_dataset
 from src.analysis.log_ingestor import ingest_logs
 from src.analysis.log_checker import check_test_logs, check_training_logs
 from src.analysis import matrix_analyzer as ma
+from src.analysis.learning_curves import generate_learning_curves
 from src.pipelines.rotation_pipeline import run_pipeline
 import typer
 import src.datasets.gtsrb as gtsrb
@@ -144,6 +145,24 @@ def preprocess_cmd(
         file_format=file_format.lower()
     )
 
+@app.command("learning-curves")
+def learning_curves_cmd(
+    dataset: str = typer.Option(..., "--dataset", "-d", help="Dataset name: MNIST, GTSRB, GTSRB_RGB, LEGO"),
+    logs_dir: Path = typer.Option(
+        Path("results/log_files_from_slave/logs"),
+        "--logs-dir",
+        help="Base logs directory (either the parent of json_* or a specific json_<DATASET> folder).",
+    ),
+    output_dir: Path = typer.Option(
+        Path("results/plots"),
+        "--output-dir",
+        help="Output directory for learning curves.",
+    ),
+):
+    """
+    Generate learning curves (loss/accuracy vs epoch) from training logs.
+    """
+    generate_learning_curves(dataset_name=dataset.strip(), logs_base=logs_dir, output_base=output_dir)
 
 @app.command()
 def prepare_dataset(
