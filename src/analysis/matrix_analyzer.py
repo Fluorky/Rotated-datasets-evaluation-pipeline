@@ -1,62 +1,125 @@
-# src/analysis/matrix_analyzer.py
+# -*- coding: utf-8 -*-
+"""
+Matrix analyzer (per-dataset), with time-aware rankings.
+
+What it does
+------------
+1) Reads confusion matrices under <cm_root>/<MODEL>/<TEST_CASE>/confusion_matrix.npy
+2) Computes accuracy per (model, test_case) and stores to SQLite 'evaluations'
+3) Pulls training time from 'training_logs' (via compute_training_times -> training_runs)
+4) Prints per-dataset rankings:
+   - Quality-only (avg, min, median, max, std)
+   - Time-aware: avg_perf (=avg/time), robust_perf (=min/time), balanced score
+5) Writes all console output to an optional log file (tee).
+
+Notes
+-----
+- Dataset scoping is strict:
+    MNIST      -> model name contains 'MNIST'
+    GTSRB      -> contains 'GTSRB' but NOT 'GTSRB_RGB' / 'GTSRB-RGB'
+    GTSRB_RGB  -> contains 'GTSRB_RGB' or 'GTSRB-RGB'
+    LEGO       -> contains 'LEGO'
+- Extended stats are printed in the exact style you requested.
+
+"""
+
 import os
+import sys
+import math
 import sqlite3
-from statistics import mean, median, stdev
-from collections import defaultdict
-from typing import Dict, Iterable, List, Optional, Tuple
-
 import numpy as np
+from tqdm import tqdm
+from typing import Dict, List, Tuple, Optional
+from statistics import mean, median, stdev
+from collections import defaultdict, OrderedDict
+from contextlib import contextmanager
 
-# ---------- utils ----------
 
-def _dataset_tokens(dataset: str) -> List[str]:
-    """Tokens używane do dopasowania modeli w SQL (case-insensitive)."""
-    ds = dataset.strip().lower()
-    if ds == "gtsrb_rgb":
-        return ["gtsrb-rgb-"]
-    if ds == "gtsrb":
-        return ["gtsrb-"]
-    if ds == "mnist":
-        return ["mnist-"]
-    if ds == "lego":
-        return ["lego-"]
-    # fallback — dopasuj początek nazwy jak podano
-    return [ds + "-"]
+# ----------------------------- tee / logging --------------------------------
 
-def _dataset_where_sql(alias: str, dataset: str) -> Tuple[str, List[str]]:
+@contextmanager
+def tee_to_file(log_file: Optional[str]):
     """
-    Buduje fragment WHERE dla SQL: (LOWER(alias) LIKE ? OR ...)
-    alias – nazwa kolumny z modelem, np. 'model' albo 'm.model'
+    Mirror stdout to a file if log_file is provided.
+    Usage:
+        with tee_to_file("path/to.log"):
+            print("...")  # goes to console and file
     """
-    toks = _dataset_tokens(dataset)
-    parts = [f"LOWER({alias}) LIKE ?" for _ in toks]
-    params = [t + "%" for t in toks]
-    return "(" + " OR ".join(parts) + ")", params
+    if not log_file:
+        yield
+        return
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    class TeeWriter:
+        def __init__(self, a, b):
+            self.a, self.b = a, b
+        def write(self, s):
+            self.a.write(s)
+            self.b.write(s)
+        def flush(self):
+            self.a.flush()
+            self.b.flush()
+    old = sys.stdout
+    f = open(log_file, "w", encoding="utf-8")
+    sys.stdout = TeeWriter(old, f)
+    try:
+        yield
+    finally:
+        sys.stdout = old
+        f.close()
 
-def _ensure_column(conn: sqlite3.Connection, table: str, column: str, decl: str) -> None:
-    cur = conn.cursor()
-    cur.execute(f"PRAGMA table_info({table})")
-    cols = {row[1].lower() for row in cur.fetchall()}
-    if column.lower() not in cols:
-        cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
-        conn.commit()
 
-def _tee_print(s: str, log_fp) -> None:
-    print(s, flush=True)
-    if log_fp:
-        log_fp.write(s + "\n")
-        log_fp.flush()
+# ----------------------------- helpers --------------------------------------
 
-# ---------- accuracy helper ----------
+def _safe_load_cm(path: str) -> Optional[np.ndarray]:
+    try:
+        return np.load(path)
+    except Exception:
+        return None
 
-def calculate_accuracy(conf_matrix: np.ndarray) -> float:
-    correct = np.trace(conf_matrix)
-    total = conf_matrix.sum()
-    return float(correct) / float(total) if total > 0 else 0.0
+def _accuracy_from_cm(cm: np.ndarray) -> float:
+    total = cm.sum()
+    if total <= 0:
+        return 0.0
+    return float(np.trace(cm)) / float(total)
 
-# ---------- schema ----------
+def _upper(s: str) -> str:
+    return s.upper().replace("-", "_")
 
-def initialize_db(db_path: str) -> sqlite3.Connection:
+def _model_belongs_to_dataset(model_name: str, dataset: str) -> bool:
+    """
+    Strict dataset matching based on model folder name.
+    Avoids mixing GTSRB with GTSRB_RGB.
+    """
+    m = _upper(model_name)
+    ds = _upper(dataset)
+    if ds == "GTSRB_RGB":
+        return ("GTSRB_RGB" in m)
+    if ds == "GTSRB":
+        return ("GTSRB" in m) and ("GTSRB_RGB" not in m)
+    return (ds in m)
+
+def _norm_minmax(values: List[float]) -> Dict[str, float]:
+    """
+    Return mapping id->normalized value in [0,1].
+    Here we accept a dict later; this helper works on simple list.
+    """
+    vmin = min(values) if values else 0.0
+    vmax = max(values) if values else 1.0
+    span = (vmax - vmin) if (vmax > vmin) else 1.0
+    return {i: (val - vmin) / span for i, val in enumerate(values)}
+
+def _norm_minmax_dict(d: Dict[str, float]) -> Dict[str, float]:
+    if not d:
+        return {}
+    vmin = min(d.values())
+    vmax = max(d.values())
+    span = (vmax - vmin) if (vmax > vmin) else 1.0
+    return {k: (v - vmin) / span for k, v in d.items()}
+
+
+# ----------------------------- DB schema ------------------------------------
+
+def _initialize_db(db_path: str) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
     cur.execute("""
@@ -71,14 +134,13 @@ def initialize_db(db_path: str) -> sqlite3.Connection:
             max REAL,
             std REAL,
             train_time REAL,
-            perf_per_time REAL,
-            dataset TEXT
+            perf_per_time REAL
         )
     """)
     conn.commit()
     return conn
 
-def create_training_runs_table(db_path: str, log_fp=None) -> None:
+def create_training_runs_table(db_path: str) -> None:
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
     cur.execute("DROP TABLE IF EXISTS training_runs")
@@ -91,529 +153,392 @@ def create_training_runs_table(db_path: str, log_fp=None) -> None:
     """)
     conn.commit()
     conn.close()
-    _tee_print("✅ Created table: training_runs", log_fp)
+    print("✅ Created table: training_runs")
 
-def compute_training_times(db_path: str, log_fp=None) -> None:
+def compute_training_times(db_path: str) -> None:
     """
-    Sumuje czasy na podstawie tabeli training_logs (powstaje przy ingescie).
+    Aggregate total training time per log_file from 'training_logs'
+    (populated by log_ingestor), and insert into 'training_runs'.
     """
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
+
+    # Might not exist if user didn't ingest training logs; guard it.
     cur.execute("""
-        SELECT log_file, SUM(elapsed_time) AS t
-        FROM training_logs
-        GROUP BY log_file
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND name='training_logs'
     """)
+    if not cur.fetchone():
+        print("⚠️ Table 'training_logs' not found. Training times will be NULL.")
+        conn.close()
+        return
+
+    cur.execute("SELECT log_file, SUM(elapsed_time) FROM training_logs GROUP BY log_file")
     rows = cur.fetchall()
 
     entries = []
     for log_file, total_time in rows:
-        model = log_file
-        if model.endswith("_train.txt"):
-            model = model[:-10]  # strip "_train.txt"
-        entries.append((model, log_file, round(total_time or 0.0, 2)))
+        model = log_file[:-10] if log_file.endswith("_train.txt") else log_file
+        entries.append((model, log_file, round(float(total_time or 0.0), 2)))
 
-    cur.executemany(
-        "INSERT INTO training_runs (model, log_file, total_train_time) VALUES (?, ?, ?)",
-        entries
-    )
-    conn.commit()
-    conn.close()
-    _tee_print(f"✅ Inserted/updated {len(entries)} rows into training_runs", log_fp)
-
-def create_model_summary_table(db_path: str, log_fp=None) -> None:
-    conn = sqlite3.connect(db_path)
-    cur = conn.cursor()
-    cur.execute("DROP TABLE IF EXISTS model_summary")
-    cur.execute("""
-        CREATE TABLE model_summary (
-            dataset TEXT NOT NULL,
-            model   TEXT NOT NULL,
-            avg     REAL,
-            median  REAL,
-            min     REAL,
-            max     REAL,
-            std     REAL,
-            train_time REAL,
-            perf_per_time REAL,
-            PRIMARY KEY (dataset, model)
+    if entries:
+        cur.executemany(
+            "INSERT OR REPLACE INTO training_runs (model, log_file, total_train_time) VALUES (?, ?, ?)",
+            entries
         )
-    """)
-    conn.commit()
+        conn.commit()
     conn.close()
-    _tee_print("✅ Created table: model_summary", log_fp)
+    print(f"✅ Inserted {len(entries)} rows into training_runs")
 
-# ---------- core: collect, enrich, summarize (scoped by dataset) ----------
 
-def collect_and_store_results(confusion_matrices_root_dir: str, db_path: str, dataset: str, log_fp=None) -> None:
-    conn = initialize_db(db_path)
-    # ew. migracja kolumny dataset jeśli starsza baza
-    _ensure_column(conn, "evaluations", "dataset", "TEXT")
+# ---------------------- main ingestion from confusion matrices --------------
 
-    raw_results: List[Tuple[str, str, float]] = []
+def collect_and_store_results(cm_root: str, db_path: str, dataset: Optional[str] = None) -> None:
+    """
+    Scan confusion matrices and (re)fill 'evaluations' with enriched rows.
+    If 'dataset' is provided, only models that belong to that dataset are accepted.
+    """
+    conn = _initialize_db(db_path)
+    cur  = conn.cursor()
 
-    if not os.path.isdir(confusion_matrices_root_dir):
-        _tee_print(f"⚠️ Not a directory: {confusion_matrices_root_dir}", log_fp)
+    raw: List[Tuple[str, str, float]] = []
+
+    if not os.path.isdir(cm_root):
+        print(f"❌ Not a directory: {cm_root}")
         conn.close()
         return
 
-    model_dirs = [d for d in os.listdir(confusion_matrices_root_dir)
-                  if os.path.isdir(os.path.join(confusion_matrices_root_dir, d))]
+    for model_dir in tqdm(sorted(os.listdir(cm_root)), desc="📁 Scanning models"):
+        model_path = os.path.join(cm_root, model_dir)
+        if not os.path.isdir(model_path):
+            continue
 
-    for model_dir in model_dirs:
-        model_path = os.path.join(confusion_matrices_root_dir, model_dir)
-        for test_subdir in os.listdir(model_path):
+        # dataset filter
+        if dataset and not _model_belongs_to_dataset(model_dir, dataset):
+            continue
+
+        for test_subdir in sorted(os.listdir(model_path)):
             test_path = os.path.join(model_path, test_subdir)
             cm_file = os.path.join(test_path, "confusion_matrix.npy")
             if not os.path.exists(cm_file):
                 continue
-            try:
-                cm = np.load(cm_file)
-                acc = calculate_accuracy(cm)
-                raw_results.append((model_dir, test_subdir, acc))
-            except Exception as e:
-                _tee_print(f"⚠️ Failed to load {cm_file}: {e}", log_fp)
+            cm = _safe_load_cm(cm_file)
+            if cm is None:
+                print(f"⚠️ Failed to load {cm_file}")
+                continue
+            acc = _accuracy_from_cm(cm)
+            raw.append((model_dir, test_subdir, acc))
 
-    # grupowanie do obliczeń statystyk po modelu (w obrębie tego datasetu)
-    grouped: Dict[str, List[float]] = defaultdict(list)
-    for model, _, acc in raw_results:
-        grouped[model].append(acc)
+    # Group accuracies by model
+    acc_by_model: Dict[str, List[float]] = defaultdict(list)
+    for m, _, a in raw:
+        acc_by_model[m].append(a)
 
-    cur = conn.cursor()
+    # Insert enriched rows to 'evaluations'
+    # (We don't truncate the table, so multiple runs can co-exist — up to you.)
+    rows_to_insert = []
+    # get training time map once
+    cur.execute("""
+        SELECT model, total_train_time FROM training_runs
+    """)
+    time_map = {r[0]: (r[1] or None) for r in cur.fetchall()}
 
-    # enrich + insert (dataset scoped)
-    to_insert = []
-    for model, test_case, acc in raw_results:
-        acc_list = grouped[model]
-        avg_ = round(mean(acc_list), 6)
-        med_ = round(median(acc_list), 6)
-        min_ = round(min(acc_list), 6)
-        max_ = round(max(acc_list), 6)
-        std_ = round(stdev(acc_list), 6) if len(acc_list) > 1 else 0.0
+    for model, test_case, acc in raw:
+        m_accs = acc_by_model[model]
+        avg_   = mean(m_accs)
+        med_   = median(m_accs)
+        min_   = min(m_accs)
+        max_   = max(m_accs)
+        std_   = stdev(m_accs) if len(m_accs) > 1 else 0.0
 
-        # training time (jeśli istnieje w training_runs)
-        cur.execute("SELECT total_train_time FROM training_runs WHERE model = ?", (model,))
-        row = cur.fetchone()
-        train_time = float(row[0]) if row else None
-        perf = (acc / train_time) if (train_time and train_time > 0) else None
+        ttime = time_map.get(model)
+        perf  = (acc / ttime) if (ttime and ttime > 0) else None
 
-        to_insert.append((
-            model, test_case, acc,
-            avg_, med_, min_, max_, std_,
-            train_time, perf, dataset
+        rows_to_insert.append((
+            model, test_case, float(acc),
+            float(avg_), float(med_), float(min_), float(max_), float(std_),
+            float(ttime) if ttime else None,
+            float(perf) if perf else None
         ))
 
-    cur.executemany("""
-        INSERT INTO evaluations (
-            model, test_case, accuracy,
-            avg, median, min, max, std,
-            train_time, perf_per_time, dataset
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, to_insert)
-    conn.commit()
+    if rows_to_insert:
+        cur.executemany("""
+            INSERT INTO evaluations (
+                model, test_case, accuracy,
+                avg, median, min, max, std,
+                train_time, perf_per_time
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, rows_to_insert)
+        conn.commit()
+
     conn.close()
+    print(f"✅ Saved {len(rows_to_insert)} rows into evaluations (db: {db_path})")
 
-    _tee_print(f"✅ Saved {len(to_insert)} entries to {db_path} (dataset={dataset})", log_fp)
 
-def compute_and_insert_model_summaries(db_path: str, dataset: str, log_fp=None) -> None:
+# ---------------------- reporting / rankings (per dataset) ------------------
+
+def _fetch_eval_rows(db_path: str, dataset: str) -> List[Tuple[str, float]]:
+    """
+    Return [(model, accuracy), ...] filtered by dataset using Python-side guard.
+    """
     conn = sqlite3.connect(db_path)
-    cur = conn.cursor()
-
-    # Accuracy rows strictly for this dataset
-    cur.execute("""
-        SELECT model, accuracy
-        FROM evaluations
-        WHERE dataset = ?
-    """, (dataset,))
+    cur  = conn.cursor()
+    cur.execute("SELECT model, accuracy FROM evaluations")
     rows = cur.fetchall()
+    conn.close()
+    # strict filter to avoid GTSRB vs GTSRB_RGB mixing
+    return [(m, a) for (m, a) in rows if _model_belongs_to_dataset(m, dataset)]
 
-    acc_by_model = defaultdict(list)
-    for model, acc in rows:
-        if acc is not None:
-            acc_by_model[model].append(float(acc))
+def _fetch_train_times(db_path: str) -> Dict[str, float]:
+    conn = sqlite3.connect(db_path)
+    cur  = conn.cursor()
+    cur.execute("SELECT model, total_train_time FROM training_runs")
+    d = {m: float(t) for (m, t) in cur.fetchall() if t is not None}
+    conn.close()
+    return d
 
-    data_to_insert = []
+def _print_extended_stats(acc_by_model: Dict[str, List[float]]) -> None:
+    """
+    Classic extended stats (without time). Sorted by avg desc, then min desc,
+    then median desc, then max desc, then std asc.
+    """
+    summary = []
+    for model, accs in acc_by_model.items():
+        accs_clean = [a for a in accs if a is not None]
+        if not accs_clean:
+            continue
+        summary.append({
+            "model":  model,
+            "avg":    mean(accs_clean),
+            "median": median(accs_clean),
+            "min":    min(accs_clean),
+            "max":    max(accs_clean),
+            "std":    stdev(accs_clean) if len(accs_clean) > 1 else 0.0
+        })
+
+    summary.sort(key=lambda s: (-s["avg"], -s["min"], -s["median"], -s["max"], s["std"]))
+
+    print("\n📈 Extended stats per model:")
+    for s in summary:
+        print(f"🧪 {s['model']}: avg={s['avg']:.4f}, median={s['median']:.4f}, "
+              f"min={s['min']:.4f}, max={s['max']:.4f}, std={s['std']:.4f}")
+
+def _print_time_aware_stats(
+    acc_by_model: Dict[str, List[float]],
+    train_times: Dict[str, float],
+    alpha: float = 0.70,
+    top_n: Optional[int] = None
+) -> None:
+    """
+    Time-aware view: avg_perf, robust_perf, and a balanced score
+    (alpha*norm(avg) + (1-alpha)*norm(avg_perf)).
+    """
+    # Build metrics
+    avg_map: Dict[str, float] = {}
+    min_map: Dict[str, float] = {}
+    avg_perf: Dict[str, float] = {}
+    robust_perf: Dict[str, float] = {}
+
     for model, accs in acc_by_model.items():
         if not accs:
             continue
-        avg_acc = mean(accs)
-        med_acc = median(accs)
-        min_acc = min(accs)
-        max_acc = max(accs)
-        std_acc = stdev(accs) if len(accs) > 1 else 0.0
+        a = mean(accs)
+        m = min(accs)
+        avg_map[model] = a
+        min_map[model] = m
+        t = train_times.get(model)
+        if t and t > 0:
+            avg_perf[model] = a / t
+            robust_perf[model] = m / t
 
-        # training time (global per model)
-        cur.execute("SELECT total_train_time FROM training_runs WHERE model = ?", (model,))
-        r = cur.fetchone()
-        train_time = float(r[0]) if r else None
-        perf_ratio = (avg_acc / train_time) if (train_time and train_time > 0) else None
+    # Balanced score
+    norm_avg       = _norm_minmax_dict(avg_map)
+    norm_avg_perf  = _norm_minmax_dict(avg_perf) if avg_perf else {}
+    score: Dict[str, float] = {}
+    for model in avg_map.keys():
+        s1 = norm_avg.get(model, 0.0)
+        s2 = norm_avg_perf.get(model, 0.0)
+        score[model] = alpha * s1 + (1.0 - alpha) * s2
 
-        data_to_insert.append((dataset, model, avg_acc, med_acc, min_acc, max_acc, std_acc, train_time, perf_ratio))
+    # Sorting
+    def _sort_key_quality(m):   # same as in classic
+        return (-avg_map.get(m, -1), -min_map.get(m, -1))
+    def _sort_key_avgperf(m):
+        return (-avg_perf.get(m, -math.inf), -robust_perf.get(m, -math.inf))
+    def _sort_key_score(m):
+        return (-score.get(m, -math.inf), -avg_map.get(m, -math.inf))
 
-    cur.executemany("""
-        INSERT OR REPLACE INTO model_summary
-        (dataset, model, avg, median, min, max, std, train_time, perf_per_time)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, data_to_insert)
-    conn.commit()
-    conn.close()
+    models = list(acc_by_model.keys())
 
-    _tee_print(f"✅ Inserted {len(data_to_insert)} model summary rows (dataset={dataset})", log_fp)
-#
-# # ---------- reporting (scoped) ----------
-#
-# def _print_top(cur: sqlite3.Cursor, dataset: str, log_fp=None, top: int = 150) -> None:
-#     _tee_print("\n📊 Average accuracy per model (scoped):", log_fp)
-#     where_sql, params = _dataset_where_sql("model", dataset)
-#     cur.execute(f"""
-#         SELECT model, ROUND(AVG(accuracy), 6) AS avg_accuracy
-#         FROM evaluations
-#         WHERE {where_sql} OR dataset = ?
-#         GROUP BY model
-#         ORDER BY avg_accuracy DESC
-#         LIMIT {top}
-#     """, params + [dataset])
-#     for model, avg_acc in cur.fetchall():
-#         _tee_print(f"🧠 {model}: {avg_acc}", log_fp)
-#
-# def _print_top_speed(cur: sqlite3.Cursor, dataset: str, log_fp=None, top: int = 150) -> None:
-#     _tee_print("\n⚡ Performance per training time (acc/sec) — scoped:", log_fp)
-#     where_sql, params = _dataset_where_sql("model", dataset)
-#     cur.execute(f"""
-#         SELECT model, ROUND(AVG(perf_per_time), 6) AS avg_perf
-#         FROM evaluations
-#         WHERE ( {where_sql} OR dataset = ? ) AND perf_per_time IS NOT NULL
-#         GROUP BY model
-#         ORDER BY avg_perf DESC
-#         LIMIT {top}
-#     """, params + [dataset])
-#     for model, avg_perf in cur.fetchall():
-#         _tee_print(f"🚀 {model}: {avg_perf} acc/sec", log_fp)
-#
-# def _print_arch_winners(cur: sqlite3.Cursor, dataset: str, log_fp=None) -> None:
-#     _tee_print("\n🔎 Best by architecture (avg accuracy):", log_fp)
-#     arches = ["cyresnet56", "resnet56", "cyvgg19", "vgg19"]
-#     where_sql_ds, params_ds = _dataset_where_sql("model", dataset)
-#     for arch in arches:
-#         cur.execute(f"""
-#             SELECT model, ROUND(AVG(accuracy), 6) AS avg_acc
-#             FROM evaluations
-#             WHERE ({where_sql_ds} OR dataset = ?)
-#               AND LOWER(model) LIKE ?
-#             GROUP BY model
-#             ORDER BY avg_acc DESC
-#             LIMIT 1
-#         """, params_ds + [dataset, f"%{arch}%"])
-#         row = cur.fetchone()
-#         if row:
-#             _tee_print(f"🏆 {arch}: {row[0]}  → {row[1]}", log_fp)
-#         else:
-#             _tee_print(f"🏆 {arch}: (no data for {dataset})", log_fp)
-#
-# def query_best_models(db_path: str, dataset: str, log_fp=None) -> None:
-#     conn = sqlite3.connect(db_path)
-#     cur = conn.cursor()
-#
-#     _print_top(cur, dataset, log_fp)
-#     _print_top_speed(cur, dataset, log_fp)
-#     _print_arch_winners(cur, dataset, log_fp)
-#
-#     conn.close()
-from statistics import mean, median, stdev
-from collections import defaultdict
+    print("\n⚡ Time-aware ranking (average performance = avg/time):")
+    for m in sorted(models, key=_sort_key_avgperf)[:top_n]:
+        t = train_times.get(m)
+        ap = avg_perf.get(m)
+        rp = robust_perf.get(m)
+        if t is None or ap is None:
+            continue
+        print(f"🚀 {m}: train_time={t:.2f}s, avg_perf={ap:.6f}, robust_perf={rp:.6f}")
 
-def _print_extended_plain(cur: sqlite3.Cursor, dataset: str, log_fp=None, top: int = 50) -> None:
+    print("\n🏅 Balanced ranking (alpha-weighted quality + efficiency):")
+    print(f"    score = {alpha:.2f}·norm(avg) + {1-alpha:.2f}·norm(avg_perf)")
+    for m in sorted(models, key=_sort_key_score)[:top_n]:
+        t = train_times.get(m)
+        ap = avg_perf.get(m)
+        sc = score.get(m)
+        if t is None or ap is None or sc is None:
+            continue
+        print(f"🥇 {m}: score={sc:.4f}, avg={avg_map[m]:.4f}, avg_perf={ap:.6f}, time={t:.2f}s")
+
+def query_best_models(db_path: str, dataset: str, alpha: float = 0.70, top_n: int = 500) -> None:
     """
-    Extended stats per model (scoped to dataset) – accuracy only:
-      avg, median, min, max, std
+    High-level per-dataset report:
+      - Average accuracy per model (SQL-style)
+      - Classic "Extended stats per model"
+      - Time-aware rankings (avg_perf, robust_perf, balanced score)
     """
-    # Pull all accuracies for this dataset
-    cur.execute("""
-        SELECT model, accuracy
-        FROM evaluations
-        WHERE dataset = ?
-        ORDER BY model
-    """, (dataset,))
-    rows = cur.fetchall()
+    rows = _fetch_eval_rows(db_path, dataset)
+    if not rows:
+        print(f"⚠️ No evaluation rows for dataset '{dataset}'.")
+        return
 
-    acc_map = defaultdict(list)
+    # group
+    acc_by_model: Dict[str, List[float]] = defaultdict(list)
     for model, acc in rows:
-        if acc is not None:
-            acc_map[model].append(float(acc))
+        acc_by_model[model].append(acc)
 
-    # Compute per-model stats
-    summary = []
-    for model, accs in acc_map.items():
-        if not accs:
+    # SQL-like avg (Python)
+    avg_list = [(m, mean(v)) for m, v in acc_by_model.items()]
+    avg_list.sort(key=lambda x: -x[1])
+
+    print("\n📊 Average accuracy per model (per-dataset):")
+    for m, a in avg_list:
+        print(f"🧠 {m}: {a:.4f}")
+
+    if avg_list:
+        print(f"\n🏆 Best model (by accuracy): {avg_list[0][0]} with avg accuracy: {avg_list[0][1]:.4f}")
+
+    # Extended stats (classic)
+    _print_extended_stats(acc_by_model)
+
+    # # Time-aware
+    # train_times = _fetch_train_times(db_path)
+    # _print_time_aware_stats(acc_by_model, train_times, alpha=alpha, top_n=top_n)
+
+    train_times = _fetch_train_times(db_path)
+
+    # NEW: extended stats per-time (accuracy / train_time)
+    _print_extended_stats_per_time(acc_by_model, train_times)
+
+    # Existing time-aware sections
+    _print_time_aware_stats(acc_by_model, train_times, alpha=alpha, top_n=top_n)
+
+    # Balanced ranking based ONLY on per-time metrics (avg_perf & robust_perf)
+    _print_balanced_ranking_per_time(acc_by_model, train_times, alpha=0.70, top_n=top_n)
+
+
+def _trimmed_mean(values, trim=0.10):
+    """Simple symmetric trimmed mean: drop trim% lowest & highest."""
+    if not values:
+        return 0.0
+    n = len(values)
+    k = int(n * trim)
+    vals = sorted(values)
+    core = vals[k:n-k] if n - 2*k > 0 else vals
+    return mean(core) if core else mean(vals)
+
+
+def _print_balanced_ranking_per_time(
+    acc_by_model: Dict[str, List[float]],
+    train_times: Dict[str, float],
+    alpha: float = 0.70,
+    top_n: int = 10,
+) -> None:
+    """
+    Balanced ranking based ONLY on efficiency metrics (accuracy per time).
+    score = alpha·norm(avg_perf) + (1-alpha)·norm(robust_perf)
+
+    Where:
+      - avg_perf   = mean(accuracy_i / train_time)
+      - robust_perf = trimmed mean 10% of the per-time list
+    """
+    rows = []
+    for model, accs in acc_by_model.items():
+        t = train_times.get(model)
+        if not t or t <= 0:
             continue
-        avg_acc = mean(accs)
-        med_acc = median(accs)
-        min_acc = min(accs)
-        max_acc = max(accs)
-        std_acc = stdev(accs) if len(accs) > 1 else 0.0
-        summary.append({
+        perfs = [a / t for a in accs if a is not None]
+        if not perfs:
+            continue
+        avg_perf = mean(perfs)
+        robust_perf = _trimmed_mean(perfs, trim=0.10)
+        rows.append({
             "model": model,
-            "avg": avg_acc,
-            "median": med_acc,
-            "min": min_acc,
-            "max": max_acc,
-            "std": std_acc,
+            "avg_perf": avg_perf,
+            "robust_perf": robust_perf,
+            "time": t,
         })
 
-    summary.sort(key=lambda x: x["avg"], reverse=True)
+    if not rows:
+        print("\n⚠️ No per-time data available for balanced per-time ranking.")
+        return
 
-    _tee_print("\n📈 Extended stats per model (scoped, accuracy only):", log_fp)
-    for s in summary[:top]:
-        _tee_print(
-            f"🧪 {s['model']}: "
-            f"avg={s['avg']:.4f}, median={s['median']:.4f}, "
-            f"min={s['min']:.4f}, max={s['max']:.4f}, std={s['std']:.4f}",
-            log_fp
+    # Min-max normalization
+    min_avg = min(r["avg_perf"] for r in rows)
+    max_avg = max(r["avg_perf"] for r in rows)
+    min_rob = min(r["robust_perf"] for r in rows)
+    max_rob = max(r["robust_perf"] for r in rows)
+    span_avg = max(max_avg - min_avg, 1e-12)
+    span_rob = max(max_rob - min_rob, 1e-12)
+
+    for r in rows:
+        r["norm_avg_perf"] = (r["avg_perf"] - min_avg) / span_avg
+        r["norm_robust_perf"] = (r["robust_perf"] - min_rob) / span_rob
+        r["score"] = alpha * r["norm_avg_perf"] + (1.0 - alpha) * r["norm_robust_perf"]
+
+    rows.sort(key=lambda x: (-x["score"], -x["avg_perf"], -x["robust_perf"]))
+
+    print("\n🏅 Balanced ranking (per-time only):")
+    print(f"    score = {alpha:.2f}·norm(avg_perf) + {1-alpha:.2f}·norm(robust_perf)")
+    for r in rows[:top_n]:
+        print(
+            "🥇 {model}: score={score:.4f}, "
+            "avg_perf={avg_perf:.6f}, robust_perf={robust_perf:.6f}, time={time:.2f}s"
+            .format(**r)
         )
 
-
-def _print_top(cur: sqlite3.Cursor, dataset: str, log_fp=None, top: int = 500) -> None:
-    _tee_print("\n📊 Average accuracy per model (scoped):", log_fp)
-    cur.execute("""
-        SELECT model, ROUND(AVG(accuracy), 6) AS avg_accuracy
-        FROM evaluations
-        WHERE dataset = ?
-        GROUP BY model
-        ORDER BY avg_accuracy DESC
-        LIMIT ?
-    """, (dataset, top))
-    for model, avg_acc in cur.fetchall():
-        _tee_print(f"🧠 {model}: {avg_acc}", log_fp)
-
-def _print_top_speed(cur: sqlite3.Cursor, dataset: str, log_fp=None, top: int = 500) -> None:
-    _tee_print("\n⚡ Performance per training time (acc/sec) — scoped:", log_fp)
-    cur.execute("""
-        SELECT model, ROUND(AVG(perf_per_time), 6) AS avg_perf
-        FROM evaluations
-        WHERE dataset = ? AND perf_per_time IS NOT NULL
-        GROUP BY model
-        ORDER BY avg_perf DESC
-        LIMIT ?
-    """, (dataset, top))
-    for model, avg_perf in cur.fetchall():
-        _tee_print(f"🚀 {model}: {avg_perf} acc/sec", log_fp)
-
-def _print_arch_winners(cur: sqlite3.Cursor, dataset: str, log_fp=None) -> None:
-    _tee_print("\n🔎 Best by architecture (avg accuracy):", log_fp)
-    arches = ["cyresnet56", "resnet56", "cyvgg19", "vgg19"]
-    for arch in arches:
-        cur.execute("""
-            SELECT model, ROUND(AVG(accuracy), 6) AS avg_acc
-            FROM evaluations
-            WHERE dataset = ? AND LOWER(model) LIKE ?
-            GROUP BY model
-            ORDER BY avg_acc DESC
-            LIMIT 1
-        """, (dataset, f"%{arch}%"))
-        row = cur.fetchone()
-        if row:
-            _tee_print(f"🏆 {arch}: {row[0]}  → {row[1]}", log_fp)
-        else:
-            _tee_print(f"🏆 {arch}: (no data for {dataset})", log_fp)
-
-# def _print_extended(cur: sqlite3.Cursor, dataset: str, log_fp=None, top: int = 50) -> None:
-#     """
-#     Extended stats per model (scoped): avg/median/min/max/std + train_time + avg perf_per_time.
-#     """
-#     _tee_print("\n📈 Extended stats per model (scoped):", log_fp)
-#     cur.execute("""
-#         SELECT model,
-#                AVG(accuracy)           AS avg_acc,
-#                MIN(accuracy)           AS min_acc,
-#                MAX(accuracy)           AS max_acc,
-#                AVG(perf_per_time)      AS avg_perf
-#         FROM evaluations
-#         WHERE dataset = ?
-#         GROUP BY model
-#     """, (dataset,))
-#     rows = cur.fetchall()
-#
-#     # compute median/std in Python (SQLite doesn’t have them)
-#     # fetch all accuracies per model for this dataset
-#     cur.execute("""
-#         SELECT model, accuracy
-#         FROM evaluations
-#         WHERE dataset = ?
-#         ORDER BY model
-#     """, (dataset,))
-#     acc_rows = cur.fetchall()
-#     acc_map = defaultdict(list)
-#     for m, a in acc_rows:
-#         if a is not None:
-#             acc_map[m].append(float(a))
-#
-#     # fetch train_time per model
-#     cur.execute("SELECT model, total_train_time FROM training_runs")
-#     tt_map = dict(cur.fetchall())
-#
-#     summary = []
-#     for model, avg_acc, min_acc, max_acc, avg_perf in rows:
-#         accs = acc_map.get(model, [])
-#         if not accs:
-#             continue
-#         med = median(accs)
-#         sd  = stdev(accs) if len(accs) > 1 else 0.0
-#         tt  = tt_map.get(model)
-#         summary.append({
-#             "model": model,
-#             "avg": round(avg_acc or 0.0, 6),
-#             "median": round(med, 6),
-#             "min": round(min_acc or 0.0, 6),
-#             "max": round(max_acc or 0.0, 6),
-#             "std": round(sd, 6),
-#             "train_time": round(tt, 2) if tt else None,
-#             "avg_perf_per_time": round(avg_perf, 6) if avg_perf is not None else None,
-#         })
-#
-#     # show best by avg accuracy
-#     summary.sort(key=lambda x: x["avg"], reverse=True)
-#     for s in summary[:top]:
-#         _tee_print(
-#             f"🧪 {s['model']}: avg={s['avg']}, median={s['median']}, "
-#             f"min={s['min']}, max={s['max']}, std={s['std']}, "
-#             f"train_time={s['train_time']}, perf/time(avg)={s['avg_perf_per_time']}",
-#             log_fp
-#         )
-#     if summary:
-#         best = summary[0]
-#         _tee_print(
-#             f"\n🏅 Best model (Python, by avg acc): {best['model']} "
-#             f"with avg={best['avg']} (perf/time={best['avg_perf_per_time']})",
-#             log_fp
-#         )
-
-def _print_extended_with_perf(cur: sqlite3.Cursor, dataset: str, log_fp=None, top: int = 500) -> None:
+def _print_extended_stats_per_time(
+    acc_by_model: Dict[str, List[float]],
+    train_times: Dict[str, float],
+) -> None:
     """
-    Extended stats per model (scoped) – accuracy stats + train_time + avg perf/time.
+    Extended stats per model, but for performance-per-time (acc / train_time).
+    Sort: avg_perf desc, then min_perf desc, median_perf desc, max_perf desc, std_perf asc.
     """
-    # Base aggregates from SQL (avg/min/max and avg perf/time)
-    cur.execute("""
-        SELECT model,
-               AVG(accuracy)           AS avg_acc,
-               MIN(accuracy)           AS min_acc,
-               MAX(accuracy)           AS max_acc,
-               AVG(perf_per_time)      AS avg_perf
-        FROM evaluations
-        WHERE dataset = ?
-        GROUP BY model
-    """, (dataset,))
-    rows = cur.fetchall()
-
-    # Pull all accuracies to compute median/std in Python
-    cur.execute("""
-        SELECT model, accuracy
-        FROM evaluations
-        WHERE dataset = ?
-        ORDER BY model
-    """, (dataset,))
-    acc_rows = cur.fetchall()
-    acc_map = defaultdict(list)
-    for m, a in acc_rows:
-        if a is not None:
-            acc_map[m].append(float(a))
-
-    # Training time per model
-    cur.execute("SELECT model, total_train_time FROM training_runs")
-    tt_map = dict(cur.fetchall())
-
-    summary = []
-    for model, avg_acc, min_acc, max_acc, avg_perf in rows:
-        accs = acc_map.get(model, [])
-        if not accs:
+    rows = []
+    for model, accs in acc_by_model.items():
+        t = train_times.get(model)
+        if not t or t <= 0:
             continue
-        med = median(accs)
-        sd  = stdev(accs) if len(accs) > 1 else 0.0
-        tt  = tt_map.get(model)
-        summary.append({
+        perfs = [a / t for a in accs]
+        if not perfs:
+            continue
+        rows.append({
             "model": model,
-            "avg": round((avg_acc or 0.0), 6),
-            "median": round(med, 6),
-            "min": round((min_acc or 0.0), 6),
-            "max": round((max_acc or 0.0), 6),
-            "std": round(sd, 6),
-            "train_time": round(tt, 2) if tt else None,
-            "avg_perf_per_time": round(avg_perf, 6) if avg_perf is not None else None,
+            "avg_perf": mean(perfs),
+            "median_perf": median(perfs),
+            "min_perf": min(perfs),
+            "max_perf": max(perfs),
+            "std_perf": stdev(perfs) if len(perfs) > 1 else 0.0,
+            "time": t,
         })
 
-    summary.sort(key=lambda x: x["avg"], reverse=True)
+    rows.sort(key=lambda s: (-s["avg_perf"], -s["min_perf"], -s["median_perf"], -s["max_perf"], s["std_perf"]))
 
-    _tee_print("\n📈 Extended stats per model (scoped, incl. perf/time):", log_fp)
-    for s in summary[:top]:
-        _tee_print(
+    print("\n📈 Extended stats per model (per-time):")
+    for s in rows:
+        print(
             f"🧪 {s['model']}: "
-            f"avg={s['avg']:.4f}, median={s['median']:.4f}, "
-            f"min={s['min']:.4f}, max={s['max']:.4f}, std={s['std']:.4f}, "
-            f"train_time={s['train_time']}, perf/time(avg)={s['avg_perf_per_time']}",
-            log_fp
+            f"avg_perf={s['avg_perf']:.6f}, median_perf={s['median_perf']:.6f}, "
+            f"min_perf={s['min_perf']:.6f}, max_perf={s['max_perf']:.6f}, "
+            f"std_perf={s['std_perf']:.6f}, time={s['time']:.2f}s"
         )
-
-#
-# def query_best_models(db_path: str, dataset: str, log_fp=None) -> None:
-#     conn = sqlite3.connect(db_path)
-#     cur = conn.cursor()
-#
-#     _tee_print(f"\n=== DATASET: {dataset} ===", log_fp)
-#     _print_top(cur, dataset, log_fp)
-#     _print_top_speed(cur, dataset, log_fp)
-#     _print_arch_winners(cur, dataset, log_fp)
-#     _print_extended(cur, dataset, log_fp)
-#
-#     conn.close()
-
-def query_best_models(db_path: str, dataset: str, log_fp=None) -> None:
-    conn = sqlite3.connect(db_path)
-    cur = conn.cursor()
-
-    _tee_print(f"\n=== DATASET: {dataset} ===", log_fp)
-
-    # Top by avg accuracy (scoped)
-    _tee_print("\n📊 Average accuracy per model (scoped):", log_fp)
-    cur.execute("""
-        SELECT model, ROUND(AVG(accuracy), 6) as avg_accuracy
-        FROM evaluations
-        WHERE dataset = ?
-        GROUP BY model
-        ORDER BY avg_accuracy DESC
-        LIMIT 500
-    """, (dataset,))
-    for model, avg_acc in cur.fetchall():
-        _tee_print(f"🧠 {model}: {avg_acc}", log_fp)
-
-    # Top by perf per time (scoped)
-    _tee_print("\n⚡ Performance per training time (acc/sec) — scoped:", log_fp)
-    cur.execute("""
-        SELECT model, ROUND(AVG(perf_per_time), 6) as avg_perf
-        FROM evaluations
-        WHERE dataset = ? AND perf_per_time IS NOT NULL
-        GROUP BY model
-        ORDER BY avg_perf DESC
-        LIMIT 500
-    """, (dataset,))
-    for model, avg_perf in cur.fetchall():
-        _tee_print(f"🚀 {model}: {avg_perf} acc/sec", log_fp)
-
-    # Best per architecture (scoped)
-    _tee_print("\n🔎 Best by architecture (avg accuracy):", log_fp)
-    for arch in ["cyresnet56", "resnet56", "cyvgg19", "vgg19"]:
-        cur.execute("""
-            SELECT model, ROUND(AVG(accuracy), 6) AS avg_acc
-            FROM evaluations
-            WHERE dataset = ? AND LOWER(model) LIKE ?
-            GROUP BY model
-            ORDER BY avg_acc DESC
-            LIMIT 1
-        """, (dataset, f"%{arch}%"))
-        row = cur.fetchone()
-        msg = f"🏆 {arch}: {row[0]}  → {row[1]}" if row else f"🏆 {arch}: (no data for {dataset})"
-        _tee_print(msg, log_fp)
-
-    # >>> BOTH extended blocks <<<
-    _print_extended_plain(cur, dataset, log_fp, top=500)         # accuracy-only (your old style)
-    _print_extended_with_perf(cur, dataset, log_fp, top=500)     # with train_time + perf/time
-
-    conn.close()
