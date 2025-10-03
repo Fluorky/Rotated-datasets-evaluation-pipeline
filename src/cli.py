@@ -1,4 +1,5 @@
 import typer
+import os
 from src.analysis.learning_matrix import process_dataset
 # future: from src.db.handler import show_table
 # future: from src.pipelines.rotation_pipeline import run_pipeline
@@ -8,11 +9,13 @@ from src.analysis.log_checker import check_test_logs, check_training_logs
 from src.analysis import matrix_analyzer as ma
 from src.analysis.learning_curves import generate_learning_curves
 from src.pipelines.rotation_pipeline import run_pipeline
-import typer
+from src.analysis.optuna_analyzer import (
+    generate_optuna_learning_curves,
+    generate_optuna_heatmaps,
+)
 import src.datasets.gtsrb as gtsrb
 import src.datasets.gtsrb_rgb as gtsrb_rgb
 import src.datasets.lego as lego
-import os
 
 from pathlib import Path
 
@@ -163,6 +166,24 @@ def learning_curves_cmd(
     Generate learning curves (loss/accuracy vs epoch) from training logs.
     """
     generate_learning_curves(dataset_name=dataset.strip(), logs_base=logs_dir, output_base=output_dir)
+
+
+@app.command("optuna-analyze")
+def optuna_analyze_cmd(
+    dataset: str = typer.Option(..., "--dataset", "-d", help="Dataset name (MNIST, GTSRB, GTSRB_RGB, LEGO)"),
+    optuna_logs: Path = typer.Option(..., "--optuna-logs", help="Path to Optuna logs directory (optuna_checked/logs)"),
+    output_dir: Path = typer.Option("results", "--output-dir", help="Base output directory"),
+    curves_only: bool = typer.Option(False, "--curves-only", help="Generate only learning curves"),
+    heatmaps_only: bool = typer.Option(False, "--heatmaps-only", help="Generate only [TEST] heatmaps"),
+):
+    """
+    Analyze Optuna logs: training curves (with last checkpoint marker) and 1-row [TEST] heatmaps.
+    """
+    if not heatmaps_only:
+        generate_optuna_learning_curves(dataset_name=dataset, optuna_logs_dir=optuna_logs, output_base=output_dir)
+    if not curves_only:
+        generate_optuna_heatmaps(dataset_name=dataset, optuna_logs_dir=optuna_logs, output_base=output_dir)
+
 
 @app.command()
 def prepare_dataset(
