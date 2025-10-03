@@ -1447,83 +1447,89 @@ wspólne dla całego zbioru scenariuszy.
 
 ## Pomiar skuteczności (accuracy, macierze pomyłek)
 
-Skuteczność raportowana jest jako **dokładność top-1** dla każdej pary
-**train → test**:
+Skuteczność jest to **dokładność top-1** dla każdej pary
+**train - test** zgodnie z definicją:
 $$
-Acc \;=\; \frac{1}{N}\sum_{i=1}^{N}\mathbf{1}\{\hat y_i = y_i\}.
+Acc \;=\; \frac{1}{N}\sum_{i=1}^{N}\mathbf{1}\{\hat{y}_i = y_i\},
 $$
-Oprócz wartości globalnej zapisywana jest **dokładność per-klasa** oraz
-**macro-average** (średnia z dokładności klas), co ogranicza wpływ
-niezbalansowania danych.
+gdzie $N$ to liczba próbek w teście, $y_i$ to etykieta rzeczywista, zaś
+$\hat{y}_i$ predykcja modelu. Oprócz wartości globalnej zapisywana jest
+**dokładność per-klasa** oraz **macro-average** (średnia z dokładności
+klas), co ogranicza wpływ niezbalansowania. W razie potrzeby stosowany
+jest także **micro-average** (ważenie liczbą próbek).
 
-Dla każdej pary generowana jest **macierz pomyłek** o rozmiarze
-$C \times C$ (wiersz = klasa rzeczywista, kolumna = klasa przewidziana).
-Pliki zapisywane są w dwóch formatach:
-- **`.npy`** - surowe wartości do analizy i agregacji,
-- **`.png`** - wizualizacja do raportów (normalizacja wierszowa lub globalna).
+Dla każdej pary **train - test** generowana jest **macierz pomyłek**
+o rozmiarze $C \times C$ (wiersz = klasa rzeczywista, kolumna = klasa
+przewidziana).  \
+Macierz zapisywana jest w dwóch formatach:  \
+- **`.npy`** - surowe wartości do analizy i agregacji,  \
+- **`.png`** - wizualizacja do raportów.  \
 
-Artefakty (logi, macierze, checkpointy) trafiają do katalogu odpowiadającego
-parze train/test, co upraszcza późniejszą ingestie i budowę map
+Wizualizacja macierzy ułatwia wychwycenie **symetrii błędów** oraz klas w których wystepuje
+mylenie się się przy podobnych kształtach w róznych orientacjach. Artefakty (logi,
+macierze, checkpointy) przechowywane są w katalogach, których nazwy jednoznacznie
+kodują parę train/test i konfigurację, co upraszcza późniejsze tworzenie mapy
 „trenuj na X, testuj na Y”.
 
 
 ## Śledzenie metryk: średnia, mediana, odchylenie standardowe
 
-Wyniki są agregowane po wszystkich **zestawach testowych** przypisanych do
-danego train. Na tej podstawie liczone są statystyki zbiorcze:
-- **mean** - średnia dokładność,
-- **median** - odporna na wartości skrajne,
-- **std** - odchylenie standardowe między testami,
-- **min / max** - zakres jakości w całym scenariuszu.
+Wyniki agregowane są po **zestawach testowych** przypisanych do danego
+zbioru treningowego oraz - jeśli występują - po **powtórzeniach** tej
+samej konfiguracji.  \
+Raportowane są:  \
+- **mean** - średnia dokładność,  \
+- **median** - odporna na wartości skrajne,  \
+- **std** - odchylenie standardowe między zestawami testowymi,  \
+- **min / max** - zakres jakości w całym scenariuszu.  \
 
-Dodatkowe miary stabilności:
-- **robust mean** (średnia ucięta, np. 10%),
-- **IQR** (rozstęp międzykwartylowy po zestawach testowych),
-- **gap train–test** (różnica między wynikiem na zbiorze użytym w treningu
-  a średnią po zbiorach „spoza rozkładu”).
+Dodatkowe wskaźniki stabilności:  \
+- **robust mean** (średnia ucięta, domyślnie 10%),  \
+- **IQR** (rozstęp międzykwartylowy),  \
+- **gap train–test** (różnica między wynikiem na zbiorze użytym do treningu
+  a średnią po zbiorach „spoza rozkładu”).  \
 
-Statystyki i metadane zapisywane są do **SQLite** oraz do **CSV**, co ułatwia
-filtrowanie (po modelu, transformacji, zbiorze) i zasila panele analityczne
-oraz rankingi.
-
+Statystyki oraz metadane zapisywane są do **SQLite** i **CSV**, co ułatwia
+filtrowanie (po modelu, transformacji, zbiorze) oraz zasilanie rankingów
+i paneli analitycznych.
 
 ## Analiza skuteczności względem rotacji
 
 **Heatmapa train–test.**  
-Macierz, w której wiersze odpowiadają rozkładom kątów w treningu
-(*non_rotated*, *fixed_30*, *range_0_180*, …), a kolumny rozkładom kątów
-w teście (*rotated-30*, *rotated-90-120*, *range_full*). Każda komórka
-to dokładność top-1.
+Tworzona jest macierz, w której wiersze odpowiadają rozkładom kątów
+w treningu (*non\_rotated*, *fixed\_30*, *range\_0\_180*, …), a kolumny -
+rozkładom kątów w teście (*rotated-30*, *rotated-90-120*, *range\_full*).
+Każda komórka to dokładność top-1.
 
 **Krzywe stabilności względem** $\Delta\theta$.  
-Wyniki grupowane są według „mismatchu” $\Delta\theta$ między rozkładem
-kątów w treningu i w teście (z cyklicznością $2\pi$). Raportowane są:
-- $Acc(\Delta\theta)$ - dokładność w funkcji różnicy kątów,
-- `AUC_theta` - pole pod krzywą stabilności,
-- $Acc_{\text{worst}}$ - najniższa dokładność w badanym zakresie,
-- $SD_{\theta}$ - odchylenie standardowe między koszykami $\Delta\theta$.
+Wyniki grupowane są według różnicy $\Delta\theta$ między rozkładem kątów
+w treningu i w teście (z uwzględnieniem cykliczności $2\pi$).  \
+Raportowane są:  \
+- $Acc(\Delta\theta)$ - dokładność w funkcji różnicy kątów,  \
+- `AUC_theta` - pole pod krzywą stabilności,  \
+- $Acc_{\text{worst}}$ - najniższa dokładność w badanym zakresie,  \
+- $SD_{\theta}$ - odchylenie standardowe między koszykami $\Delta\theta$. \
 
 **Per-klasa a rotacja.**  
-Z macierzy pomyłek wyprowadzane są dokładności per-klasa w funkcji
-rozkładu kątów. Pozwala to wskazać klasy szczególnie wrażliwe
-(np. z symetriami mylącymi pary etykiet).
-
-
+Z macierzy pomyłek wyprowadzane są dokładności per-klasa w funkcji rozkładu
+kątów, co pozwala wskazać klasy wrażliwe oraz stabilne niezależnie od orientacji.
+Dla porównań między modelami spójny pozostaje **krok kątowy** oraz zasady
+„wrap-around” przy wyznaczaniu $\Delta\theta$.
 
 ## Ranking modeli
 
-Ranking budowany jest na podstawie **średniej dokładności** po całym
-scenariuszu testowym dla danej konfiguracji (model + transformacja).
-Przy remisie kolejno rozstrzygają:
-1. **std** - niższe lepsze,
-2. `Acc_worst` - wyższe lepsze,
-3. **params / FLOPs** - mniejszy koszt preferowany przy porównywalnej jakości.
+Ranking tworzony jest na podstawie **średniej dokładności** po całym
+scenariuszu testowym dla danej konfiguracji *(model + transformacja)*.
+Kryteria rozstrzygania remisów:  \
+1. **std** - niższe lepsze,  \
+2. $Acc_{\text{worst}}$ - wyższe lepsze,  \
+3. **params / FLOPs** - mniejszy koszt preferowany przy porównywalnej jakości.  \
 
-W tabelach rankingowych pokazywane są kolumny: `mean`, `median`, `std`,
-`min`, `max`, opcjonalnie `AUC_theta`, `Acc_worst`, a także `params`
-i `FLOPs` (jeśli dostępne). Wyniki eksportowane są do **CSV** i do bazy
-**SQLite**, co ułatwia porównanie wariantów bazowych i rotacyjnych w poprzek
-zbiorów oraz ustawień rotacji.
+W tabelach rankingowych prezentowane są: `mean`, `median`, `std`, `min`,
+`max`, opcjonalnie `AUC_theta`, $Acc_{\text{worst}}$, oraz `params`,
+`FLOPs` (jeśli dostępne). Wyniki eksportowane są do **CSV** i **SQLite**,
+co ułatwia porównanie wariantów bazowych i rotacyjnych w poprzek zbiorów
+i ustawień rotacji.
 
 
 \newpage
