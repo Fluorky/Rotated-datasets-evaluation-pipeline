@@ -19,6 +19,7 @@ from src.analysis.optuna_analyzer import (
 # import src.datasets.gtsrb as gtsrb
 # import src.datasets.gtsrb_rgb as gtsrb_rgb
 # import src.datasets.lego as lego
+from contextlib import contextmanager
 
 from pathlib import Path
 
@@ -76,109 +77,6 @@ def check_logs_cmd(
     print("\n📌 Checking test logs...")
     check_test_logs(test_path, test_marker)
 
-
-# inside src/cli.py
-import sys
-import io
-import typer
-# ... other imports ...
-
-# @app.command("matrix-analyzer")
-# def matrix_analyzer_cmd(
-#     cm_root: Path = typer.Option(..., "--cm-root", help="Path to root directory of confusion matrices"),
-#     db_path: Path = typer.Option(Path("results/db/experiment_logs.db"), "--db", help="Path to SQLite database"),
-#     dataset: str = typer.Option(None, "--dataset", "-d", help="Dataset name for tagging/filtering (e.g., MNIST)"),
-#     log_file: Path = typer.Option(None, "--log-file", help="Optional file to tee stdout/stderr into"),
-# ):
-#     """
-#     Analyze confusion matrices and training logs, and update the evaluation database.
-#     Results are tagged with --dataset (so you can query per dataset later).
-#     """
-#     # Optional: tee output to file as well as console
-#     f = None
-#     if log_file is not None:
-#         log_file.parent.mkdir(parents=True, exist_ok=True)
-#         f = open(log_file, "a", encoding="utf-8", buffering=1)
-#
-#         class _Tee(io.TextIOBase):
-#             def __init__(self, *streams): self.streams = streams
-#             def write(self, s):
-#                 for st in self.streams: st.write(s); st.flush()
-#                 return len(s)
-#             def flush(self):
-#                 for st in self.streams: st.flush()
-#         sys.stdout = _Tee(sys.stdout, f)
-#         sys.stderr = _Tee(sys.stderr, f)
-#
-#     print("🛠️ Rebuilding training_runs table...")
-#     ma.create_training_runs_table(str(db_path))
-#     ma.compute_training_times(str(db_path))
-#
-#     print("📥 Collecting evaluation results...")
-#     ma.collect_and_store_results(str(cm_root), str(db_path), dataset=dataset)
-#
-#     print("📊 Creating model summary table...")
-#     ma.create_model_summary_table(str(db_path))
-#     ma.compute_and_insert_model_summaries(str(db_path), dataset=dataset)
-#
-#     print("📈 Querying best models...")
-#     ma.query_best_models(str(db_path), dataset=dataset)
-#
-#     if f:
-#         f.close()
-import sys
-import io
-from contextlib import contextmanager
-from datetime import datetime
-
-# @app.command("matrix-analyzer")
-# def matrix_analyzer_cmd(
-#     cm_root: Path = typer.Option(..., "--cm-root", help="Path to root directory of confusion matrices"),
-#     db_path: Path = typer.Option(Path("results/db/experiment_logs.db"), "--db", help="Path to SQLite database"),
-#     dataset: str = typer.Option(None, "--dataset", "-d", help="Dataset name for tagging/filtering (e.g., MNIST)"),
-#     log_file: Path = typer.Option(None, "--log-file", help="Optional file to tee stdout/stderr into"),
-#     # --- NEW ranking options ---
-#     top_k: int = typer.Option(10, "--top-k", help="How many models to print in multi-metric ranking"),
-#     rank_csv: Path = typer.Option(None, "--rank-csv", help="Optional CSV path to save the full ranking"),
-#     w_avg: float = typer.Option(0.5, help="Weight for avg accuracy"),
-#     w_median: float = typer.Option(0.0, help="Weight for median accuracy"),
-#     w_max: float = typer.Option(0.2, help="Weight for max accuracy"),
-#     w_std: float = typer.Option(0.1, help="Weight for std (lower is better)"),
-#     w_time: float = typer.Option(0.0, help="Weight for train_time (lower is better)"),
-#     w_perf: float = typer.Option(0.2, help="Weight for perf_per_time"),
-# ):
-#     """
-#     Analyze confusion matrices and training logs, update DB, and print per-dataset ranking.
-#     """
-#     # (tee-to-file wrapper you already added) ...
-#
-#     print("🛠️ Rebuilding training_runs table...")
-#     ma.create_training_runs_table(str(db_path))
-#     ma.compute_training_times(str(db_path))
-#
-#     print("📥 Collecting evaluation results...")
-#     ma.collect_and_store_results(str(cm_root), str(db_path), dataset=dataset)
-#
-#     print("📊 Creating model summary table...")
-#     ma.create_model_summary_table(str(db_path))
-#     ma.compute_and_insert_model_summaries(str(db_path), dataset=dataset)
-#
-#     print("📈 Querying best models (by avg acc only)...")
-#     ma.query_best_models(str(db_path), dataset=dataset)
-#
-#     # --- NEW: multi-metric ranking (all metrics at once) ---
-#     weights = {"avg": w_avg, "median": w_median, "max": w_max, "std": w_std, "train_time": w_time, "perf_per_time": w_perf}
-#     out_csv = str(rank_csv) if rank_csv else None
-#     if rank_csv is None:
-#         # sensible default CSV path next to DB
-#         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-#         out_csv = str(Path(db_path).with_name(f"rank_{dataset or 'ALL'}_{ts}.csv"))
-#     ma.multi_metric_rank(str(db_path), dataset=dataset, top_k=top_k, out_csv=out_csv, weights=weights)
-
-
-import sys
-from contextlib import contextmanager
-# ...
 
 @contextmanager
 def _tee_stdout(log_path: Optional[str]):
