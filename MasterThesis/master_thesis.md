@@ -1249,7 +1249,7 @@ zaś ścieżki są przekazywane jawnie w CLI.
 Artefakty przeprowadzonych eksperymentów są porządkowane w stałej strukturze katalogów.
 Dzięki temu skrypty analityczne mogą automatycznie odnajdywać logi,
 modele i macierze pomyłek, zestawiać wyniki i budować heatmapy
-train–test.
+train-test.
 
 ```
 CyCNN-Enhanced-develop/
@@ -1317,7 +1317,7 @@ Jeśli podano `--model-save-path`, checkpoint zostaje zapisany dokładnie w tej
 ścieżce, z pominięciem wzorca domyślnego.
 
 **Macierze pomyłek (PNG i NPY)** zapisywane są razem z wynikiem testu.
-Gdy nie podano `--output-dir`, używany jest katalog zależny od pary train–test:
+Gdy nie podano `--output-dir`, używany jest katalog zależny od pary train-test:
 ```
 cycnn/logs/<train_set>_test_on_<test_set>/
     confusion_matrix.npy
@@ -1329,7 +1329,7 @@ W przypadku, gdy jest podany parametr `--output-dir <DIR>`, pliki trafiają do w
 <DIR>/confusion_matrix.png
 ```
 
-**Scenariusze train–test (JSON)** zawierają gotowe listy par zbiorów, których
+**Scenariusze train-test (JSON)** zawierają gotowe listy par zbiorów, których
 nazwy odpowiadają rzeczywistym ścieżkom na dysku. W repozytorium znajdują się następujące scenariusze:
 ```
 cycnn/train_test_scenarios_MNIST.json
@@ -1373,7 +1373,7 @@ Uruchomienia są orkiestrane przez pliki **JSON** opisujące scenariusze:
 każdy zestaw treningowy ma przypisaną listę zestawów testowych
 (ścieżki 1:1 z drzewem katalogów). Rozwiązanie to upraszcza replikację,
 pozwala uruchamiać całe macierze porównań oraz zasila późniejsze
-wizualizacje w postaci map ciepła „train–test”.
+wizualizacje w postaci map ciepła „train-test”.
 
 Obliczenia realizowane są na GPU **NVIDIA RTX 3070 Ti** i **RTX 3060**.
 Akceleracja opiera się na **CUDA**, **cuDNN** i **cuBLAS**; włączony jest
@@ -1448,7 +1448,7 @@ wspólne dla całego zbioru scenariuszy.
 ## Pomiar skuteczności (accuracy, macierze pomyłek)
 
 Skuteczność raportowana jest jako **dokładność top-1** dla każdej pary
-train–test. Wartość wyznaczana jest z **macierzy pomyłek** o rozmiarze
+train-test. Wartość wyznaczana jest z **macierzy pomyłek** o rozmiarze
 $C \times C$, zapisywanej jako `confusion_matrix.npy`.
 
 **Micro-accuracy** (domyślnie):
@@ -1459,20 +1459,19 @@ $$
 =\frac{\operatorname{tr}(CM)}{\sum CM}.
 $$
 
-**Macro-accuracy** (opcjonalnie) – średnia z dokładności klas:
+**Macro-accuracy** (opcjonalnie) - średnia z dokładności klas:
 $$
 \mathrm{Acc}_{\mathrm{macro}}
 =\frac{1}{C}\sum_{k=1}^{C}
   \frac{\mathrm{TP}_k}{\mathrm{TP}_k+\mathrm{FN}_k}.
 $$
 
-Macierz pomyłek zapisywana jest w dwóch postaciach: surowe wartości
+Macierz pomyłek zapisywana jest w dwóch postaciach: jako surowe wartości
 (`.npy`) do analizy oraz wizualizacja (`.png`) do raportów (z opcją
-normalizacji wierszowej albo globalnej). Heatmapa **train–test** (PNG)
+normalizacji wierszowej albo globalnej). Heatmapa **train-test** (PNG)
 pokazuje jakość dla układu „trenuj na X, testuj na Y”. Dokładności
 per-klasa są wykorzystywane w wykresach porównawczych.
 
----
 
 ## Śledzenie metryk: średnia, mediana, odchylenie standardowe
 
@@ -1480,15 +1479,13 @@ Dla każdego modelu agregowane są wyniki z przypisanych scenariuszy
 kątowych. Raportowane są: **mean**, **median**, **min**, **max**,
 **std**. Dodatkowo liczone są wskaźniki stabilności: **robust mean**
 (średnia ucięta 10%) oraz **IQR**. Wyznaczany jest także
-**gap train–test** – różnica między przypadkami „train-like”
+**gap train-test** - różnica między przypadkami „train-like”
 (np. zawierającymi `non_rotated` albo `plus_non_rotated`) a resztą.
 
 Wyniki i metadane trafiają do **SQLite** (np. `evaluations`,
 `training_runs`) oraz do **CSV** w `results/exports/<DATASET>/<micro|macro>/...`,
 co ułatwia filtrowanie po modelu, transformacji i zbiorze oraz budowę
 rankingów.
-
----
 
 ## Analiza skuteczności względem rotacji
 
@@ -1528,29 +1525,214 @@ Parametry i FLOPs nie są obecnie uwzględniane. Dzięki spójnym ścieżkom
 artefaktów i zapisowi metryk do CSV/SQLite porównywanie wariantów
 bazowych i rotacyjnych pozostaje powtarzalne i przejrzyste.
 
+# Interpretacja wizualizacji wyników
 
+**Macierz pomyłek.** Jasna, ciągła przekątna oznacza wysoką poprawność.
+Powtarzające się skupiska poza przekątną wskazują systematyczne błędy
+między konkretnymi klasami. W zadaniach wrażliwych na orientację błąd
+ma często charakter „lustrzany” dla par klas o podobnych kształtach.
+
+**Mapa train-test.** Wiersze odpowiadają rozkładom kątów użytym w treningu,
+kolumny rozkładom w teście. Każda komórka to top-1 accuracy. Jednolite
+jasne pasma oznaczają stabilne uogólnianie poza rozkład treningowy.
+Ciemniejsze obszary przy skrajnych kolumnach sugerują spadek jakości dla
+dużych różnic kątowych.
+
+**Wyniki per klasa vs kąt.** Wykresy z wynikami w koszykach kątowych
+pozwalają wskazać klasy wyraźnie tracące jakość wraz ze zmianą orientacji
+oraz klasy odporne na obrót. To ułatwia decyzje, czy potrzebna jest
+dodatkowa augmentacja, czy zmiana części „rotacyjnej” architektury.
+
+
+## Zakres odpowiedzialności narzędzi
+
+`matrix_analyzer.py` oblicza micro i macro accuracy, agreguje statystyki
+i czasy, wyznacza metryki zależne od kąta, eksportuje pliki CSV i drukuje
+rankingi. Obrazy PNG (macierze, mapy train-test, wykresy per klasa vs kąt)
+są generowane w modułach ewaluacyjnych testów. Analizator korzysta z tych
+samych danych w formacie NPY i uzupełnia je o tabele potrzebne do raportu.
+
+
+## Struktura wyników i artefaktów
+
+```
+Results/
+db/experiment_logs.db
+logs/matrix_<DATASET>*<METRYKA>*<ZNACZNIK_CZASU>.log
+results/exports/<DATASET>/<micro|macro>/
+ranking_quality.csv
+ranking_per_time.csv
+ranking_timeaware_avgperf.csv
+ranking_timeaware_balanced.csv
+ranking_balanced_per_time.csv
+train_test_gap.csv
+delta_curves/
+acc_vs_delta_<MODEL>.csv
+auc_theta_ranking.csv
+
+```
+
+
+## Ograniczenia i kierunki rozwoju
+
+Analizator nie tworzy obrazów PNG - koncentruje się na metrykach i plikach
+CSV (m.in. metryki kątowe, wskaźniki stabilności, rankingi). Obrazy
+powstają w innych częściach pipeline’u i są używane w interpretacji.
+W kolejnych iteracjach warto rozważyć integrację generowania obrazów w tym
+samym narzędziu, dołączenie parametrów i FLOPs do rankingów oraz zapis
+dokładności per klasa w CSV równolegle z wizualizacjami.
 
 
 \newpage
 
 # Porównanie wyników
 
-## CyCNN vs klasyczne CNN
+Poniższy rozdział zbiera pełny obraz jakości i stabilności badanych
+konfiguracji. Uwzględnione są cztery zbiory (MNIST, GTSRB, GTSRB_RGB,
+LEGO), dwie rodziny modeli bazowych (VGG-19, ResNet-56) oraz ich
+odpowiedniki cykliczne (CyVGG-19, CyResNet-56). Porównywane są dwa
+warianty odwzorowania (linear-polar, log-polar). Prezentowane metryki obejmują
+dokładność top-1 (micro), wskaźniki odporności na kąt (krzywe
+Acc(delta_theta), AUC_theta, worst-case), a także ujęcie per-time
+(jakość na jednostkę czasu trenowania). Wnioski najpierw syntetycznie
+opisują zachowanie całych rodzin, następnie omawiają specyfikę poszczególnych
+zbiorów i kończą się prostą regułą wyboru konfiguracji pod ograniczenia
+praktyczne.
+
+
+## Zakres i procedura
+
+Eksperymenty realizowane były w ustalonym protokole trenowania, z tymi
+samymi regułami walidacji i jednolitym budżetem obliczeń. Dla każdego
+modelu uruchamiany był zestaw scenariuszy train-test zbudowanych z
+wariantów rotacyjnych: zbiory bez rotacji, zbiory o stałych kątach oraz
+zbiory o kątach losowanych z przedziałów. Wynik testu zapisywany był
+jako macierz pomyłek C×C, a dokładność micro liczona była bezpośrednio
+z tej macierzy. Stabilność względem rotacji pochodziła z dwóch widoków:
+heatmap train-test oraz krzywych Acc(delta_theta), które agregują
+dokładność względem różnicy rozkładów kątów pomiędzy treningiem i testem.
+AUC_theta liczono trapezowo po ujednoliconym koszykowaniu delta_theta
+i normalizowano do przedziału 0-1. Wariant per-time powstawał przez
+odniesienie średniej dokładności do całkowitego czasu trenowania.
+
+## Metryki i interpretacja
+
+Micro-accuracy oddaje skuteczność „po wszystkich próbkach”, więc jest
+odporna na nierówne liczebności klas w stopniu typowym dla zadań
+klasyfikacji. AUC_theta syntetyzuje zachowanie krzywej Acc(delta_theta):
+im wyższe, tym reprezentacja bardziej wyrównana względem kątów. Wartość
+worst-case wyłapuje najtrudniejszy punkt krzywej i jest ważna, gdy
+liczy się niezawodność w całym zakresie. Metryka per-time pomaga wybrać
+wariant pod ograniczenia budżetu czasu i energii. Wykresy heatmap
+train-test uzupełniają metryki numeryczne i pozwalają wzrokowo ocenić,
+czy model „grzeje” także w kolumnach odległych kątowo od treningu.
+
+## Obraz ogólny: rodziny i transformacje
+
+Modele cykliczne konsekwentnie podnoszą średnią jakość i stabilność
+rotacyjną względem klasycznych odpowiedników. Najsilniejszy efekt widać
+na GTSRB_RGB, gdzie różnica w średniej jakości sięga dziesiątek punktów
+procentowych. Na GTSRB i LEGO zyski są wyraźne, na MNIST umiarkowane
+(blisko sufitu), ale krzywe Acc(delta_theta) i AUC_theta nadal przemawiają
+za rozwiązaniami cyklicznymi. Wariant log-polar zwiększa odporność na
+duże różnice kątów, co podnosi AUC_theta i worst-case. Wariant
+linear-polar częściej wygrywa w ujęciu per-time, zwłaszcza w rodzinie
+ResNet. Wspólny wzorzec to lepsza generalizacja poza rozkład treningowy:
+modele cykliczne uczone non_rotated utrzymują wysokie wartości także dla
+kolumn testowych z odległymi kątami.
 
 ## VGG vs CyVGG
 
-## Resnet vs CyResNet
+Wersje CyVGG zyskują przede wszystkim na log-polar: rośnie AUC_theta,
+spłaszczają się krzywe Acc(delta_theta), a worst-case przestaje być
+„wąskim gardłem”. Na GTSRB_RGB różnica względem VGG-19 jest największa,
+co potwierdzają zarówno liczby, jak i heatmapy. Na LEGO CyVGG-log
+bywa liderem stabilności, a per-time utrzymuje rozsądny poziom. Na
+MNIST różnice są mniejsze, ale nadal widoczne w przebiegach względem
+delta_theta.
+
+## ResNet vs CyResNet
+
+W rodzinie ResNet linear-polar daje świetny kompromis jakości i per-time,
+sprawdzający się na LEGO i MNIST. Wariant log-polar podnosi stabilność
+dla dużych delta_theta i często wygrywa AUC_theta na GTSRB oraz na RGB.
+W praktyce CyResNet bywa „bezpiecznym domyślnym wyborem”: średnia jakość
+jest wysoka, krzywe są równe, a koszt obliczeń pozostaje akceptowalny.
 
 ## CyVGG vs CyResNet
 
-[...] cyresnet56 uczył się dłużej niż cyvgg19, ale dawał bardziej stabilne wyniki, w szczególności w przypadku funkcji aktywacji typu logpolar.
-I jak to się mówi - nie można zjeść ciastka i mieć go też (ang. „You can’t eat your
+CyResNet częściej prowadzi w średniej i per-time, zwłaszcza z
+linear-polar. CyVGG-log bywa liderem stabilności na części zbiorów
+w ujęciu AUC_theta. Wybór między nimi sprowadza się do akcentów: czy
+priorytetem jest ogólna średnia i efektywność, czy maksymalna równość
+wyników w poprzek kątów. 
+W przypadku CyResNet56 trening trwał dłużej niż CyVGG19 i w większości konfiguracji
+(szczególnie z log-polar na GTSRB, GTSRB_RGB i MNIST) osiągał wyższą
+stabilność rotacyjną mierzoną AUC_theta. Wyjątki to LEGO w log-polar oraz
+GTSRB_RGB w linear-polar, gdzie nieznacznie lepsze AUC_theta uzyskał
+CyVGG19. Co ukazuje klasyczny kompromis jakość-czas: nie da się jednocześnie
+maksymalizować stabilności i skracać treningu. I jak to się mówi - 
+nie można zjeść ciastka i mieć go też (ang. „You can’t eat your
 cake and have it too” [@kaczynski1995wp]).
 
 
-## Wpływ transformacji (linearpolar vs logpolar)
 
-## Wydajność na różnych zbiorach
+## Wnioski per zbiór
+
+GTSRB. Średnia najwyższa dla CyResNet-linear, stabilność często najlepsza
+dla CyVGG-log. Różnice worst-case wśród topowych konfiguracji są niewielkie,
+co pozwala dobrać wariant pod budżet czasu lub wymagania stabilności.
+
+GTSRB_RGB. Przejście do CyCNN przynosi wyraźny skok jakości i AUC_theta.
+CyResNet-log zwykle prowadzi w stabilności, a szybkie klasyki (np.
+VGG-log) przegrywają jakościowo z wersjami cyklicznymi.
+
+LEGO. CyResNet-linear dominuje średnią i per-time, lecz CyVGG-log
+potrafi minimalnie wygrać AUC_theta. To zbiór, na którym dobrze widać
+różnicę akcentów między linear- a log-polar.
+
+MNIST. Różnice są niewielkie, ale CyResNet-linear bywa najlepszy w
+średniej, a CyVGG-linear w AUC_theta. Przy priorytecie przepustowości
+rozsądnym wyborem jest ResNet-linear.
+
+## Analiza błędów i wzorce pomyłek
+
+Macierze pomyłek ujawniają klastry mylonych etykiet. Na danych
+wrażliwych na orientację przewijają się pary o symetriach rotacyjnych
+oraz klasy o zbliżonych obrysach. Wersje cykliczne „rozsuwają” takie
+wyspy, co sugeruje bardziej jednorodną reprezentację kąta. W zestawach
+kolorowych widoczny jest dodatkowy zysk wynikający z utrzymania informacji
+barwnej wraz z inwariancją względem rotacji.
+
+## Koszt obliczeń a wybór konfiguracji
+
+Jeśli liczy się niezawodność w całym zakresie kątów, preferowane są
+konfiguracje Cy + log-polar. Jeżeli kluczowa jest przepustowość lub
+budżet energii, lepiej sprawdzi się linear-polar, często w parze z
+(Cy)ResNet-56. W zastosowaniach o zróżnicowanych wymaganiach można
+rozważyć parę modeli i wybierać ścieżkę decyzyjną zależnie od profilu
+zapytania.
+
+## Rekomendacje praktyczne
+
+Przy ograniczonym czasie trenowania i ścisłych limitach SLA dobrym
+punktem startowym jest CyResNet-linear. Gdy zadanie wymaga wysokiej
+stabilności w poprzek kątów lub mocno odbiega od rozkładu treningowego,
+warto przejść na log-polar i rozważyć CyVGG-log lub CyResNet-log. W
+kontekstach, gdzie napotykane są różne skale i perspektywy, modele
+z log-polar utrzymują równy poziom jakości i lepiej zachowują się w
+najtrudniejszych punktach krzywej.
+
+## Podsumowanie
+
+Architektury cykliczne są prostym, a skutecznym podniesieniem klasycznych
+CNN pod kątem rotacji. W średniej jakości zyskują na wszystkich zbiorach,
+w stabilności wyraźnie wygrywają na danych o bogatszej strukturze, a
+dzięki dwóm wariantom odwzorowania pozwalają zbalansować odporność i
+efektywność. Wybór między linear- a log-polar jest wyborem akcentów,
+a różnice między CyVGG i CyResNet sprowadzają się do kompromisu między
+stabilnością a kosztem. W praktyce łatwo dopasować konfigurację do
+priorytetu wdrożeniowego bez przebudowy głębszej części modeli.
 
 \newpage
 
