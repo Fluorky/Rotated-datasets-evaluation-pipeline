@@ -1447,89 +1447,88 @@ wspólne dla całego zbioru scenariuszy.
 
 ## Pomiar skuteczności (accuracy, macierze pomyłek)
 
-Skuteczność jest to **dokładność top-1** dla każdej pary
-**train - test** zgodnie z definicją:
+Skuteczność raportowana jest jako **dokładność top-1** dla każdej pary
+train–test. Wartość wyznaczana jest z **macierzy pomyłek** o rozmiarze
+$C \times C$, zapisywanej jako `confusion_matrix.npy`.
+
+**Micro-accuracy** (domyślnie):
 $$
-Acc \;=\; \frac{1}{N}\sum_{i=1}^{N}\mathbf{1}\{\hat{y}_i = y_i\},
+\mathrm{Acc}_{\mathrm{micro}}
+=\frac{\sum_{k=1}^{C}\mathrm{TP}_k}
+       {\sum_{k=1}^{C}\big(\mathrm{TP}_k+\mathrm{FP}_k+\mathrm{FN}_k\big)}
+=\frac{\operatorname{tr}(CM)}{\sum CM}.
 $$
-gdzie $N$ to liczba próbek w teście, $y_i$ to etykieta rzeczywista, zaś
-$\hat{y}_i$ predykcja modelu. Oprócz wartości globalnej zapisywana jest
-**dokładność per-klasa** oraz **macro-average** (średnia z dokładności
-klas), co ogranicza wpływ niezbalansowania. W razie potrzeby stosowany
-jest także **micro-average** (ważenie liczbą próbek).
 
-Dla każdej pary **train - test** generowana jest **macierz pomyłek**
-o rozmiarze $C \times C$ (wiersz = klasa rzeczywista, kolumna = klasa
-przewidziana).  \
-Macierz zapisywana jest w dwóch formatach:  \
-- **`.npy`** - surowe wartości do analizy i agregacji,  \
-- **`.png`** - wizualizacja do raportów.  \
+**Macro-accuracy** (opcjonalnie) – średnia z dokładności klas:
+$$
+\mathrm{Acc}_{\mathrm{macro}}
+=\frac{1}{C}\sum_{k=1}^{C}
+  \frac{\mathrm{TP}_k}{\mathrm{TP}_k+\mathrm{FN}_k}.
+$$
 
-Wizualizacja macierzy ułatwia wychwycenie **symetrii błędów** oraz klas w których wystepuje
-mylenie się się przy podobnych kształtach w róznych orientacjach. Artefakty (logi,
-macierze, checkpointy) przechowywane są w katalogach, których nazwy jednoznacznie
-kodują parę train/test i konfigurację, co upraszcza późniejsze tworzenie mapy
-„trenuj na X, testuj na Y”.
+Macierz pomyłek zapisywana jest w dwóch postaciach: surowe wartości
+(`.npy`) do analizy oraz wizualizacja (`.png`) do raportów (z opcją
+normalizacji wierszowej albo globalnej). Heatmapa **train–test** (PNG)
+pokazuje jakość dla układu „trenuj na X, testuj na Y”. Dokładności
+per-klasa są wykorzystywane w wykresach porównawczych.
 
+---
 
 ## Śledzenie metryk: średnia, mediana, odchylenie standardowe
 
-Wyniki agregowane są po **zestawach testowych** przypisanych do danego
-zbioru treningowego oraz - jeśli występują - po **powtórzeniach** tej
-samej konfiguracji.  \
-Raportowane są:  \
-- **mean** - średnia dokładność,  \
-- **median** - odporna na wartości skrajne,  \
-- **std** - odchylenie standardowe między zestawami testowymi,  \
-- **min / max** - zakres jakości w całym scenariuszu.  \
+Dla każdego modelu agregowane są wyniki z przypisanych scenariuszy
+kątowych. Raportowane są: **mean**, **median**, **min**, **max**,
+**std**. Dodatkowo liczone są wskaźniki stabilności: **robust mean**
+(średnia ucięta 10%) oraz **IQR**. Wyznaczany jest także
+**gap train–test** – różnica między przypadkami „train-like”
+(np. zawierającymi `non_rotated` albo `plus_non_rotated`) a resztą.
 
-Dodatkowe wskaźniki stabilności:  \
-- **robust mean** (średnia ucięta, domyślnie 10%),  \
-- **IQR** (rozstęp międzykwartylowy),  \
-- **gap train–test** (różnica między wynikiem na zbiorze użytym do treningu
-  a średnią po zbiorach „spoza rozkładu”).  \
+Wyniki i metadane trafiają do **SQLite** (np. `evaluations`,
+`training_runs`) oraz do **CSV** w `results/exports/<DATASET>/<micro|macro>/...`,
+co ułatwia filtrowanie po modelu, transformacji i zbiorze oraz budowę
+rankingów.
 
-Statystyki oraz metadane zapisywane są do **SQLite** i **CSV**, co ułatwia
-filtrowanie (po modelu, transformacji, zbiorze) oraz zasilanie rankingów
-i paneli analitycznych.
+---
 
 ## Analiza skuteczności względem rotacji
 
-**Heatmapa train–test.**  
-Tworzona jest macierz, w której wiersze odpowiadają rozkładom kątów
-w treningu (*non\_rotated*, *fixed\_30*, *range\_0\_180*, …), a kolumny -
-rozkładom kątów w teście (*rotated-30*, *rotated-90-120*, *range\_full*).
-Każda komórka to dokładność top-1.
+Nazwy scenariuszy (`rotated-a[-b]`, `range_a_b`, `full_0_360`,
+`non_rotated`) determinują przedziały kątów. Wyznaczane są środki
+przedziałów oraz różnica kątowa $\Delta\theta$ na okręgu z wrap-around
+(zakres $[0^\circ, 180^\circ]$). Budowane są:
 
-**Krzywe stabilności względem** $\Delta\theta$.  
-Wyniki grupowane są według różnicy $\Delta\theta$ między rozkładem kątów
-w treningu i w teście (z uwzględnieniem cykliczności $2\pi$).  \
-Raportowane są:  \
-- $Acc(\Delta\theta)$ - dokładność w funkcji różnicy kątów,  \
-- `AUC_theta` - pole pod krzywą stabilności,  \
-- $Acc_{\text{worst}}$ - najniższa dokładność w badanym zakresie,  \
-- $SD_{\theta}$ - odchylenie standardowe między koszykami $\Delta\theta$. \
+- krzywe $Acc(\Delta\theta)$ z koszykowaniem co
+  $\theta_{\text{step}}=15^\circ$,
+- $AUC_{\theta}$ (pole pod krzywą, trapezowo; normalizacja przez
+  $180^\circ$),
+- $Acc_{\min}$ (najgorszy koszyk),
+- $SD_{\theta}$ (odchylenie między koszykami).
 
-**Per-klasa a rotacja.**  
-Z macierzy pomyłek wyprowadzane są dokładności per-klasa w funkcji rozkładu
-kątów, co pozwala wskazać klasy wrażliwe oraz stabilne niezależnie od orientacji.
-Dla porównań między modelami spójny pozostaje **krok kątowy** oraz zasady
-„wrap-around” przy wyznaczaniu $\Delta\theta$.
+Eksport odbywa się do `delta_curves/acc_vs_delta_<MODEL>.csv` oraz
+`auc_theta_ranking.csv`. Spójny krok kątowy i jednolite zasady wrap-around
+zapewniają porównywalność między modelami.
+
 
 ## Ranking modeli
 
-Ranking tworzony jest na podstawie **średniej dokładności** po całym
-scenariuszu testowym dla danej konfiguracji *(model + transformacja)*.
-Kryteria rozstrzygania remisów:  \
-1. **std** - niższe lepsze,  \
-2. $Acc_{\text{worst}}$ - wyższe lepsze,  \
-3. **params / FLOPs** - mniejszy koszt preferowany przy porównywalnej jakości.  \
+Dostępne są dwa widoki.
 
-W tabelach rankingowych prezentowane są: `mean`, `median`, `std`, `min`,
-`max`, opcjonalnie `AUC_theta`, $Acc_{\text{worst}}$, oraz `params`,
-`FLOPs` (jeśli dostępne). Wyniki eksportowane są do **CSV** i **SQLite**,
-co ułatwia porównanie wariantów bazowych i rotacyjnych w poprzek zbiorów
-i ustawień rotacji.
+**Quality-only.** Sortowanie po `avg`; przy remisach kolejno:
+`std` (niższe lepsze), `min`, `median`, `max`, `robust_mean`, `IQR`
+(niższy lepszy). Eksport do `ranking_quality.csv`.
+
+**Time-aware.** Uwzględnia koszt czasowy:
+- `avg/time` oraz `min/time` (druk + `ranking_timeaware_avgperf.csv`),
+- wariant zbalansowany `avg` vs `avg_perf`
+  (`ranking_timeaware_balanced.csv`),
+- wariant zbalansowany tylko per-time
+  (`ranking_balanced_per_time.csv`).
+
+Parametry i FLOPs nie są obecnie uwzględniane. Dzięki spójnym ścieżkom
+artefaktów i zapisowi metryk do CSV/SQLite porównywanie wariantów
+bazowych i rotacyjnych pozostaje powtarzalne i przejrzyste.
+
+
 
 
 \newpage
