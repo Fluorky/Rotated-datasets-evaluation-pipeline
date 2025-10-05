@@ -1035,7 +1035,7 @@ def query_best_models(
     db_path: str,
     dataset: str,
     alpha: float = 0.70,
-    top_n: int = 50,
+    top_n: int = 500,
     theta_step: int = 15,
     metric: Optional[str] = None,   # NEW
 ) -> None:
