@@ -1,16 +1,23 @@
 # src/analysis/learning_curves.py
 """
-Parse training logs and generate learning curves (loss/accuracy vs. epoch).
+Generate combined learning curves from training logs.
 
-- Distinguishes arches: cyresnet56, resnet56, cyvgg19, vgg19 (no canonicalization).
-- Uses only the TRAIN label (filename stem of *train* logs) to detect (arch, activation).
-- Scans logs recursively under .../train (works with flat or nested layouts).
-- Recognizes common metric formats, e.g.:
-    Epoch 1/90 - loss: 0.54 - acc: 87.2% - val_loss: 0.60 - val_accuracy: 0.84
-    epoch: 2 loss: 0.432 accuracy: 0.905 val_loss: 0.51 val_acc: 88.1%
-- Converts accuracy to percent if it looks like fraction (<= 1.5).
-- Outputs PNGs per run (loss + accuracy) under:
-    <output>/<DATASET>/learning_curves/<group_key>/
+What it plots (per run):
+- Left Y:  train_loss (green, solid) + val_loss (blue, dashed)
+- Right Y: train_acc  (orange, solid) + val_acc  (red, dashed) — in %
+
+Robust parsing:
+- Supports "Train Loss:" / "Training loss" / "trn loss", plain "loss:", and "Validation loss:".
+- Accuracy as:
+    * fraction "A/B"  -> converted to percent,
+    * explicit "(xx.xx%)" in parentheses -> used as percent,
+    * plain number (0..1 converted to %; >100 treated as count and divided by set size).
+- Reads dataset sizes from lines like:
+    "✔️ Train data: 35289 samples" / "✔️ Validation data: 3920 samples"
+  to convert counts -> percent when needed.
+- Works with both layouts for logs_dir:
+    (A) <logs_dir>/train/*.txt|.log|.out  (flat)
+    (B) <logs_dir>/json_<DATASET>/train/** (nested)
 """
 
 from __future__ import annotations
@@ -22,29 +29,71 @@ from collections import defaultdict
 
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.ticker import PercentFormatter
 
-# Distinct groups we support
+# ---------- Colors (distinct) ----------
+TRAIN_LOSS_COLOR = "#2ca02c"  # green
+VAL_LOSS_COLOR   = "#1f77b4"  # blue
+TRAIN_ACC_COLOR  = "#ff7f0e"  # orange
+VAL_ACC_COLOR    = "#d62728"  # red
+
+# ---------- Model group detection (optional grouping by arch/activation) ----------
 MODEL_KEYS: List[str] = [
-    "cyresnet56_logpolar",
-    "cyresnet56_linearpolar",
-    "cyvgg19_logpolar",
-    "cyvgg19_linearpolar",
-    "resnet56_logpolar",
-    "resnet56_linearpolar",
-    "vgg19_logpolar",
-    "vgg19_linearpolar",
+    "cyresnet56_logpolar", "cyresnet56_linearpolar",
+    "cyvgg19_logpolar",    "cyvgg19_linearpolar",
+    "resnet56_logpolar",   "resnet56_linearpolar",
+    "vgg19_logpolar",      "vgg19_linearpolar",
 ]
-
 ARCH_TOKENS: List[str] = ["cyresnet56", "cyvgg19", "resnet56", "vgg19"]
 ACTIVATIONS: List[str] = ["linearpolar", "logpolar"]
 
-# Epoch/metric patterns (case-insensitive)
+# ---------- Regexes ----------
 EPOCH_RE = re.compile(r"(?i)\bepoch(?:\s*[:#]|\s+)?\s*(\d+)(?:\s*/\s*\d+)?")
-LOSS_RE = re.compile(r"(?i)\bval[_\s-]?loss\s*[:=]\s*([0-9]*\.?[0-9]+)|\bloss\s*[:=]\s*([0-9]*\.?[0-9]+)")
-ACC_RE  = re.compile(r"(?i)\bval[_\s-]?(acc|accuracy)\s*[:=]\s*([0-9]*\.?[0-9]+)%?|\b(acc|accuracy)\s*[:=]\s*([0-9]*\.?[0-9]+)%?")
+
+NUM  = r"[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?"
+FRAC = rf"({NUM})\s*/\s*({NUM})"
+
+# Loss
+VAL_LOSS_RE   = re.compile(rf"(?i)\b(?:val(?:idation)?[_\s-]?)loss\s*[:=]\s*({NUM})")
+TRAIN_LOSS_RE = re.compile(rf"(?i)\b(?:trn|train(?:ing)?)[_\s-]?loss\s*[:=]\s*({NUM})")
+LOSS_RE       = re.compile(
+    rf"(?i)(?<!val_)(?<!val-)(?<!val\s)(?<!val)"
+    rf"(?<!validation_)(?<!validation-)(?<!validation\s)(?<!validation)"
+    rf"\bloss\s*[:=]\s*({NUM})"
+)
+
+# Accuracy as fraction A/B
+VAL_ACC_FRAC_RE = re.compile(rf"(?i)\b(?:val(?:idation)?[_\s-]?(?:acc|accuracy|top1|top-1))[^0-9]*{FRAC}")
+ACC_FRAC_RE     = re.compile(
+    rf"(?i)(?<!val_)(?<!val-)(?<!val\s)(?<!val)"
+    rf"(?<!validation_)(?<!validation-)(?<!validation\s)(?<!validation)"
+    rf"\b(?:acc|accuracy|top1|top-1)[^0-9]*{FRAC}"
+)
+
+# Accuracy as plain number (block the A/B form via negative lookahead)
+VAL_ACC_RE = re.compile(
+    rf"(?i)\b(?:val(?:idation)?[_\s-]?(?:acc|accuracy|top1|top-1))\s*[:=]\s*(?!{NUM}\s*/)\s*({NUM})%?"
+)
+ACC_RE = re.compile(
+    rf"(?i)(?<!val_)(?<!val-)(?<!val\s)(?<!val)"
+    rf"(?<!validation_)(?<!validation-)(?<!validation\s)(?<!validation)"
+    rf"\b(?:acc|accuracy|top1|top-1)\s*[:=]\s*(?!{NUM}\s*/)\s*({NUM})%?"
+)
+
+# Explicit percent in parentheses: "(80.94%)"
+PAREN_PCT_RE = re.compile(r"\(\s*([0-9]+(?:\.[0-9]+)?)\s*%\s*\)")
+VAL_KEYWORD_RE = re.compile(r"(?i)\bval(?:idation)?\b")
+
+# Dataset sizes
+TRAIN_SAMPLES_RE = re.compile(r"(?i)\btrain\s+data:\s*([0-9][0-9,]*)\s*samples")
+VAL_SAMPLES_RE   = re.compile(r"(?i)\bval(?:idation)?\s+data:\s*([0-9][0-9,]*)\s*samples")
+
+
+# ---------- Small helpers ----------
 
 def resolve_train_path(logs_base: Path, dataset_name: str) -> Optional[Path]:
-    candidates = [
+    """Find '<...>/train' under various common layouts."""
+    for p in [
         logs_base / "train",
         logs_base / f"json_{dataset_name}" / "train",
         logs_base / f"json_{dataset_name.lower()}" / "train",
@@ -52,18 +101,19 @@ def resolve_train_path(logs_base: Path, dataset_name: str) -> Optional[Path]:
         logs_base / dataset_name / "train",
         logs_base / dataset_name.lower() / "train",
         logs_base / dataset_name.upper() / "train",
-    ]
-    for p in candidates:
+    ]:
         if p.exists() and p.is_dir():
             return p
     return None
 
+
 def detect_arch(train_label: str) -> Optional[str]:
     t = train_label.lower()
-    for token in ARCH_TOKENS:  # cy* first, then bare
+    for token in ARCH_TOKENS:  # order matters (cy* first)
         if token in t:
             return token
     return None
+
 
 def detect_activation(train_label: str) -> Optional[str]:
     t = train_label.lower()
@@ -72,127 +122,238 @@ def detect_activation(train_label: str) -> Optional[str]:
             return act
     return None
 
+
 def shorten_label(label: str) -> str:
-    # Similar shortening as in heatmaps (drop long prefixes like "...-xxx-yyy_")
+    """Drop long prefixes like '...-xxx-yyy_' for nicer titles."""
     return re.sub(r'^.+?-[^-]+-[^_]+_', '', label)
 
-def _to_percent(x: Optional[float]) -> Optional[float]:
-    if x is None:
-        return None
-    # If number looks like a fraction (<= 1.5), treat as 0..1 and convert to percent
+
+def _to_percent_if_fraction(x: float) -> float:
+    """If x looks like 0..1 -> convert to percent; otherwise return as-is."""
     return x * 100.0 if x <= 1.5 else x
+
+
+def _parse_acc_from_line(line: str, prefer_val: bool) -> Tuple[Optional[float], Optional[float]]:
+    """
+    Return (acc, val_acc) in percent if possible.
+    Priority per line:
+      1) fraction A/B -> %
+      2) percent in parentheses "(xx.x%)" (if prefer_val)
+      3) plain number after acc/accuracy (block A/B with negative lookahead)
+    If prefer_val=True and we see plain "Accuracy:" on a validation line,
+    treat it as val_acc.
+    """
+    acc = val_acc = None
+    acc_frac_found = val_acc_frac_found = False
+
+    # 1) Fractions
+    m = VAL_ACC_FRAC_RE.search(line)
+    if m:
+        num, den = float(m.group(1)), float(m.group(2))
+        if den != 0:
+            val_acc = (num / den) * 100.0
+            val_acc_frac_found = True
+
+    m = ACC_FRAC_RE.search(line)
+    if m:
+        num, den = float(m.group(1)), float(m.group(2))
+        if den != 0:
+            if prefer_val:
+                val_acc = (num / den) * 100.0
+                val_acc_frac_found = True
+            else:
+                acc = (num / den) * 100.0
+                acc_frac_found = True
+
+    # 2) Explicit percent "(xx.xx%)" – usually appears on validation lines
+    if prefer_val and val_acc is None:
+        m = PAREN_PCT_RE.search(line)
+        if m:
+            val_acc = float(m.group(1))
+
+    # 3) Plain numbers
+    if not val_acc_frac_found and val_acc is None:
+        m = VAL_ACC_RE.search(line)
+        if m:
+            val_acc = _to_percent_if_fraction(float(m.group(1)))
+
+    if not acc_frac_found:
+        m = ACC_RE.search(line)
+        if m:
+            value = _to_percent_if_fraction(float(m.group(1)))
+            if prefer_val and val_acc is None:
+                val_acc = value
+            elif acc is None:
+                acc = value
+
+    return acc, val_acc
+
+
+# ---------- Core parsing & plotting ----------
 
 def parse_training_log(path: Path) -> pd.DataFrame:
     """
-    Parse a single training log into a tidy DataFrame with columns:
-    epoch, loss, val_loss, acc, val_acc  (accuracy in percent if possible).
+    Parse one training log into a DataFrame with columns:
+      epoch, loss, val_loss, acc, val_acc
+    Accuracy is converted to percent whenever possible.
     """
-    rows: List[Dict[str, float]] = []
-    epoch_counter = 0
-
     try:
         text = path.read_text(encoding="utf-8", errors="ignore")
     except Exception:
         return pd.DataFrame(columns=["epoch", "loss", "val_loss", "acc", "val_acc"])
 
-    for line in text.splitlines():
-        # Try to detect epoch
-        epoch_match = EPOCH_RE.search(line)
-        if epoch_match:
-            epoch = int(epoch_match.group(1))
-            epoch_counter = epoch
-        else:
-            # Increment when we see metrics without explicit epoch (best-effort)
-            # Do not increment on empty/noise lines
-            epoch = None
+    rows: List[Dict[str, float]] = []
+    current_epoch: Optional[int] = None
+    current: Dict[str, Optional[float]] = {"epoch": None, "loss": None, "val_loss": None, "acc": None, "val_acc": None}
 
-        # Extract losses (prefer val_loss if present)
-        loss_match = LOSS_RE.search(line)
-        loss = None
-        val_loss = None
-        if loss_match:
-            # LOSS_RE has two alternatives; pick groups accordingly
-            val_loss_str, loss_str = loss_match.groups()
-            if val_loss_str is not None:
-                val_loss = float(val_loss_str)
-            if loss_str is not None:
-                loss = float(loss_str)
+    # capture dataset sizes to turn raw counts into %
+    train_n: Optional[int] = None
+    val_n: Optional[int] = None
 
-        # Extract accuracies (val first if present)
-        acc = None
-        val_acc = None
-        acc_match = ACC_RE.search(line)
-        if acc_match:
-            # The regex has 4 capturing groups; pick non-None values
-            groups = acc_match.groups()
-            # groups: (val_tag, val_val, acc_tag, acc_val)
-            if groups[1] is not None:
-                val_acc = float(groups[1])
-            if groups[3] is not None:
-                acc = float(groups[3])
-
-        # If we captured anything metric-like, record a row
-        if any(v is not None for v in (loss, val_loss, acc, val_acc)):
-            if epoch is None:
-                epoch_counter += 1
-                epoch = epoch_counter
+    def flush():
+        if current["epoch"] is not None and any(v is not None for k, v in current.items() if k != "epoch"):
             rows.append({
-                "epoch": int(epoch),
-                "loss": loss,
-                "val_loss": val_loss,
-                "acc": _to_percent(acc) if acc is not None else None,
-                "val_acc": _to_percent(val_acc) if val_acc is not None else None,
+                "epoch": int(current["epoch"]),
+                "loss": current["loss"],
+                "val_loss": current["val_loss"],
+                "acc": current["acc"],
+                "val_acc": current["val_acc"],
             })
+
+    for line in text.splitlines():
+        # dataset sizes (often printed once near the top)
+        m_trn = TRAIN_SAMPLES_RE.search(line)
+        if m_trn:
+            train_n = int(m_trn.group(1).replace(",", ""))
+        m_val = VAL_SAMPLES_RE.search(line)
+        if m_val:
+            val_n = int(m_val.group(1).replace(",", ""))
+
+        # epoch boundary
+        m_ep = EPOCH_RE.search(line)
+        if m_ep:
+            if current_epoch is not None:
+                flush()
+            current_epoch = int(m_ep.group(1))
+            current = {"epoch": current_epoch, "loss": None, "val_loss": None, "acc": None, "val_acc": None}
+
+        if current_epoch is None:
+            current_epoch = 1
+            current["epoch"] = current_epoch
+
+        # losses: val first, then explicit train, then generic
+        m_vl = VAL_LOSS_RE.search(line)
+        if m_vl:
+            current["val_loss"] = float(m_vl.group(1))
+
+        m_tl = TRAIN_LOSS_RE.search(line)
+        if m_tl:
+            current["loss"] = float(m_tl.group(1))
+        if current["loss"] is None:
+            m_l = LOSS_RE.search(line)
+            if m_l:
+                current["loss"] = float(m_l.group(1))
+
+        # accuracy (with validation context heuristic)
+        prefer_val = bool(m_vl) or bool(VAL_KEYWORD_RE.search(line))
+        acc, val_acc = _parse_acc_from_line(line, prefer_val=prefer_val)
+
+        # convert raw counts to percent if we know dataset sizes
+        if acc is not None and acc > 100 and train_n:
+            if acc <= train_n * 1.01:
+                acc = (acc / train_n) * 100.0
+        if val_acc is not None and val_acc > 100 and val_n:
+            if val_acc <= val_n * 1.01:
+                val_acc = (val_acc / val_n) * 100.0
+
+        if acc is not None:
+            current["acc"] = acc
+        if val_acc is not None:
+            current["val_acc"] = val_acc
+
+    flush()
 
     if not rows:
         return pd.DataFrame(columns=["epoch", "loss", "val_loss", "acc", "val_acc"])
 
     df = pd.DataFrame(rows).sort_values("epoch")
-    # Deduplicate per epoch keeping the last occurrence
+    # if duplicates per epoch, keep the last
     df = df.drop_duplicates(subset=["epoch"], keep="last").reset_index(drop=True)
     return df
 
-def _plot_loss(df: pd.DataFrame, title: str, out_path: Path):
-    if df.empty:
-        return
-    plt.figure(figsize=(10, 6))
-    if "loss" in df and df["loss"].notna().any():
-        plt.plot(df["epoch"], df["loss"], marker="o", label="loss")
-    if "val_loss" in df and df["val_loss"].notna().any():
-        plt.plot(df["epoch"], df["val_loss"], marker="o", label="val_loss")
-    plt.title(title)
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=150)
-    plt.close()
 
-def _plot_acc(df: pd.DataFrame, title: str, out_path: Path):
+def _plot_combined(df: pd.DataFrame, title: str, out_path: Path):
+    """
+    One figure per run:
+      - Left Y: train_loss (green) + val_loss (blue)
+      - Right Y: train_acc (orange) + val_acc (red) in %
+    """
     if df.empty:
         return
-    plt.figure(figsize=(10, 6))
-    if "acc" in df and df["acc"].notna().any():
-        plt.plot(df["epoch"], df["acc"], marker="o", label="acc")
-    if "val_acc" in df and df["val_acc"].notna().any():
-        plt.plot(df["epoch"], df["val_acc"], marker="o", label="val_acc")
-    plt.title(title)
-    plt.xlabel("Epoch")
-    plt.ylabel("Accuracy [%]")
-    plt.grid(True, alpha=0.3)
-    plt.legend()
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=150)
-    plt.close()
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    lines, labels = [], []
+
+    # Loss (left)
+    if "loss" in df and df["loss"].notna().any():
+        l1, = ax.plot(df["epoch"], df["loss"], marker="o",
+                      color=TRAIN_LOSS_COLOR, label="train_loss")
+        lines.append(l1); labels.append("train_loss")
+
+    if "val_loss" in df and df["val_loss"].notna().any():
+        l2, = ax.plot(df["epoch"], df["val_loss"], marker="o", linestyle="--", alpha=0.95,
+                      color=VAL_LOSS_COLOR, label="val_loss")
+        lines.append(l2); labels.append("val_loss")
+
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Loss")
+    ax.grid(True, which="both", alpha=0.3)
+
+    # Accuracy (right)
+    ax2 = ax.twinx()
+    acc_series = pd.concat(
+        [df.get("acc", pd.Series(dtype=float)),
+         df.get("val_acc", pd.Series(dtype=float))],
+        ignore_index=True
+    ).dropna()
+
+    if "acc" in df and df["acc"].notna().any():
+        l3, = ax2.plot(df["epoch"], df["acc"], marker="s",
+                       color=TRAIN_ACC_COLOR, label="train_acc")
+        lines.append(l3); labels.append("train_acc")
+
+    if "val_acc" in df and df["val_acc"].notna().any():
+        l4, = ax2.plot(df["epoch"], df["val_acc"], marker="s", linestyle="--", alpha=0.95,
+                       color=VAL_ACC_COLOR, label="val_acc")
+        lines.append(l4); labels.append("val_acc")
+
+    ax2.set_ylabel("Accuracy [%]")
+
+    # If values look like percent, clamp & show % ticks
+    is_percent = (not acc_series.empty and acc_series.min() >= 0.0 and acc_series.max() <= 100.0)
+    if is_percent:
+        ax2.set_ylim(0, 100)
+        ax2.yaxis.set_major_formatter(PercentFormatter(xmax=100, decimals=0))
+
+    # Legend below
+    ncols = min(4, max(1, len(labels)))
+    fig.legend(handles=lines, labels=labels,
+               loc="upper center", bbox_to_anchor=(0.5, -0.08),
+               ncol=ncols, frameon=True, title="Metrics")
+    fig.subplots_adjust(bottom=0.18)
+
+    fig.suptitle(title)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
 
 def generate_learning_curves(dataset_name: str, logs_base: Path, output_base: Path):
     """
-    Generate learning curves from training logs for the given dataset.
-    Saves per-run PNGs under:
-      <output>/<DATASET>/learning_curves/<group_key>/
+    Scan training logs and save per-run PNGs under:
+      <output>/<DATASET>/learning_curves/<group_key>/<short>_combined.png
     """
     train_path = resolve_train_path(Path(logs_base), dataset_name)
     output_root = Path(output_base) / dataset_name / "learning_curves"
@@ -211,12 +372,11 @@ def generate_learning_curves(dataset_name: str, logs_base: Path, output_base: Pa
         print(f"⚠️ No training log files found under: {train_path}")
         return
 
-    # results[group][list of (label, path)]
     groups: Dict[str, List[Tuple[str, Path]]] = defaultdict(list)
 
     for f in sorted({p for p in files if p.is_file()}):
         stem = f.stem
-        tlabel = stem  # full stem as train label
+        tlabel = stem
         arch = detect_arch(tlabel)
         act  = detect_activation(tlabel)
         if not arch or not act:
@@ -237,10 +397,10 @@ def generate_learning_curves(dataset_name: str, logs_base: Path, output_base: Pa
         for train_label, path in runs:
             df = parse_training_log(path)
             short = shorten_label(train_label)
-
-            # Loss curves
-            _plot_loss(df, title=f"Loss – {short}", out_path=out_dir / f"{short}_loss.png")
-            # Accuracy curves
-            _plot_acc(df, title=f"Accuracy – {short}", out_path=out_dir / f"{short}_acc.png")
+            _plot_combined(
+                df,
+                title=f"Learning Curve – {short}",
+                out_path=out_dir / f"{short}_combined.png",
+            )
 
     print(f"✅ Learning curves generated under: {output_root}")

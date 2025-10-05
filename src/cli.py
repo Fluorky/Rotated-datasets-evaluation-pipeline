@@ -1,4 +1,7 @@
+from typing import Optional
+
 import typer
+import os
 from src.analysis.learning_matrix import process_dataset
 # future: from src.db.handler import show_table
 # future: from src.pipelines.rotation_pipeline import run_pipeline
@@ -6,12 +9,17 @@ from src.analysis.learning_matrix import process_dataset
 from src.analysis.log_ingestor import ingest_logs
 from src.analysis.log_checker import check_test_logs, check_training_logs
 from src.analysis import matrix_analyzer as ma
+from src.analysis.learning_curves import generate_learning_curves
+from src.analysis.best_models import summarize_best_models
 from src.pipelines.rotation_pipeline import run_pipeline
-import typer
-import src.datasets.gtsrb as gtsrb
-import src.datasets.gtsrb_rgb as gtsrb_rgb
-import src.datasets.lego as lego
-import os
+from src.analysis.optuna_analyzer import (
+    generate_optuna_learning_curves,
+    generate_optuna_heatmaps,
+)
+# import src.datasets.gtsrb as gtsrb
+# import src.datasets.gtsrb_rgb as gtsrb_rgb
+# import src.datasets.lego as lego
+from contextlib import contextmanager
 
 from pathlib import Path
 
@@ -70,37 +78,45 @@ def check_logs_cmd(
     check_test_logs(test_path, test_marker)
 
 
+@contextmanager
+def _tee_stdout(log_path: Optional[str]):
+    """Simple tee: stdout + file (append)."""
+    if not log_path:
+        yield None
+        return
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    with open(log_path, "a", encoding="utf-8") as fp:
+        yield fp
+
+
+
 @app.command("matrix-analyzer")
 def matrix_analyzer_cmd(
-    cm_root: Path = typer.Option(
-        Path(r"\\wsl.localhost\Ubuntu\home\testhub\CyCNN\CyCNN-master\cycnn\logs\json_MNIST\confusion_matrices"),
-        "--cm-root",
-        help="Path to root directory of confusion matrices"
-    ),
-    db_path: Path = typer.Option(
-        Path("results/db/experiment_logs.db"),
-        "--db",
-        help="Path to SQLite database"
-    )
+    cm_root: Path = typer.Option(..., "--cm-root", help="Path to confusion_matrices root for ONE dataset"),
+    db_path: Path = typer.Option(Path("results/db/experiment_logs.db"), "--db", help="SQLite DB path"),
+    dataset: str = typer.Option(..., "--dataset", help="Dataset name: MNIST | GTSRB | GTSRB_RGB | LEGO"),
+    log_file: Optional[Path] = typer.Option(None, "--log-file", help="Append console output to this file as well"),
 ):
     """
-    Analyze confusion matrices and training logs, then update evaluation database.
+    Analyze confusion matrices and training logs, scoped to ONE dataset.
     """
+    from src.analysis import matrix_analyzer as ma
 
+    with _tee_stdout(str(log_file) if log_file else None) as fp:
+        print(f"📝 Logging to: {log_file}" if log_file else "📝 Logging to: <stdout only>")
+        print("🛠️ Rebuilding training_runs table...")
+        ma.create_training_runs_table(str(db_path), log_fp=fp)
+        ma.compute_training_times(str(db_path), log_fp=fp)
 
-    print("🛠️ Rebuilding training_runs table...")
-    ma.create_training_runs_table(db_path)
-    ma.compute_training_times(db_path)
+        print("📥 Collecting evaluation results...")
+        ma.collect_and_store_results(str(cm_root), str(db_path), dataset=dataset, log_fp=fp)
 
-    print("📥 Collecting evaluation results...")
-    ma.collect_and_store_results(str(cm_root), str(db_path))
+        print("📊 Creating model summary table...")
+        ma.create_model_summary_table(str(db_path), log_fp=fp)
+        ma.compute_and_insert_model_summaries(str(db_path), dataset=dataset, log_fp=fp)
 
-    print("📊 Creating model summary table...")
-    ma.create_model_summary_table(db_path)
-    ma.compute_and_insert_model_summaries(db_path)
-
-    print("📈 Querying best models...")
-    ma.query_best_models(db_path)
+        print("📈 Querying best models (scoped)...")
+        ma.query_best_models(str(db_path), dataset=dataset, log_fp=fp)
 
 @app.command("preprocess")
 def preprocess_cmd(
@@ -144,23 +160,78 @@ def preprocess_cmd(
         file_format=file_format.lower()
     )
 
-
-@app.command()
-def prepare_dataset(
-    dataset: str = typer.Option(..., "--dataset", "-d", help="Dataset to prepare: GTSRB, GTSRB_RGB, LEGO")
+@app.command("learning-curves")
+def learning_curves_cmd(
+    dataset: str = typer.Option(..., "--dataset", "-d", help="Dataset name: MNIST, GTSRB, GTSRB_RGB, LEGO"),
+    logs_dir: Path = typer.Option(
+        Path("results/log_files_from_slave/logs"),
+        "--logs-dir",
+        help="Base logs directory (either the parent of json_* or a specific json_<DATASET> folder).",
+    ),
+    output_dir: Path = typer.Option(
+        Path("results/plots"),
+        "--output-dir",
+        help="Output directory for learning curves.",
+    ),
 ):
-    """Prepare a dataset from raw files."""
+    """
+    Generate learning curves (loss/accuracy vs epoch) from training logs.
+    """
+    generate_learning_curves(dataset_name=dataset.strip(), logs_base=logs_dir, output_base=output_dir)
 
-    dataset = dataset.upper()
-    if dataset == "GTSRB":
-        gtsrb.main()
-    elif dataset == "GTSRB_RGB":
-        gtsrb_rgb.main()
-    elif dataset == "LEGO":
-        lego.main()
-    else:
-        typer.echo(f"❌ Unknown dataset: {dataset}")
-        raise typer.Exit(code=1)
+
+@app.command("optuna-analyze")
+def optuna_analyze_cmd(
+    dataset: str = typer.Option(..., "--dataset", "-d", help="Dataset name (MNIST, GTSRB, GTSRB_RGB, LEGO)"),
+    optuna_logs: Path = typer.Option(..., "--optuna-logs", help="Path to Optuna logs directory (optuna_checked/logs)"),
+    output_dir: Path = typer.Option("results", "--output-dir", help="Base output directory"),
+    curves_only: bool = typer.Option(False, "--curves-only", help="Generate only learning curves"),
+    heatmaps_only: bool = typer.Option(False, "--heatmaps-only", help="Generate only [TEST] heatmaps"),
+):
+    """
+    Analyze Optuna logs: training curves (with last checkpoint marker) and 1-row [TEST] heatmaps.
+    """
+    if not heatmaps_only:
+        generate_optuna_learning_curves(dataset_name=dataset, optuna_logs_dir=optuna_logs, output_base=output_dir)
+    if not curves_only:
+        generate_optuna_heatmaps(dataset_name=dataset, optuna_logs_dir=optuna_logs, output_base=output_dir)
+
+@app.command("best-models")
+def best_models_cmd(
+    dataset: str = typer.Option(..., "--dataset", "-d", help="Dataset name: MNIST, GTSRB, GTSRB_RGB, LEGO"),
+    results_dir: Path = typer.Option(
+        Path("results/heatmaps"),
+        "--results-dir",
+        help="Folder containing the accuracy_matrix_*.csv made by 'analyze'.",
+    ),
+    out_dir: Path = typer.Option(
+        None,
+        "--out-dir",
+        help="Optional custom output directory (default: <results>/<DATASET>/summary).",
+    ),
+):
+    """
+    Rank models for a dataset using generated accuracy matrices and save CSV summaries.
+    """
+    summarize_best_models(dataset_name=dataset.strip(), results_root=results_dir, out_dir=out_dir)
+
+
+# @app.command()
+# def prepare_dataset(
+#     dataset: str = typer.Option(..., "--dataset", "-d", help="Dataset to prepare: GTSRB, GTSRB_RGB, LEGO")
+# ):
+#     """Prepare a dataset from raw files."""
+#
+#     dataset = dataset.upper()
+#     if dataset == "GTSRB":
+#         gtsrb.main()
+#     elif dataset == "GTSRB_RGB":
+#         gtsrb_rgb.main()
+#     elif dataset == "LEGO":
+#         lego.main()
+#     else:
+#         typer.echo(f"❌ Unknown dataset: {dataset}")
+#         raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":
