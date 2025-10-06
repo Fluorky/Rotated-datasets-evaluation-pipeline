@@ -1599,6 +1599,28 @@ opisują zachowanie całych rodzin, następnie omawiają specyfikę poszczególn
 zbiorów i kończą się prostą regułą wyboru konfiguracji pod ograniczenia
 praktyczne.
 
+\begin{table}[h]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.12}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lccc}
+\hline
+Zbiór & Lider średniej (avg) & Lider AUC\(_\theta\) & Lider avg\_perf \\
+\hline
+GTSRB      & CyResNet56-linear (0.8688)  & CyResNet56-linear (0.8640)  & CyVGG19-log (0.001250) \\
+GTSRB\_RGB & CyVGG19-linear (0.9025)     & CyVGG19-linear (0.9006)     & CyVGG19-linear (0.001791) \\
+LEGO       & CyVGG19-linear (0.8816)     & CyVGG19-linear (0.8789)     & ResNet56-linear (0.001429) \\
+MNIST      & CyResNet56-log (0.9544)     & CyResNet56-log (0.9520)     & CyVGG19-log (0.001005) \\
+\hline
+\end{tabular}%
+}
+\caption{Liderzy średniej jakości, stabilności (AUC\(_\theta\)) i efektywności
+per-time dla metryki micro; porównanie rodzin i transformacji.}
+\end{table}
+
+
 
 ## Zakres i procedura
 
