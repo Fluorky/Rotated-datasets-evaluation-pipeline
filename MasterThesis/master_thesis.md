@@ -840,13 +840,6 @@ zastosowana jest ta sama logika budowania zbiorów danych oraz ich podziału na
 `train` i `test`. Dodatkowo, w ścieżce IDX dla MNIST nazwa pliku `t10k` jest
 zamieniana na `test` przed uruchomieniem rotacji.
 
-## Sposób augmentacji danych: rotacje i łączenie zbiorów
-
-Pipeline obsługuje dwa formaty wejścia. Pierwszy to format IDX (ubyte),
-stosowany m.in. w MNIST. Drugi to tryb NPY, w którym dane zapisywane są jako
-`train_images.npy` i `train_labels.npy`, a dla części testowej jako
-`test_images.npy` i `test_labels.npy`. Niezależnie od formatu stosowana jest ta
-sama logika budowania zbiorów oraz podziału na `train` i `test`.
 
 ### Rotacje
 
