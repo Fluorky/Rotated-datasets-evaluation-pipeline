@@ -1084,7 +1084,7 @@ jako miejsce pracy wariantu algorytmu Winograda. Rozwiązanie to pozwala skórci
 wymaga odpowiedniej ilości pamięci VRAM, przez co na kartach graficznych posiadających mniej VRAMU mogą
 pojawić się błędy OOM.
 
-Integracja z modelami jest bezpośrednia. We wszystkich miejscach, gdzie w
+Integracja z modelami zrobiona w sposób bezpośredni. We wszystkich miejscach, gdzie w
 bazowych architekturach użyto `nn.Conv2d`, zarówno w `conv1`, jak i w
 konwolucjach wewnątrz bloków, w wersjach **CyVGG** i **CyResNet** wstawiono
 `CyConv2d`. Pozostałe elementy pozostają bez zmian: BatchNorm, ReLU, GAP i
@@ -1118,7 +1118,7 @@ główny skrypt `main.py` oraz launchery dla poszczególnych datasetów.
 Znajdują się tam także pliki uruchamiające Optunę i konfiguracje eksperymentów.
 
 Repozytorium zarządzające skupia narzędzia do przygotowania danych,
-rotacji i łączenia zbiorów, a także do analizy wyników. Dostępny jest
+rotacji i łączenia zbiorów, a także do analizy wyników. Wykorzystywany jest
 interfejs CLI (Typer), który buduje zbiory, wczytuje logi i artefakty,
 zapisuje metryki do **SQLite** oraz generuje mapy ciepła train-test i
 zestawienia rankingowe. Artefakty są porządkowane w powtarzalnej
@@ -1128,7 +1128,7 @@ zbiorcze w `results/`.
 
 ## Automatyzacja: skrypty trenowania, testowania, ewaluacji
 
-Trenowanie modeli uruchamiane jest skryptem launcher_<dataset>.py, który 
+Trenowanie modeli uruchamiane z wykorzystaniem skryptu launcher_<dataset>.py, który 
 wywołuje `main.py` z odpowiednimi parametrami dla danego
 modelu, zbioru, wariantu przekształceń i ustawień treningu. W trakcie
 ewaluacji zapisywana jest macierz pomyłek oraz podstawowe metryki
@@ -1485,14 +1485,15 @@ rankingów.
 Nazwy scenariuszy (`rotated-a[-b]`, `range_a_b`, `full_0_360`,
 `non_rotated`) determinują przedziały kątów. Wyznaczane są środki
 przedziałów oraz różnica kątowa $\Delta\theta$ na okręgu z wrap-around
-(zakres $[0^\circ, 180^\circ]$). Budowane są:
+(zakres $[0^\circ, 180^\circ]$). 
+Budowane są:  \
 
 - krzywe $Acc(\Delta\theta)$ z koszykowaniem co
-  $\theta_{\text{step}}=15^\circ$,
+  $\theta_{\text{step}}=15^\circ$,  \
 - $AUC_{\theta}$ (pole pod krzywą, trapezowo; normalizacja przez
-  $180^\circ$),
-- $Acc_{\min}$ (najgorszy koszyk),
-- $SD_{\theta}$ (odchylenie między koszykami).
+  $180^\circ$),  \
+- $Acc_{\min}$ (najgorszy koszyk),  \
+- $SD_{\theta}$ (odchylenie między koszykami).  \
 
 Eksport odbywa się do `delta_curves/acc_vs_delta_<MODEL>.csv` oraz
 `auc_theta_ranking.csv`. Spójny krok kątowy i jednolite zasady wrap-around
@@ -1507,12 +1508,12 @@ Dostępne są dwa widoki.
 `std` (niższe lepsze), `min`, `median`, `max`, `robust_mean`, `IQR`
 (niższy lepszy). Eksport do `ranking_quality.csv`.
 
-**Time-aware.** Uwzględnia koszt czasowy:
-- `avg/time` oraz `min/time` (druk + `ranking_timeaware_avgperf.csv`),
+**Time-aware.** Uwzględnia koszt czasowy:  \
+- `avg/time` oraz `min/time` (druk + `ranking_timeaware_avgperf.csv`),  \
 - wariant zbalansowany `avg` vs `avg_perf`
-  (`ranking_timeaware_balanced.csv`),
+  (`ranking_timeaware_balanced.csv`),  \
 - wariant zbalansowany tylko per-time
-  (`ranking_balanced_per_time.csv`).
+  (`ranking_balanced_per_time.csv`).  \
 
 Parametry i FLOPs nie są obecnie uwzględniane. Dzięki spójnym ścieżkom
 artefaktów i zapisowi metryk do CSV/SQLite porównywanie wariantów
@@ -1689,7 +1690,6 @@ CyVGG19. Co ukazuje klasyczny kompromis jakość-czas: nie da się jednocześnie
 maksymalizować stabilności i skracać treningu. I jak to się mówi - 
 nie można zjeść ciastka i mieć go też (ang. „You can’t eat your
 cake and have it too” [@kaczynski1995wp]).
-
 
 
 ## Wnioski per zbiór
