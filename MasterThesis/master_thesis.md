@@ -1168,10 +1168,10 @@ Proces optymalizacji uruchomiony został dla czterech modeli
 transformacji (*linear polar*, *log polar*). Optymalizacja prowadzona była na
 zestawach oznaczonych jako *non_rotated*. W każdej konfiguracji wykonano
 25 prób z limitem 10 epok na próbę, aby ograniczyć czas trwania
-eksperymentów. Przeszukiwane były następujące zakresy:
-*learning rate* od `1e-4` do `5e-2` w skali logarytmicznej,
-*weight decay* od `1e-7` do `1e-3` w skali logarytmicznej,
-*momentum* od `0.85` do `0.99` w skali liniowej.
+eksperymentów. Przeszukiwane były następujące zakresy:  \
+*learning rate* od `1e-4` do `5e-2` w skali logarytmicznej,  \
+*weight decay* od `1e-7` do `1e-3` w skali logarytmicznej,  \
+*momentum* od `0.85` do `0.99` w skali liniowej.  \
 
 Zastosowanie Optuny pozwoliło osiągnąć wyższą dokładność niż w ustawieniach
 dobieranych ręcznie. Najczęściej wybierane wartości *learning rate* mieściły
@@ -1549,6 +1549,8 @@ samych danych w formacie NPY i uzupełnia je o tabele potrzebne do raportu.
 
 ## Struktura wyników i artefaktów
 
+Wyniki i atrefakty były tworzone i przechowywane zgodnie z poniższa strukturą.
+
 ```
 Results/
 db/experiment_logs.db
@@ -1569,12 +1571,13 @@ auc_theta_ranking.csv
 
 ## Ograniczenia i kierunki rozwoju
 
-Analizator nie tworzy obrazów PNG - koncentruje się na metrykach i plikach
+Analizator nie tworzy obrazów PNG, on koncentruje się na metrykach i wynikowych plikach
 CSV (m.in. metryki kątowe, wskaźniki stabilności, rankingi). Obrazy
 powstają w innych częściach pipeline’u i są używane w interpretacji.
-W kolejnych iteracjach warto rozważyć integrację generowania obrazów w tym
-samym narzędziu, dołączenie parametrów i FLOPs do rankingów oraz zapis
-dokładności per klasa w CSV równolegle z wizualizacjami.
+W kolejnych iteracjach warte rozważenia są:  \
+- integrację generowania obrazów w tym samym narzędziu,  \
+- dołączenie parametrów i FLOPs do rankingów  \
+- zapis dokładności per klasa w CSV równolegle z wizualizacjami  \
 
 
 \newpage
@@ -1637,7 +1640,7 @@ Micro-accuracy oddaje skuteczność „po wszystkich próbkach”, więc jest
 odporna na nierówne liczebności klas w stopniu typowym dla zadań
 klasyfikacji. AUC_theta syntetyzuje zachowanie krzywej Acc(delta_theta):
 im wyższe, tym reprezentacja bardziej wyrównana względem kątów. Wartość
-worst-case wyłapuje najtrudniejszy punkt krzywej i jest ważna, gdy
+worst-case wyłapuje najtrudniejszy punkt krzywej, który jest ważny, gdy
 liczy się niezawodność w całym zakresie. Metryka per-time pomaga wybrać
 wariant pod ograniczenia budżetu czasu i energii. Wykresy heatmap
 train-test uzupełniają metryki numeryczne i pozwalają wzrokowo ocenić,
@@ -1727,6 +1730,149 @@ budżet energii, lepiej sprawdzi się linear-polar, często w parze z
 (Cy)ResNet-56. W zastosowaniach o zróżnicowanych wymaganiach można
 rozważyć parę modeli i wybierać ścieżkę decyzyjną zależnie od profilu
 zapytania.
+
+## Strojenie hiperparametrów (Optuna) a odporność na rotacje
+
+### Założenie i konfiguracja
+
+Celem było sprawdzenie, czy **strojenie hiperparametrów** (learning
+rate, momentum, weight decay) dla **konfiguracji non_rotated**
+potrafi: (1) podnieść **bazową jakość** przy kątach bliskich \(0^\circ\),
+oraz (2) **przenieść się** na **stabilność rotacyjną** (AUC\(_\theta\),
+worst-case) **bez** zmiany architektury i bez augmentacji rotacjami.
+
+Walidacja w **Optunie** była ustawiona na **non_rotated**. Funkcja celu
+to klasyczne *val\_acc* w pobliżu \(0^\circ\). Trening przebiegał bez
+rotacji, a użyta transformacja (linear-polar / log-polar) była identyczna
+jak w bazie. Taki układ celowo „patrzy” tylko na zachowanie wokół
+\(0^\circ\) i nie nagradza odporności na duże \(\Delta\theta\).
+
+**Wejście do porównań.** Dla każdego zbioru dostępne są pliki:
+
+optuna_vs_baseline_nonrot_{GTSRB|GTSRB_RGB|LEGO|MNIST}_micro.csv
+
+Zawierają one pary kolumn `avg_base / avg_opt`, `AUC_base / AUC_opt`,
+`worst_base / worst_opt` oraz różnice `d_avg`, `d_AUC`, `d_worst`.
+
+> Konwencja skrótów: **linear** = linear-polar, **log** = log-polar.
+
+
+### Metryki i zapis wyników
+
+Porównywane są dwie wersje dla danej (architektura, transformacja):
+**Baseline (non\_rot)** i **Optuna (non\_rot)**. Raportowane miary:
+
+- **avg** – średnia dokładność (micro) po scenariuszach testowych,
+- **AUC\(_\theta\)** – pole pod krzywą \(Acc(\Delta\theta)\),
+  znormalizowane do \([0,1]\),
+- **worst** – najniższy punkt \(Acc(\Delta\theta)\) (najtrudniejszy
+  koszyk kątowy),
+- (opcjonalnie) **avg\_perf** – średnia jakość podzielona przez czas
+  trenowania.
+
+W tekście zastosowana jest notacja „przejścia”:
+
+avg 0.926 → 0.954 (Δavg +0.029)
+AUC 0.921 → 0.952 (ΔAUC +0.031)
+worst 0.916 → 0.950 (Δworst +0.034)
+
+
+### Wyniki: Optuna (val = non_rotated) kontra Baseline
+
+#### Obraz globalny
+
+Wynik jest spójny między zbiorami, gdyż zmiany **avg** są na ogół niewielkie,
+zwykle (|\Delta|\le 0.01). Wskaźniki **AUC(_\theta)** i **worst**
+przeważnie nie rosną, ponieważ przy walidacji ustawionej na (0^\circ)
+brakuje presji selekcyjnej na stabilność dla dużych (\Delta\theta).
+Zdarzają się lokalne plusy (pojedyncze pary model–transformacja), jednak
+w ujęciu przekrojowym dominują wyniki neutralne lub lekko ujemne zarówno
+w **AUC(_\theta)**, jak i w **worst**.
+
+#### Przykłady do wklejenia (po 1–2 na zbiór)
+
+> **GTSRB — ResNet-linear**  
+> `avg a_b → a_o (Δavg …)`  
+> `AUC u_b → u_o (ΔAUC …)`  
+> `worst w_b → w_o (Δworst …)`
+
+> **GTSRB_RGB — CyResNet-log**  
+> analogiczna linia z CSV
+
+> **LEGO — CyVGG-log**  
+> analogiczna linia z CSV
+
+> **MNIST — ResNet-linear**  
+> analogiczna linia z CSV
+
+*(W każdym przypadku krótkie zdanie komentarza: „przy walidacji
+non\_rot brak wzrostu AUC/worst; zmiana avg kosmetyczna”.)*
+
+---
+
+### Interpretacja: dlaczego tak wyszło
+
+1. **Niedopasowany cel walidacji.** Walidacja non\_rotated faworyzuje
+   konfiguracje pod \(\Delta\theta\!\approx\!0^\circ\). AUC\(_\theta\) i
+   worst zależą głównie od zachowania przy **dużych** \(\Delta\theta\).
+   Optuna tego **nie widzi**.
+2. **Architektura dominuje nad LR/WD.** Odporność na obrót wynika
+   przede wszystkim z **własności modelu** (CyCNN, oś orientacji,
+   transformacje polarne). Hiperparametry regulują tempo i gładkość
+   uczenia, ale nie wprowadzają ekwiwariancji.
+3. **Budżet i harmonogram.** Krótki trening / konserwatywny scheduler
+   zmniejsza „rozdzielczość” selekcji; łatwo przestroić się pod szybki
+   wzrost w okolicy \(0^\circ\).
+4. **Regularizacja nieukierunkowana na AUC.** Jeśli przestrzeń
+   poszukiwań obejmuje wyłącznie LR, WD i momentum, to trudno poprawić
+   **worst/AUC\(_\theta\)**. Pomogłyby techniki wprost wzmacniające
+   uogólnianie (np. label smoothing, dropout schedule, mixup).
+5. **Bias prunera.** Wczesne zatrzymywanie oparte o *val\_acc* przy
+   \(0^\circ\) premiuje konfiguracje „szybkiego startu” kosztem globalnej
+   stabilności.
+
+
+### Co to znaczy dla wniosków w pracy
+
+- Brak systematycznego zysku w AUC\(_\theta\) / worst przy
+  **val = non\_rotated** **potwierdza** tezę, że o odporności decyduje
+  **architektura + transformacja**, a nie samo dostrajanie LR/WD pod
+  kąt \(0^\circ\).
+- To **nie** jest dowód na „nieskuteczność Optuny”, tylko sygnał, że
+  **cel walidacji** był **niespójny** z badaną własnością (stabilnością
+  rotacyjną).
+
+
+[//]: # (### Jak to poprawić &#40;prosty plan re-testu&#41;)
+
+[//]: # ()
+[//]: # (1. Pozostawić **training = non\_rotated** &#40;fair porównanie&#41;.)
+
+[//]: # (2. Zbudować **val-suite**: np. \&#40;0^\circ,45^\circ,90^\circ,135^\circ\&#41;,)
+
+[//]: # (   albo koszykowanie \&#40;[0^\circ,180^\circ]\&#41;.)
+
+[//]: # (3. Zmienić cel Optuny na **AUC\&#40;_\theta\&#41;** lub mieszaninę)
+
+[//]: # (   \&#40;0.7\cdot\text{avg} + 0.3\cdot\text{AUC}_\theta\&#41;.)
+
+[//]: # (4. Poszerzyć przestrzeń o **regularizacje** &#40;label smoothing, dropout,)
+
+[//]: # (   ewentualnie mixup/cutmix&#41;.)
+
+[//]: # (5. Uruchomić **15–25 prób, 5–10 epok**; wystarczy, by zobaczyć kierunek.)
+
+
+
+### Wniosek syntetyczny
+
+Przy **walidacji non\_rotated** strojenie Optuną **nie** przekłada się na
+lepszą **stabilność rotacyjną**. Hiperparametry potrafią skorygować bazę
+w okolicach \(0^\circ\), lecz **AUC\(_\theta\)** i **worst** pozostają
+praktycznie bez zmian. Jeśli celem jest odporność na obrót,
+**architektura cykliczna** i **transformacje polarne** są kluczowe, a
+proces strojenia musi tę własność **jawnie** mierzyć już na etapie
+walidacji.
 
 ## Rekomendacje praktyczne
 
