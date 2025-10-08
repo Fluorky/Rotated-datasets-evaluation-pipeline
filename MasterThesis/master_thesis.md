@@ -1,17 +1,11 @@
 ---
-documentclass: article
-lang: pl-PL
 header-includes:
   - \usepackage{graphicx}
   - \usepackage{multicol}
   - \usepackage{ragged2e}
   - \usepackage{tocloft}
   - \renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
-  - \usepackage{booktabs}
-  - \usepackage{siunitx}
-  - \sisetup{output-decimal-marker = {,}, detect-all, round-mode=places, round-precision=3}
-  - \usepackage{csvsimple}
-  - \usepackage[strings]{underscore}
+
 ---
 
 
@@ -2033,13 +2027,13 @@ Porównywane są dwie wersje dla danej pary (architektura, transformacja):
 **Baseline (`non_rotated`)** i **Optuna (`non_rotated`)**. Raportowane
 miary:
 
-- **avg** - średnia dokładność (micro) po scenariuszach testowych;
-- **AUC\(_\theta\)** - pole pod krzywą \( \mathrm{Acc}(\Delta\theta) \),
-  znormalizowane do \([0,1]\);
-- **worst** - minimum krzywej \( \mathrm{Acc}(\Delta\theta) \)
+- **avg** – średnia dokładność (micro) po scenariuszach testowych;
+- **AUC$_\theta$** – pole pod krzywą $\mathrm{Acc}(\Delta\theta)$,
+  znormalizowane do $[0,1]$;
+- **worst** – minimum krzywej $\mathrm{Acc}(\Delta\theta)$
   (najtrudniejszy koszyk kątowy);
-- (opcjonalnie) **avg\_perf** - \( \mathrm{mean}(\mathrm{Acc}) /
-  T_{\mathrm{train}} \), gdzie \( T_{\mathrm{train}} \) to czas trenowania.
+- (opcjonalnie) **avg\_perf** – $\mathrm{mean}(\mathrm{Acc})/T_{\mathrm{train}}$,
+  gdzie $T_{\mathrm{train}}$ to czas trenowania.
 
 **Notacja w tekście (przykład):**
 
@@ -2075,14 +2069,6 @@ w **AUC\(_\theta\)**, jak i w **worst**.
 > **MNIST - ResNet-linear**  
 > analogiczna linia z CSV
 
-# Auto tables from CSV (Pandoc + XeLaTeX)
-
-Below are tables read directly from CSV files under `media/csvs/`.
-
-
-% ... Twój tekst ...
-
-\csvautobooktabular{\detokenize{media/csvs/optuna_vs_baseline_nonrot_GTSRB_micro.csv}}
 
 
 *(Komentarz: „walidacja `non_rotated` nie podnosi
@@ -2134,9 +2120,9 @@ modyfikacji architektury i bez dokładania rotacyjnego augmentu.
 Rozdzieliłem ścieżki danych: `train_dir` to czyste *non_rotated*, a
 `val_dir` zawiera **miks kątów** (np. `non_rotated`, `rotated-XX`,
 `range_*`, `full_0_360`). Na tej walidacji liczę krzywą
-(\mathrm{Acc}(\Delta\theta)) (koszyki co (15^\circ), wrap-around) i
-z niej biorę **(\mathrm{AUC}_\theta)**, **worst** oraz **avg**. W Optunie
-ustawiam **cel walidacji na (\mathrm{AUC}_\theta)**, żeby selekcjonować
+($\mathrm{Acc}(\Delta\theta)$) (koszyki co (15^\circ), wrap-around) i
+z niej biorę **($\mathrm{AUC}_\theta$)**, **worst** oraz **avg**. W Optunie
+ustawiam **cel walidacji na ($\mathrm{AUC}_\theta$)**, żeby selekcjonować
 checkpointy, które lepiej trzymają poziom w całym zakresie kątów. Sam
 **trening** pozostaje **taki jak był**.
 
@@ -2191,9 +2177,9 @@ jakości. Dla każdej z ośmiu konfiguracji spadły avg, AUCθ i worst.
 
 W tej próbie – krótko i uczciwie – **nie zadziałało**. Dla wszystkich
 ośmiu konfiguracji (VGG/ResNet i ich warianty cykliczne, linear/log)
-**spadły** trzy kluczowe miary: średnia dokładność, (\mathrm{AUC}_\theta)
+**spadły** trzy kluczowe miary: średnia dokładność, ($\mathrm{AUC}_\theta$)
 i „worst-case”. Przykładowo, **CyResNet56·linear** z
-(\mathrm{avg}\approx0{.}94) zjechał do ok. (0{.}83), a „worst”
+($\mathrm{avg}\approx0{.}94$) zjechał do ok. (0{.}83), a „worst”
 spadł wyraźnie poniżej poprzedniego minimum. Analogiczny obraz pojawił
 się dla pozostałych par, łącznie z modelami bazowymi.
 
@@ -2210,8 +2196,8 @@ od zera cech, które normalnie budujemy architekturą (CyCNN, oś
 orientacji) albo augmentacją rotacją. Dochodzi jeszcze ryzyko
 **niedopasowania rozkładu walidacji do testów**: jeśli miks kątów na
 walidacji różni się od tego w docelowych scenariuszach, to
-(\mathrm{AUC}*\theta) z walidacji słabiej koreluje z
-(\mathrm{AUC}*\theta) w testach. Na koniec: **worst-case** jest
+($\mathrm{AUC}*\theta$) z walidacji słabiej koreluje z
+($\mathrm{AUC}*\theta$) w testach. Na koniec: **worst-case** jest
 najbardziej wrażliwy na „niedogrzanie”. Krótkie treningi po prostu nie
 dowożą dojrzałych reprezentacji, które trzymają poziom także dla
 najtrudniejszych (\Delta\theta).
@@ -2223,7 +2209,7 @@ zastąpi** dłuższego, bogatszego uczenia i **nie skompensuje** różnic
 architektonicznych. **Odporność na rotację** w tej pracy wynika przede
 wszystkim z **CyCNN** (oś orientacji, cykliczny padding) oraz z
 **przekształceń polarnych**. Samo strojenie **LR/momentum/WD pod
-(\mathrm{AUC}_\theta)**, przy krótkim budżecie i bez rotacji w treningu,
+($\mathrm{AUC}_\theta$)**, przy krótkim budżecie i bez rotacji w treningu,
 **nie tworzy ekwiwariancji** – co najwyżej wybiera trochę lepszy punkt
 na istniejącej, dość płaskiej krzywej.
 
@@ -2231,13 +2217,14 @@ na istniejącej, dość płaskiej krzywej.
 
 Żeby taki wariant miał sens, trzeba **wyrównać budżet** z baseline’ami
 (epoki, batch, scheduler), dopasować **walidację kątową** do tego, co
-sprawdzamy w testach (te same koszyki (\Delta\theta)), a cel Optuny
-ustawić na **(\mathrm{AUC}_\theta)** albo **mieszankę**
-(0{.}7\cdot\text{avg}+0{.}3\cdot\mathrm{AUC}_\theta) z **worst** jako
+sprawdzamy w testach (te same koszyki $\Delta\theta$), a cel Optuny
+ustawić na **$\mathrm{AUC}_\theta$** albo **mieszankę**
+$0.7 \cdot \mathrm{avg} + 0.3 \cdot \mathrm{AUC}_\theta$ z **worst** jako
 tie-breaker. Delikatne **regularizacje** (np. label smoothing, dropout)
 i łagodniejsza dynamika uczenia (dłuższy warm-up, cosine LR, ewentualnie
 zamrożone BN) często poprawiają dół krzywej, czyli to, co najbardziej
 nas boli w kontekście rotacji.
+
 
 **Jedno zdanie na koniec.**
 Rotation-aware validation to dobry pomysł na **lepszy wybór checkpointu**,
