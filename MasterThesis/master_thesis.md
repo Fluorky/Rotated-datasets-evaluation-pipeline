@@ -1,10 +1,17 @@
 ---
+documentclass: article
+lang: pl-PL
 header-includes:
   - \usepackage{graphicx}
   - \usepackage{multicol}
   - \usepackage{ragged2e}
   - \usepackage{tocloft}
   - \renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+  - \usepackage{booktabs}
+  - \usepackage{siunitx}
+  - \sisetup{output-decimal-marker = {,}, detect-all, round-mode=places, round-precision=3}
+  - \usepackage{csvsimple}
+  - \usepackage[strings]{underscore}
 ---
 
 
@@ -1376,7 +1383,7 @@ precyzja przez `torch.cuda.amp`. Należy uwzględnić bufor roboczy
 dla Pythona, NumPy i PyTorcha; `cudnn.benchmark = True` pozostaje aktywny
 ze względu na czas trenowania, co nie zaburza porównywalności wyników.
 
-Wyniki zapisywane są w spójnej strukturze: logi z przebiegów, najlepsze
+Wyniki zapisywane są w spójnej strukturze zawierającej: logi z przebiegów, najlepsze
 checkpointy `.pt`, macierze pomyłek w formatach `.npy` i `.png`,
 zestawienia CSV oraz wpisy w bazie **SQLite**. Na tej podstawie
 budowane są rankingi oraz statystyki zbiorcze (średnia, mediana,
@@ -1387,13 +1394,13 @@ procedurę pomiaru skuteczności oraz metodę agregacji metryk.
 
 ## Scenariusze trenowania/testowania (opis JSON)
 
-Scenariusze zdefiniowane są przez pliki JSON, który mapują **zestawy
-treningowy** na listę **zestawów testowych**. Klucze i wartości są
+Scenariusze zdefiniowane są przez pliki JSON, które mapują **zestawy
+treningowe** na listy**zestawów testowych**. Klucze i wartości są
 po prostu ścieżkami katalogów w strukturze danych. Dzięki temu w łatwy sposób
 powiązane zostały nazwy w  pliku JSON z realnymi ścieżkami na dysku 
-i można było przeprowadzić serię eksperymentów bez ręcznej konfiguracji czy uruchamiania.
+i możliwe było przeprowadzenie serii eksperymentów bez ręcznej konfiguracji czy uruchamiania.
 
-Przykładowy fragment JSON:
+Przykładowy fragment pliku JSON ze scenariuszami train-test:
 
 ```json
 {
@@ -1444,7 +1451,7 @@ Skuteczność raportowana jest jako **dokładność top-1** dla każdej pary
 train-test. Wartość wyznaczana jest z **macierzy pomyłek** o rozmiarze
 $C \times C$, zapisywanej jako `confusion_matrix.npy`.
 
-**Micro-accuracy** (domyślnie):
+**Micro-accuracy** (zastosowana w pracy):
 $$
 \mathrm{Acc}_{\mathrm{micro}}
 =\frac{\sum_{k=1}^{C}\mathrm{TP}_k}
@@ -1452,7 +1459,7 @@ $$
 =\frac{\operatorname{tr}(CM)}{\sum CM}.
 $$
 
-**Macro-accuracy** (opcjonalnie) - średnia z dokładności klas:
+**Macro-accuracy** (opcjonalnia nie zastosowana w pracy) - średnia z dokładności klas:
 $$
 \mathrm{Acc}_{\mathrm{macro}}
 =\frac{1}{C}\sum_{k=1}^{C}
@@ -1476,39 +1483,39 @@ kątowych. Raportowane są: **mean**, **median**, **min**, **max**,
 (np. zawierającymi `non_rotated` albo `plus_non_rotated`) a resztą.
 
 Wyniki i metadane trafiają do **SQLite** (np. `evaluations`,
-`training_runs`) oraz do **CSV** w `results/exports/<DATASET>/<micro|macro>/...`,
-co ułatwia filtrowanie po modelu, transformacji i zbiorze oraz budowę
-rankingów.
+`training_runs`) oraz do **CSV** zapisywanego pod następującą ścieżką 
+`results/exports/<DATASET>/<micro|macro>/...`, co ułatwia filtrowanie po: modelu, 
+transformacji i zbiorze, a także łatwiejszą budowę rankingów i wykresów.
 
 ## Analiza skuteczności względem rotacji
 
 Nazwy scenariuszy (`rotated-a[-b]`, `range_a_b`, `full_0_360`,
-`non_rotated`) determinują przedziały kątów. Wyznaczane są środki
+`non_rotated`) determinują przedziały kątów, na których podstawie wyznaczane są środki
 przedziałów oraz różnica kątowa $\Delta\theta$ na okręgu z wrap-around
 (zakres $[0^\circ, 180^\circ]$). 
-Budowane są:  \
+Następnie obliczane są następujące parametry:  \
 
 - krzywe $Acc(\Delta\theta)$ z koszykowaniem co
   $\theta_{\text{step}}=15^\circ$,  \
-- $AUC_{\theta}$ (pole pod krzywą, trapezowo; normalizacja przez
+- $AUC_{\theta}$ (pole pod krzywą, obliczane metododa trapezową wraz normalizacja przez
   $180^\circ$),  \
 - $Acc_{\min}$ (najgorszy koszyk),  \
 - $SD_{\theta}$ (odchylenie między koszykami).  \
 
-Eksport odbywa się do `delta_curves/acc_vs_delta_<MODEL>.csv` oraz
-`auc_theta_ranking.csv`. Spójny krok kątowy i jednolite zasady wrap-around
+Eksport tych parametrów odbywa się do `delta_curves/acc_vs_delta_<MODEL>.csv` oraz
+`auc_theta_ranking.csv`. Warto podkreślić, że spójny krok kątowy i jednolite zasady wrap-around
 zapewniają porównywalność między modelami.
 
 
 ## Ranking modeli
 
-Dostępne są dwa widoki.
+Rankingi modeli są tworzone na podstawie następujących dwóch sposób:
 
 **Quality-only.** Sortowanie po `avg`; przy remisach kolejno:
 `std` (niższe lepsze), `min`, `median`, `max`, `robust_mean`, `IQR`
-(niższy lepszy). Eksport do `ranking_quality.csv`.
+(niższy lepszy). Ich eksport odbywa się do pliku `ranking_quality.csv`.
 
-**Time-aware.** Uwzględnia koszt czasowy:  \
+**Time-aware.** Uwzględnianie kosztu czasowego:  \
 - `avg/time` oraz `min/time` (druk + `ranking_timeaware_avgperf.csv`),  \
 - wariant zbalansowany `avg` vs `avg_perf`
   (`ranking_timeaware_balanced.csv`),  \
@@ -1617,7 +1624,9 @@ MNIST      & CyResNet56-log (0.9544)     & CyResNet56-log (0.9520)     & CyVGG19
 per-time dla metryki micro; porównanie rodzin i transformacji.}
 \end{table}
 
-
+Źródło danych: dane z results/exports/<DATASET>/micro/*.csv skonsolidowane w family_summary_<DATASET>_micro.csv.
+Interpretacja: kolumny wskazują najlepszą rodzinę/transformację dla średniej jakości (avg), stabilności rotacyjnej 
+(AUC_θ) i efektywności „na jednostkę czasu” (avg_perf).
 
 ## Zakres i procedura
 
@@ -1634,6 +1643,11 @@ AUC_theta liczono trapezowo po ujednoliconym koszykowaniu delta_theta
 i normalizowano do przedziału 0-1. Wariant per-time powstawał przez
 odniesienie średniej dokładności do całkowitego czasu trenowania.
 
+[Rys. 1 - „Heatmapa train-test”]
+Plik: heatmap_cyresnet56_linear.png (albo najlepiej panel 1×2: klasyk vs Cy).
+Podpis: „Mapa jakości train-test. Modele cykliczne utrzymują wysokie wartości w kolumnach odpowiadających testom odległym kątowo od treningu (lepsza generalizacja poza 
+$\theta$=0$^\circ$).”
+
 ## Metryki i interpretacja
 
 Micro-accuracy oddaje skuteczność „po wszystkich próbkach”, więc jest
@@ -1645,6 +1659,12 @@ liczy się niezawodność w całym zakresie. Metryka per-time pomaga wybrać
 wariant pod ograniczenia budżetu czasu i energii. Wykresy heatmap
 train-test uzupełniają metryki numeryczne i pozwalają wzrokowo ocenić,
 czy model „grzeje” także w kolumnach odległych kątowo od treningu.
+
+[Rys. 2 - „Przykładowe krzywe Acc(Δθ) - duży kontrast”]
+Pliki:
+- family_acc_vs_delta_VGG19-log.csv + family_acc_vs_delta_CyVGG19-log.csv (GTSRB_RGB),
+- lub ResNet vs CyResNet (GTSRB_RGB).
+Podpis: „Krzywe Acc(Δθ) na GTSRB_RGB: przebieg cykliczny jest wyższy i bardziej płaski w całym zakresie [0°, 180°].”
 
 ## Obraz ogólny: rodziny i transformacje
 
@@ -1660,6 +1680,10 @@ ResNet. Wspólny wzorzec to lepsza generalizacja poza rozkład treningowy:
 modele cykliczne uczone non_rotated utrzymują wysokie wartości także dla
 kolumn testowych z odległymi kątami.
 
+[Rys. 3 - „Ranking AUCθ(barplot) dla jednego zbioru”]
+Plik: results/exports/<DATASET>/micro/delta_curves/auc_theta_ranking.csv (np. LEGO lub GTSRB).
+Podpis: „Globalna stabilność rotacyjna (AUCθ): najwyżej plasują się konfiguracje cykliczne, zwłaszcza z log-polar.”
+
 ## VGG vs CyVGG
 
 Wersje CyVGG zyskują przede wszystkim na log-polar: rośnie AUC_theta,
@@ -1670,6 +1694,16 @@ bywa liderem stabilności, a per-time utrzymuje rozsądny poziom. Na
 MNIST różnice są mniejsze, ale nadal widoczne w przebiegach względem
 delta_theta.
 
+[Rys. 4 - „Acc(Δθ) - VGG19-log vs CyVGG19-log (GTSRB_RGB)”]
+Pliki: family_acc_vs_delta_VGG19-log.csv, family_acc_vs_delta_CyVGG19-log.csv.
+Podpis: „CyVGG-log wyraźnie przewyższa VGG-log dla całego zakresu Δθ.”
+
+[Rys. 5 - „Macierze pomyłek (ten sam test, np. rotated-90-120)”]
+Pliki:
+- confusion_matrix_VGG19-..._test_on_rotated-90-120.png
+- confusion_matrix_CyVGG19-..._test_on_rotated-90-120.png
+Podpis: „Wersja cykliczna ma bardziej skupioną przekątną i mniej symetrycznych rozlań błędów.”
+
 ## ResNet vs CyResNet
 
 W rodzinie ResNet linear-polar daje świetny kompromis jakości i per-time,
@@ -1677,6 +1711,14 @@ sprawdzający się na LEGO i MNIST. Wariant log-polar podnosi stabilność
 dla dużych delta_theta i często wygrywa AUC_theta na GTSRB oraz na RGB.
 W praktyce CyResNet bywa „bezpiecznym domyślnym wyborem”: średnia jakość
 jest wysoka, krzywe są równe, a koszt obliczeń pozostaje akceptowalny.
+
+[Rys. 6 - „Acc(Δθ) - ResNet56-linear vs CyResNet56-linear (LEGO)”]
+Pliki: family_acc_vs_delta_ResNet56-linear.csv, family_acc_vs_delta_CyResNet56-linear.csv.
+Podpis: „CyResNet56-linear łączy wysoką średnią z dobrą efektywnością per-time.”
+
+[Rys. 7 - „Acc(Δθ) - ResNet56-log vs CyResNet56-log (GTSRB_RGB)”]
+Pliki: family_acc_vs_delta_ResNet56-log.csv, family_acc_vs_delta_CyResNet56-log.csv.
+Podpis: „Wariant log-polar u CyResNet zapewnia najwyższe AUCθ na RGB.”
 
 ## CyVGG vs CyResNet
 
@@ -1693,6 +1735,214 @@ CyVGG19. Co ukazuje klasyczny kompromis jakość-czas: nie da się jednocześnie
 maksymalizować stabilności i skracać treningu. I jak to się mówi - 
 nie można zjeść ciastka i mieć go też (ang. „You can’t eat your
 cake and have it too” [@kaczynski1995wp]).
+
+[Rys. 8 - „Porównanie per-time (avg_perf) - słupki”]
+Plik: results/exports/<DATASET>/micro/ranking_timeaware_avgperf.csv (np. LEGO).
+Podpis: „Efektywność per-time: CyResNet-linear zazwyczaj na czele.”
+
+## Wpływ transformacji (linear-polar vs log-polar)
+
+### Definicje i sposób liczenia
+
+W pracy stosowane są dwa warianty odwzorowania biegunowego. W trybie
+**linear** promień rośnie liniowo, co daje równy krok po $\rho$ oraz
+stabilną siatkę kątową. W trybie **log** promień rośnie logarytmicznie,
+co zagęszcza próbki w pobliżu środka i ułatwia „składanie” dużych obrotów
+wzdłuż osi $\rho$. Metryki liczone są tak samo dla obu wariantów:
+**micro-accuracy** z macierzy pomyłek \texttt{confusion\_matrix.npy},
+$\mathrm{AUC}_\theta$ i **worst-case** z krzywych
+$\mathrm{Acc}(\Delta\theta)$ po zbinowaniu różnic kątów z wrap-around oraz
+**avg\_perf** rozumiane jako $\mathrm{mean}(\mathrm{Acc})/\mathrm{train\_time}$.
+
+**Konwencja różnic ($\Delta$).** Porównania zapisuję jako
+$\Delta=\mathrm{log}-\mathrm{linear}$ w obrębie **tej samej** rodziny i
+**tego samego** zbioru. Przykład:
+`avg 0.926 → 0.954 (Δavg +0.029), AUC 0.921 → 0.952 (ΔAUC +0.031),`
+`worst 0.916 → 0.950 (Δworst +0.034), avg_perf +0.000050)`.
+
+[Rys. 9 - „Δ (log − linear) - słupki dla MNIST (np. CyResNet)”]
+Dane: wyciągnij pary z family_acc_vs_delta_* + family_summary_*.
+Podpis: „Wpływ transformacji: na MNIST log-polar podnosi zarówno jakość, jak i stabilność oraz lekko poprawia per-time.”
+
+[Rys. 10 - „Δ (log − linear) - słupki dla GTSRB (np. CyResNet)”]
+Podpis: „Na GTSRB linear-polar częściej wygrywa w avg i AUC θ ; log-polar bywa korzystny punktowo.”
+
+## GTSRB (micro)
+
+Na GTSRB **linear** wygrywa średnią i stabilność; **log** jest korzystny
+per-time tylko dla CyVGG.
+
+**VGG19**  
+avg 0.479 → 0.473 (Δavg −0.006)  
+AUC 0.445 → 0.438 (ΔAUC −0.007)  
+worst 0.441 → 0.434 (Δworst −0.007)
+
+**ResNet56**  
+avg 0.547 → 0.519 (Δavg −0.028)  
+AUC 0.518 → 0.488 (ΔAUC −0.030)  
+worst 0.514 → 0.484 (Δworst −0.030)  
+avg_perf 0.001241 → 0.001070 (Δ −0.000170)
+
+**CyVGG19**  
+avg 0.854 → 0.818 (Δavg −0.036)  
+AUC 0.847 → 0.809 (ΔAUC −0.038)  
+worst 0.844 → 0.806 (Δworst −0.038)  
+avg_perf 0.001070 → 0.001250 (Δ +0.000180)
+
+**CyResNet56**  
+avg 0.869 → 0.853 (Δavg −0.016)  
+AUC 0.864 → 0.848 (ΔAUC −0.016)  
+worst 0.862 → 0.844 (Δworst −0.017)  
+avg_perf 0.001025 → 0.000849 (Δ −0.000176)
+
+**Wniosek.** Priorytet **avg/AUC/worst** → **linear**. Dla **per-time**
+jedyny wyjątek to **CyVGG-log**.
+
+## GTSRB_RGB (micro)
+
+Różnice **log** vs **linear** w rodzinie są **małe**, z lekką przewagą
+**linear**. Największy skok jakości i tak daje **cykliczność**.
+
+**VGG19**  
+avg 0.504 → 0.498 (Δavg −0.007)  
+AUC 0.472 → 0.464 (ΔAUC −0.007)  
+worst 0.466 → 0.459 (Δworst −0.007)  
+avg_perf 0.001447 → 0.001454 (Δ +0.000008)
+
+**ResNet56**  
+avg 0.591 → 0.576 (Δavg −0.015)  
+AUC 0.566 → 0.549 (ΔAUC −0.017)  
+worst 0.562 → 0.544 (Δworst −0.018)
+
+**CyVGG19**  
+avg 0.902 → 0.887 (Δavg −0.016)  
+AUC 0.901 → 0.883 (ΔAUC −0.017)  
+worst 0.900 → 0.882 (Δworst −0.018)  
+avg_perf 0.001791 → 0.001692 (Δ −0.000099)
+
+**CyResNet56**  
+avg 0.898 → 0.897 (Δavg −0.002)  
+AUC 0.897 → 0.895 (ΔAUC −0.002)  
+worst 0.896 → 0.894 (Δworst −0.002)  
+avg_perf 0.001552 → 0.001537 (Δ −0.000015)
+
+**Wniosek.** Dla RGB **linear** jest minimalnie lepszy jakościowo i
+zwykle szybszy; **log** nie daje zauważalnych zysków w micro.
+
+## LEGO (micro)
+
+W przyapdku datasetu LEGO wyniki pokazują ciekawą zależność. W klasycznych modelach
+użycie **linear** wygrywa jakością. W przypadku CyResNet użycie **log** robi poprawę 
+jakości i stabilności. Per-time zależy od rodziny.
+
+**VGG19**  
+avg 0.850 → 0.840 (Δavg −0.010)  
+AUC 0.845 → 0.834 (ΔAUC −0.011)  
+worst 0.844 → 0.833 (Δworst −0.011)  
+avg_perf 0.000999 → 0.001261 (Δ +0.000262)
+
+**ResNet56**  
+avg 0.815 → 0.797 (Δavg −0.018)  
+AUC 0.808 → 0.789 (ΔAUC −0.018)  
+worst 0.806 → 0.788 (Δworst −0.019)  
+avg_perf 0.001429 → 0.001407 (Δ −0.000022)
+
+**CyVGG19**  
+avg 0.882 → 0.876 (Δavg −0.005)  
+AUC 0.879 → 0.874 (ΔAUC −0.005)  
+worst 0.878 → 0.873 (Δworst −0.005)  
+avg_perf 0.000961 → 0.000909 (Δ −0.000052)
+
+**CyResNet56**  
+avg 0.855 → 0.856 (Δavg +0.001)  
+AUC 0.851 → 0.852 (ΔAUC +0.002)  
+worst 0.848 → 0.851 (Δworst +0.003)
+
+**Wniosek.** Jeśli celem jest **jakość/stabilność** w **CyResNet56**,
+**log** ma lekki plus. W **VGG/ResNet** jakościowo lepszy jest **linear**,
+choć **VGG-log** bywa szybszy.
+
+## MNIST (micro)
+
+W przypadku zbioru MNIST użycie **log-polar** wyraźnie pomaga, zwłaszcza 
+w przypadku **CyResNet56**. Zyski są widoczne we wszystkich metrykach.
+
+**VGG19**  
+avg 0.669 → 0.669 (Δavg ~0)  
+AUC 0.645 → 0.645 (ΔAUC ~0)  
+worst 0.640 → 0.639 (Δworst −0.001)  
+avg_perf 0.000781 → 0.000801 (Δ +0.000020)
+
+**ResNet56**  
+avg 0.705 → 0.709 (Δavg +0.004)  
+AUC 0.684 → 0.687 (ΔAUC +0.004)  
+worst 0.679 → 0.683 (Δworst +0.004)  
+avg_perf 0.000536 → 0.000542 (Δ +0.000007)
+
+**CyVGG19**  
+avg 0.888 → 0.892 (Δavg +0.004)  
+AUC 0.880 → 0.885 (ΔAUC +0.005)  
+worst 0.877 → 0.881 (Δworst +0.004)  
+avg_perf 0.000914 → 0.001005 (Δ +0.000091)
+
+**CyResNet56**  
+avg 0.926 → 0.954 (Δavg +0.029)  
+AUC 0.921 → 0.952 (ΔAUC +0.031)  
+worst 0.916 → 0.950 (Δworst +0.034)  
+avg_perf 0.000517 → 0.000567 (Δ +0.000050)
+
+**Wniosek.** 
+Użycie **logpolar** daje wyraźną poprawę wyników, 
+z najsilniejszym efektem uzyskanym w przypadku modelu **CyResNet**.
+
+### Liderzy per zbiór (uśrednienia rodzin, micro)
+
+* **GTSRB**: avg/AUC/worst **CyResNet56-linear**
+  (0.8688 / 0.8640 / 0.8617), per-time **CyVGG19-log** (0.001321).
+* **GTSRB_RGB**: avg/AUC/worst **CyResNet56-log**
+  (0.9021 / 0.9049 / 0.9028), per-time **VGG19-log** (0.001912).
+* **LEGO**: avg/AUC/worst **CyResNet56-log**
+  (0.8822 / 0.8855 / 0.8823), per-time **ResNet56-linear** (0.001632).
+* **MNIST**: avg/AUC/worst **CyResNet56-linear**
+  (0.9549 / 0.9593 / 0.9556), per-time **ResNet56-linear** (0.001987).
+
+### Różnice **Cy − baza** (po rodzinach, micro)
+
+**GTSRB**  
+VGG linear→Cy: Δavg +0.3745, ΔAUC +0.4022, Δworst +0.4030, Δperf −0.000107  
+VGG log→Cy: Δavg +0.3450, ΔAUC +0.3706, Δworst +0.3718, Δperf +0.000242  
+Res linear→Cy: Δavg +0.3216, ΔAUC +0.3460, Δworst +0.3477, Δperf −0.000200  
+Res log→Cy: Δavg +0.3337, ΔAUC +0.3595, Δworst +0.3610, Δperf −0.000311
+
+**GTSRB_RGB**  
+VGG linear→Cy: Δavg +0.3867, ΔAUC +0.3977, Δworst +0.3954, Δperf −0.000171  
+VGG log→Cy: Δavg +0.3907, ΔAUC +0.4015, Δworst +0.3999, Δperf −0.000194  
+Res linear→Cy: Δavg +0.3959, ΔAUC +0.4103, Δworst +0.4080, Δperf −0.000243  
+Res log→Cy: Δavg +0.3906, ΔAUC +0.4062, Δworst +0.4045, Δperf −0.000347
+
+**LEGO**  
+VGG linear→Cy: Δavg +0.0252, ΔAUC +0.0289, Δworst +0.0280, Δperf −0.000424  
+VGG log→Cy: Δavg +0.0321, ΔAUC +0.0360, Δworst +0.0353, Δperf −0.000052  
+Res linear→Cy: Δavg +0.0180, ΔAUC +0.0218, Δworst +0.0209, Δperf −0.000203  
+Res log→Cy: Δavg +0.0220, ΔAUC +0.0255, Δworst +0.0247, Δperf −0.000118
+
+**MNIST**  
+VGG linear→Cy: Δavg +0.0012, ΔAUC +0.0021, Δworst +0.0017, Δperf +0.000089  
+VGG log→Cy: Δavg +0.0008, ΔAUC +0.0011, Δworst +0.0008, Δperf +0.000139  
+Res linear→Cy: Δavg +0.0037, ΔAUC +0.0040, Δworst +0.0037, Δperf −0.000045  
+Res log→Cy: Δavg +0.0035, ΔAUC +0.0037, Δworst +0.0034, Δperf +0.000027
+
+### Podsumowanie ogólne
+
+W przypadku zbiorów **GTSRB** i **GTSRB_RGB** w obrębie tej samej rodziny 
+**linear** daje zwykle wyższą **średnią** i $\mathrm{AUC}_\theta$; **log** 
+sporadycznie wygrywa „per-time” (np. CyVGG na GTSRB). Dataset **LEGO** pokazuje, że:
+dla **CyResNet** **log** ma delikatny plus jakości i stabilności, natomiast
+w **VGG/ResNet** lepszy jakościowo pozostaje **linear**, choć **VGG-log**
+bywa szybszy. W **MNIST** **log-polar** wyraźnie pomaga (najmocniej w
+**CyResNet**). W praktyce: gdy priorytetem jest **odporność na duże
+obroty** ($\mathrm{AUC}_\theta$, worst), warto wybierać **log**; gdy
+liczy się **przepustowość i koszt** (avg\_perf) - częściej **linear**.
 
 
 ## Wnioski per zbiór
@@ -1713,6 +1963,10 @@ MNIST. Różnice są niewielkie, ale CyResNet-linear bywa najlepszy w
 średniej, a CyVGG-linear w AUC_theta. Przy priorytecie przepustowości
 rozsądnym wyborem jest ResNet-linear.
 
+[Rys. 11 - „Acc(Δθ) - panel 2×2 (po 1 wykresie na zbiór)”]
+Pliki: po jednej parze CSV na zbiór (najbardziej „czytelna” rodzina).
+Podpis: „Przekrój stabilności: przewaga modeli cyklicznych utrzymuje się niezależnie od zbioru.”
+
 ## Analiza błędów i wzorce pomyłek
 
 Macierze pomyłek ujawniają klastry mylonych etykiet. Na danych
@@ -1721,6 +1975,10 @@ oraz klasy o zbliżonych obrysach. Wersje cykliczne „rozsuwają” takie
 wyspy, co sugeruje bardziej jednorodną reprezentację kąta. W zestawach
 kolorowych widoczny jest dodatkowy zysk wynikający z utrzymania informacji
 barwnej wraz z inwariancją względem rotacji.
+
+[Rys. 12 - „Macierz pomyłek (rotated-90-120) - klasyk vs Cy, ten sam test”]
+Pliki: confusion_matrix_<MODEL_A>_..._rotated-90-120.png + confusion_matrix_<MODEL_B>_..._rotated-90-120.png.
+Podpis: „Wersja cykliczna ma mniej rozproszonych pomyłek - ‘jaśniejsza’ przekątna.”
 
 ## Koszt obliczeń a wybór konfiguracji
 
@@ -1731,169 +1989,283 @@ budżet energii, lepiej sprawdzi się linear-polar, często w parze z
 rozważyć parę modeli i wybierać ścieżkę decyzyjną zależnie od profilu
 zapytania.
 
+[Rys. 13 - „Per-time vs Avg (scatter)”] (opcjonalnie, jeśli zrobisz)
+Dane: ranking_quality.csv (avg) + ranking_timeaware_avgperf.csv (avg_perf) - połącz po model.
+Podpis: „Trade-off jakość↔czas: punkty w prawym górnym rogu to konfiguracje najkorzystniejsze.”
+
+## Rekomendacje praktyczne
+
+Przy ograniczonym czasie trenowania i ścisłych limitach SLA dobrym
+punktem startowym jest **CyResNet-linear**. Gdy zadanie wymaga wysokiej
+stabilności w poprzek kątów lub mocno odbiega od rozkładu treningowego,
+warto przejść na **log-polar** i rozważyć **CyVGG-log** lub
+**CyResNet-log**. W kontekstach z dużą zmiennością skali i perspektywy
+wariant log-polar utrzymuje równy poziom jakości i lepszy „worst-case”.
+
 ## Strojenie hiperparametrów (Optuna) a odporność na rotacje
 
 ### Założenie i konfiguracja
 
-Celem było sprawdzenie, czy **strojenie hiperparametrów** (learning
-rate, momentum, weight decay) dla **konfiguracji non_rotated**
-potrafi: (1) podnieść **bazową jakość** przy kątach bliskich \(0^\circ\),
+Celem było sprawdzenie, czy **strojenie hiperparametrów** (learning rate,
+momentum, weight decay) dla **konfiguracji `non_rotated`** potrafi:
+(1) podnieść **bazową jakość** przy kątach bliskich \(0^\circ\),
 oraz (2) **przenieść się** na **stabilność rotacyjną** (AUC\(_\theta\),
 worst-case) **bez** zmiany architektury i bez augmentacji rotacjami.
 
-Walidacja w **Optunie** była ustawiona na **non_rotated**. Funkcja celu
-to klasyczne *val\_acc* w pobliżu \(0^\circ\). Trening przebiegał bez
+Walidacja w **Optunie** była ustawiona na **`non_rotated`**. Funkcja celu
+to klasyczne `val_acc` w pobliżu \(0^\circ\). Trening przebiegał bez
 rotacji, a użyta transformacja (linear-polar / log-polar) była identyczna
 jak w bazie. Taki układ celowo „patrzy” tylko na zachowanie wokół
 \(0^\circ\) i nie nagradza odporności na duże \(\Delta\theta\).
 
 **Wejście do porównań.** Dla każdego zbioru dostępne są pliki:
 
-optuna_vs_baseline_nonrot_{GTSRB|GTSRB_RGB|LEGO|MNIST}_micro.csv
+`optuna_vs_baseline_nonrot_{GTSRB|GTSRB_RGB|LEGO|MNIST}_micro.csv`
 
 Zawierają one pary kolumn `avg_base / avg_opt`, `AUC_base / AUC_opt`,
 `worst_base / worst_opt` oraz różnice `d_avg`, `d_AUC`, `d_worst`.
 
-> Konwencja skrótów: **linear** = linear-polar, **log** = log-polar.
-
+> Zostały zastosowane skróty: **linear** = linear-polar, **log** = log-polar.
 
 ### Metryki i zapis wyników
 
-Porównywane są dwie wersje dla danej (architektura, transformacja):
-**Baseline (non\_rot)** i **Optuna (non\_rot)**. Raportowane miary:
+Porównywane są dwie wersje dla danej pary (architektura, transformacja):
+**Baseline (`non_rotated`)** i **Optuna (`non_rotated`)**. Raportowane
+miary:
 
-- **avg** – średnia dokładność (micro) po scenariuszach testowych,
-- **AUC\(_\theta\)** – pole pod krzywą \(Acc(\Delta\theta)\),
-  znormalizowane do \([0,1]\),
-- **worst** – najniższy punkt \(Acc(\Delta\theta)\) (najtrudniejszy
-  koszyk kątowy),
-- (opcjonalnie) **avg\_perf** – średnia jakość podzielona przez czas
-  trenowania.
+- **avg** - średnia dokładność (micro) po scenariuszach testowych;
+- **AUC\(_\theta\)** - pole pod krzywą \( \mathrm{Acc}(\Delta\theta) \),
+  znormalizowane do \([0,1]\);
+- **worst** - minimum krzywej \( \mathrm{Acc}(\Delta\theta) \)
+  (najtrudniejszy koszyk kątowy);
+- (opcjonalnie) **avg\_perf** - \( \mathrm{mean}(\mathrm{Acc}) /
+  T_{\mathrm{train}} \), gdzie \( T_{\mathrm{train}} \) to czas trenowania.
 
-W tekście zastosowana jest notacja „przejścia”:
+**Notacja w tekście (przykład):**
 
-avg 0.926 → 0.954 (Δavg +0.029)
-AUC 0.921 → 0.952 (ΔAUC +0.031)
-worst 0.916 → 0.950 (Δworst +0.034)
+avg \(0.926 \rightarrow 0.954\) (**\(\Delta\)avg +0.029**),
+AUC\(_\theta\) \(0.921 \rightarrow 0.952\) (**\(\Delta\)AUC +0.031**),
+worst \(0.916 \rightarrow 0.950\) (**\(\Delta\)worst +0.034**).
 
-
-### Wyniki: Optuna (val = non_rotated) kontra Baseline
+### Wyniki: Optuna (val = `non_rotated`) kontra Baseline
 
 #### Obraz globalny
 
-Wynik jest spójny między zbiorami, gdyż zmiany **avg** są na ogół niewielkie,
-zwykle (|\Delta|\le 0.01). Wskaźniki **AUC(_\theta)** i **worst**
-przeważnie nie rosną, ponieważ przy walidacji ustawionej na (0^\circ)
-brakuje presji selekcyjnej na stabilność dla dużych (\Delta\theta).
-Zdarzają się lokalne plusy (pojedyncze pary model–transformacja), jednak
+Wynik jest spójny między zbiorami: zmiany **avg** są na ogół niewielkie,
+zwykle \(|\Delta| \le 0.01\). Wskaźniki **AUC\(_\theta\)** i **worst**
+przeważnie nie rosną, ponieważ przy walidacji ustawionej na \(0^\circ\)
+brakuje presji selekcyjnej na stabilność dla dużych \(\Delta\theta\).
+Zdarzają się lokalne plusy (pojedyncze pary model-transformacja), jednak
 w ujęciu przekrojowym dominują wyniki neutralne lub lekko ujemne zarówno
-w **AUC(_\theta)**, jak i w **worst**.
+w **AUC\(_\theta\)**, jak i w **worst**.
 
-#### Przykłady do wklejenia (po 1–2 na zbiór)
+#### Przykłady(po 1-2 na zbiór)
 
-> **GTSRB — ResNet-linear**  
+> **GTSRB - ResNet-linear**  
 > `avg a_b → a_o (Δavg …)`  
 > `AUC u_b → u_o (ΔAUC …)`  
 > `worst w_b → w_o (Δworst …)`
 
-> **GTSRB_RGB — CyResNet-log**  
+> **GTSRB_RGB - CyResNet-log**  
 > analogiczna linia z CSV
 
-> **LEGO — CyVGG-log**  
+> **LEGO - CyVGG-log**  
 > analogiczna linia z CSV
 
-> **MNIST — ResNet-linear**  
+> **MNIST - ResNet-linear**  
 > analogiczna linia z CSV
 
-*(W każdym przypadku krótkie zdanie komentarza: „przy walidacji
-non\_rot brak wzrostu AUC/worst; zmiana avg kosmetyczna”.)*
+# Auto tables from CSV (Pandoc + XeLaTeX)
 
----
+Below are tables read directly from CSV files under `media/csvs/`.
+
+
+% ... Twój tekst ...
+
+\csvautobooktabular{\detokenize{media/csvs/optuna_vs_baseline_nonrot_GTSRB_micro.csv}}
+
+
+*(Komentarz: „walidacja `non_rotated` nie podnosi
+AUC\(_\theta\)/worst; zmiana avg kosmetyczna”).*
 
 ### Interpretacja: dlaczego tak wyszło
 
-1. **Niedopasowany cel walidacji.** Walidacja non\_rotated faworyzuje
-   konfiguracje pod \(\Delta\theta\!\approx\!0^\circ\). AUC\(_\theta\) i
-   worst zależą głównie od zachowania przy **dużych** \(\Delta\theta\).
-   Optuna tego **nie widzi**.
+1. **Niedopasowany cel walidacji.** Walidacja `non_rotated` faworyzuje
+   konfiguracje pod \(\Delta\theta \approx 0^\circ\). AUC\(_\theta\) i
+   worst zależą od zachowania przy **dużych** \(\Delta\theta\), którego
+   Optuna **nie mierzy**.
 2. **Architektura dominuje nad LR/WD.** Odporność na obrót wynika
    przede wszystkim z **własności modelu** (CyCNN, oś orientacji,
-   transformacje polarne). Hiperparametry regulują tempo i gładkość
-   uczenia, ale nie wprowadzają ekwiwariancji.
-3. **Budżet i harmonogram.** Krótki trening / konserwatywny scheduler
+   transformacje polarne). Hiperparametry regulują tempo/gładkość
+   uczenia, ale nie wprowadzają **ekwiwariancji**.
+3. **Budżet i harmonogram.** Krótki trening lub konserwatywny scheduler
    zmniejsza „rozdzielczość” selekcji; łatwo przestroić się pod szybki
    wzrost w okolicy \(0^\circ\).
-4. **Regularizacja nieukierunkowana na AUC.** Jeśli przestrzeń
-   poszukiwań obejmuje wyłącznie LR, WD i momentum, to trudno poprawić
-   **worst/AUC\(_\theta\)**. Pomogłyby techniki wprost wzmacniające
-   uogólnianie (np. label smoothing, dropout schedule, mixup).
-5. **Bias prunera.** Wczesne zatrzymywanie oparte o *val\_acc* przy
-   \(0^\circ\) premiuje konfiguracje „szybkiego startu” kosztem globalnej
-   stabilności.
-
+4. **Regularizacja nie pod AUC.** Jeśli przestrzeń obejmuje tylko LR,
+   WD i momentum, trudno poprawić **worst/AUC\(_\theta\)**. Pomogłyby
+   zabiegi wzmacniające uogólnianie (label smoothing, dropout schedule,
+   mixup/cutmix).
+5. **Bias prunera.** Wczesne zatrzymywanie oparte o `val_acc` przy
+   \(0^\circ\) premiuje konfiguracje „szybkiego startu” kosztem
+   globalnej stabilności.
 
 ### Co to znaczy dla wniosków w pracy
 
-- Brak systematycznego zysku w AUC\(_\theta\) / worst przy
-  **val = non\_rotated** **potwierdza** tezę, że o odporności decyduje
-  **architektura + transformacja**, a nie samo dostrajanie LR/WD pod
-  kąt \(0^\circ\).
-- To **nie** jest dowód na „nieskuteczność Optuny”, tylko sygnał, że
-  **cel walidacji** był **niespójny** z badaną własnością (stabilnością
-  rotacyjną).
+Brak systematycznego zysku w **AUC\(_\theta\)** / **worst** przy
+**val = `non_rotated`** potwierdza, że o odporności decyduje
+**architektura + transformacja**, a nie samo dostrajanie LR/WD pod
+\(0^\circ\). To **nie** dowód na „nieskuteczność Optuny”, tylko sygnał,
+że **cel walidacji** był **niespójny** z badaną własnością
+(stabilnością rotacyjną).
 
+## Optuna z walidacją rotacyjną (wariant A): założenia i wyniki
 
-[//]: # (### Jak to poprawić &#40;prosty plan re-testu&#41;)
+### Motywacja dodatkowego testu
 
-[//]: # ()
-[//]: # (1. Pozostawić **training = non\_rotated** &#40;fair porównanie&#41;.)
+Chciałem sprawdzić, czy da się „wyciągnąć” większą odporność na obrót
+samą zmianą **tego, jak wybieramy najlepszy checkpoint**. Trening
+pozostaje *non_rotated* (bez obrotów w danych), ale walidacja i kryterium
+wyboru modelu patrzą już na **zachowanie względem kątów**. Innymi słowy:
+czy mądrzejsza walidacja wystarczy, żeby poprawić stabilność, **bez**
+modyfikacji architektury i bez dokładania rotacyjnego augmentu.
 
-[//]: # (2. Zbudować **val-suite**: np. \&#40;0^\circ,45^\circ,90^\circ,135^\circ\&#41;,)
+### Jak to ustawiłem
 
-[//]: # (   albo koszykowanie \&#40;[0^\circ,180^\circ]\&#41;.)
+Rozdzieliłem ścieżki danych: `train_dir` to czyste *non_rotated*, a
+`val_dir` zawiera **miks kątów** (np. `non_rotated`, `rotated-XX`,
+`range_*`, `full_0_360`). Na tej walidacji liczę krzywą
+(\mathrm{Acc}(\Delta\theta)) (koszyki co (15^\circ), wrap-around) i
+z niej biorę **(\mathrm{AUC}_\theta)**, **worst** oraz **avg**. W Optunie
+ustawiam **cel walidacji na (\mathrm{AUC}_\theta)**, żeby selekcjonować
+checkpointy, które lepiej trzymają poziom w całym zakresie kątów. Sam
+**trening** pozostaje **taki jak był**.
 
-[//]: # (3. Zmienić cel Optuny na **AUC\&#40;_\theta\&#41;** lub mieszaninę)
+GTSRB: Optuna-A vs baseline
+(oba: trening non_rotated; ta sama architektura i transformacja)
+Wynik ogólny. W tej próbie rotation-aware walidacja nie podniosła
+jakości. Dla każdej z ośmiu konfiguracji spadły avg, AUCθ i worst.
 
-[//]: # (   \&#40;0.7\cdot\text{avg} + 0.3\cdot\text{AUC}_\theta\&#41;.)
+**Szybki bilans (\Delta):**
 
-[//]: # (4. Poszerzyć przestrzeń o **regularizacje** &#40;label smoothing, dropout,)
+* **CyResNet56 · linear**
+  avg (0.9371 \to 0.8252) (**(\Delta)avg (-0.1118)**),
+  AUC(_\theta) (0.9345 \to 0.8163) (**(\Delta)AUC (-0.1183)**),
+  worst (0.9273 \to 0.7543) (**(\Delta)worst (-0.1731)**)
 
-[//]: # (   ewentualnie mixup/cutmix&#41;.)
+* **CyResNet56 · log**
+  avg (0.9268 \to 0.6842) (**(\Delta)avg (-0.2425)**),
+  AUC(_\theta) (0.9243 \to 0.6527) (**(\Delta)AUC (-0.2715)**),
+  worst (0.9113 \to 0.5044) (**(\Delta)worst (-0.4070)**)
 
-[//]: # (5. Uruchomić **15–25 prób, 5–10 epok**; wystarczy, by zobaczyć kierunek.)
+* **CyVGG19 · linear**
+  avg (0.9229 \to 0.6749) (**(\Delta)avg (-0.2480)**),
+  AUC(_\theta) (0.9209 \to 0.6757) (**(\Delta)AUC (-0.2452)**),
+  worst (0.9039 \to 0.5402) (**(\Delta)worst (-0.3637)**)
 
+* **CyVGG19 · log**
+  avg (0.9156 \to 0.6533) (**(\Delta)avg (-0.2623)**),
+  AUC(_\theta) (0.9145 \to 0.6530) (**(\Delta)AUC (-0.2615)**),
+  worst (0.8977 \to 0.5007) (**(\Delta)worst (-0.3970)**)
 
+* **ResNet56 · linear**
+  avg (0.8901 \to 0.4279) (**(\Delta)avg (-0.4622)**),
+  AUC(_\theta) (0.8868 \to 0.4266) (**(\Delta)AUC (-0.4602)**),
+  worst (0.8696 \to 0.2416) (**(\Delta)worst (-0.6280)**)
+
+* **ResNet56 · log**
+  avg (0.8777 \to 0.4200) (**(\Delta)avg (-0.4577)**),
+  AUC(_\theta) (0.8748 \to 0.4101) (**(\Delta)AUC (-0.4646)**),
+  worst (0.8548 \to 0.2645) (**(\Delta)worst (-0.5904)**)
+
+* **VGG19 · linear**
+  avg (0.8686 \to 0.2932) (**(\Delta)avg (-0.5755)**),
+  AUC(_\theta) (0.8669 \to 0.2988) (**(\Delta)AUC (-0.5681)**),
+  worst (0.8458 \to 0.1339) (**(\Delta)worst (-0.7119)**)
+
+* **VGG19 · log**
+  avg (0.8623 \to 0.2892) (**(\Delta)avg (-0.5731)**),
+  AUC(_\theta) (0.8614 \to 0.2956) (**(\Delta)AUC (-0.5659)**),
+  worst (0.8403 \to 0.1303) (**(\Delta)worst (-0.7100)**)
+
+### Co wyszło w praktyce (GTSRB)
+
+W tej próbie – krótko i uczciwie – **nie zadziałało**. Dla wszystkich
+ośmiu konfiguracji (VGG/ResNet i ich warianty cykliczne, linear/log)
+**spadły** trzy kluczowe miary: średnia dokładność, (\mathrm{AUC}_\theta)
+i „worst-case”. Przykładowo, **CyResNet56·linear** z
+(\mathrm{avg}\approx0{.}94) zjechał do ok. (0{.}83), a „worst”
+spadł wyraźnie poniżej poprzedniego minimum. Analogiczny obraz pojawił
+się dla pozostałych par, łącznie z modelami bazowymi.
+
+### Dlaczego tak się stało
+
+Najprostsze wyjaśnienie to **parytet budżetu** i **materiał do selekcji**.
+Baseline’y, z którymi się porównuję, to agregaty z dłuższych i bogatszych
+treningów (wiele scenariuszy, więcej epok). Wariant z Optuną miał
+**krótsze przebiegi**, więc mimo „sprytnego” celu walidacji selekcjonował
+spośród **słabiej wygrzanych** checkpointów. Druga sprawa: **zmieniłem
+tylko walidację, a nie ekspozycję** na kąty w samym uczeniu. To pomaga
+wybrać lepszy punkt *spośród tego, co powstało*, ale nie stworzy
+od zera cech, które normalnie budujemy architekturą (CyCNN, oś
+orientacji) albo augmentacją rotacją. Dochodzi jeszcze ryzyko
+**niedopasowania rozkładu walidacji do testów**: jeśli miks kątów na
+walidacji różni się od tego w docelowych scenariuszach, to
+(\mathrm{AUC}*\theta) z walidacji słabiej koreluje z
+(\mathrm{AUC}*\theta) w testach. Na koniec: **worst-case** jest
+najbardziej wrażliwy na „niedogrzanie”. Krótkie treningi po prostu nie
+dowożą dojrzałych reprezentacji, które trzymają poziom także dla
+najtrudniejszych (\Delta\theta).
+
+### Co z tego wynika
+
+Zmiana kryterium walidacji **porządkuje selekcję checkpointu**, ale **nie
+zastąpi** dłuższego, bogatszego uczenia i **nie skompensuje** różnic
+architektonicznych. **Odporność na rotację** w tej pracy wynika przede
+wszystkim z **CyCNN** (oś orientacji, cykliczny padding) oraz z
+**przekształceń polarnych**. Samo strojenie **LR/momentum/WD pod
+(\mathrm{AUC}_\theta)**, przy krótkim budżecie i bez rotacji w treningu,
+**nie tworzy ekwiwariancji** – co najwyżej wybiera trochę lepszy punkt
+na istniejącej, dość płaskiej krzywej.
+
+### Gdybym to rozwijał dalej
+
+Żeby taki wariant miał sens, trzeba **wyrównać budżet** z baseline’ami
+(epoki, batch, scheduler), dopasować **walidację kątową** do tego, co
+sprawdzamy w testach (te same koszyki (\Delta\theta)), a cel Optuny
+ustawić na **(\mathrm{AUC}_\theta)** albo **mieszankę**
+(0{.}7\cdot\text{avg}+0{.}3\cdot\mathrm{AUC}_\theta) z **worst** jako
+tie-breaker. Delikatne **regularizacje** (np. label smoothing, dropout)
+i łagodniejsza dynamika uczenia (dłuższy warm-up, cosine LR, ewentualnie
+zamrożone BN) często poprawiają dół krzywej, czyli to, co najbardziej
+nas boli w kontekście rotacji.
+
+**Jedno zdanie na koniec.**
+Rotation-aware validation to dobry pomysł na **lepszy wybór checkpointu**,
+ale **nie magiczna różdżka** – bez czasu i bez wsparcia architektury nie
+podniesie stabilności tak, jak robią to **CyCNN** i **log/linear-polar**.
 
 ### Wniosek syntetyczny
 
-Przy **walidacji non\_rotated** strojenie Optuną **nie** przekłada się na
-lepszą **stabilność rotacyjną**. Hiperparametry potrafią skorygować bazę
-w okolicach \(0^\circ\), lecz **AUC\(_\theta\)** i **worst** pozostają
-praktycznie bez zmian. Jeśli celem jest odporność na obrót,
+Przy **walidacji `non_rotated`** strojenie Optuną **nie** przekłada się
+na lepszą **stabilność rotacyjną**. Hiperparametry potrafią skorygować
+bazę w okolicach \(0^\circ\), lecz **AUC\(_\theta\)** i **worst**
+pozostają praktycznie bez zmian. Jeśli celem jest odporność na obrót,
 **architektura cykliczna** i **transformacje polarne** są kluczowe, a
 proces strojenia musi tę własność **jawnie** mierzyć już na etapie
 walidacji.
 
-## Rekomendacje praktyczne
-
-Przy ograniczonym czasie trenowania i ścisłych limitach SLA dobrym
-punktem startowym jest CyResNet-linear. Gdy zadanie wymaga wysokiej
-stabilności w poprzek kątów lub mocno odbiega od rozkładu treningowego,
-warto przejść na log-polar i rozważyć CyVGG-log lub CyResNet-log. W
-kontekstach, gdzie napotykane są różne skale i perspektywy, modele
-z log-polar utrzymują równy poziom jakości i lepiej zachowują się w
-najtrudniejszych punktach krzywej.
-
 ## Podsumowanie
 
-Architektury cykliczne są prostym, a skutecznym podniesieniem klasycznych
-CNN pod kątem rotacji. W średniej jakości zyskują na wszystkich zbiorach,
-w stabilności wyraźnie wygrywają na danych o bogatszej strukturze, a
-dzięki dwóm wariantom odwzorowania pozwalają zbalansować odporność i
-efektywność. Wybór między linear- a log-polar jest wyborem akcentów,
-a różnice między CyVGG i CyResNet sprowadzają się do kompromisu między
-stabilnością a kosztem. W praktyce łatwo dopasować konfigurację do
-priorytetu wdrożeniowego bez przebudowy głębszej części modeli.
+Architektury cykliczne są prostym, a skutecznym podniesieniem
+klasycznych CNN pod kątem rotacji. W średniej jakości zyskują na
+wszystkich zbiorach, w stabilności wyraźnie wygrywają na danych
+bogatszych wizualnie, a dzięki dwóm wariantom odwzorowania pozwalają
+zbalansować **odporność** i **efektywność**. Wybór między linear- a
+log-polar to wybór akcentów, a różnice między **CyVGG** i **CyResNet**
+sprowadzają się do kompromisu między **stabilnością** a **kosztem**.
+W praktyce łatwo dopasować konfigurację do priorytetu wdrożeniowego bez
+przebudowy głębszej części modeli.
+
 
 \newpage
 
@@ -1914,3 +2286,5 @@ priorytetu wdrożeniowego bez przebudowy głębszej części modeli.
 ## Dodatkowe wykresy, tablice wyników
 
 \newpage
+
+
