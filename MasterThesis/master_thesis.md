@@ -2120,58 +2120,60 @@ modyfikacji architektury i bez dokładania rotacyjnego augmentu.
 Rozdzieliłem ścieżki danych: `train_dir` to czyste *non_rotated*, a
 `val_dir` zawiera **miks kątów** (np. `non_rotated`, `rotated-XX`,
 `range_*`, `full_0_360`). Na tej walidacji liczę krzywą
-($\mathrm{Acc}(\Delta\theta)$) (koszyki co (15^\circ), wrap-around) i
-z niej biorę **($\mathrm{AUC}_\theta$)**, **worst** oraz **avg**. W Optunie
-ustawiam **cel walidacji na ($\mathrm{AUC}_\theta$)**, żeby selekcjonować
+$\mathrm{Acc}(\Delta\theta)$ (koszyki co $15^\circ$, wrap-around) i
+z niej biorę **$\mathrm{AUC}_\theta$**, **worst** oraz **avg**. W Optunie
+ustawiam **cel walidacji na $\mathrm{AUC}_\theta$**, żeby selekcjonować
 checkpointy, które lepiej trzymają poziom w całym zakresie kątów. Sam
 **trening** pozostaje **taki jak był**.
+
 
 GTSRB: Optuna-A vs baseline
 (oba: trening non_rotated; ta sama architektura i transformacja)
 Wynik ogólny. W tej próbie rotation-aware walidacja nie podniosła
 jakości. Dla każdej z ośmiu konfiguracji spadły avg, AUCθ i worst.
 
-**Szybki bilans (\Delta):**
+**Szybki bilans ($\Delta$):**
 
-* **CyResNet56 · linear**
-  avg (0.9371 \to 0.8252) (**(\Delta)avg (-0.1118)**),
-  AUC(_\theta) (0.9345 \to 0.8163) (**(\Delta)AUC (-0.1183)**),
-  worst (0.9273 \to 0.7543) (**(\Delta)worst (-0.1731)**)
+* **CyResNet56 · linear**  
+  avg $0.9371 \to 0.8252$ (**$\Delta$avg $-0.1118$**),  
+  $\mathrm{AUC}_\theta$ $0.9345 \to 0.8163$ (**$\Delta$AUC $-0.1183$**),  
+  worst $0.9273 \to 0.7543$ (**$\Delta$worst $-0.1731$**)
 
-* **CyResNet56 · log**
-  avg (0.9268 \to 0.6842) (**(\Delta)avg (-0.2425)**),
-  AUC(_\theta) (0.9243 \to 0.6527) (**(\Delta)AUC (-0.2715)**),
-  worst (0.9113 \to 0.5044) (**(\Delta)worst (-0.4070)**)
+* **CyResNet56 · log**  
+  avg $0.9268 \to 0.6842$ (**$\Delta$avg $-0.2425$**),  
+  $\mathrm{AUC}_\theta$ $0.9243 \to 0.6527$ (**$\Delta$AUC $-0.2715$**),  
+  worst $0.9113 \to 0.5044$ (**$\Delta$worst $-0.4070$**)
 
-* **CyVGG19 · linear**
-  avg (0.9229 \to 0.6749) (**(\Delta)avg (-0.2480)**),
-  AUC(_\theta) (0.9209 \to 0.6757) (**(\Delta)AUC (-0.2452)**),
-  worst (0.9039 \to 0.5402) (**(\Delta)worst (-0.3637)**)
+* **CyVGG19 · linear**  
+  avg $0.9229 \to 0.6749$ (**$\Delta$avg $-0.2480$**),  
+  $\mathrm{AUC}_\theta$ $0.9209 \to 0.6757$ (**$\Delta$AUC $-0.2452$**),  
+  worst $0.9039 \to 0.5402$ (**$\Delta$worst $-0.3637$**)
 
-* **CyVGG19 · log**
-  avg (0.9156 \to 0.6533) (**(\Delta)avg (-0.2623)**),
-  AUC(_\theta) (0.9145 \to 0.6530) (**(\Delta)AUC (-0.2615)**),
-  worst (0.8977 \to 0.5007) (**(\Delta)worst (-0.3970)**)
+* **CyVGG19 · log**  
+  avg $0.9156 \to 0.6533$ (**$\Delta$avg $-0.2623$**),  
+  $\mathrm{AUC}_\theta$ $0.9145 \to 0.6530$ (**$\Delta$AUC $-0.2615$**),  
+  worst $0.8977 \to 0.5007$ (**$\Delta$worst $-0.3970$**)
 
-* **ResNet56 · linear**
-  avg (0.8901 \to 0.4279) (**(\Delta)avg (-0.4622)**),
-  AUC(_\theta) (0.8868 \to 0.4266) (**(\Delta)AUC (-0.4602)**),
-  worst (0.8696 \to 0.2416) (**(\Delta)worst (-0.6280)**)
+* **ResNet56 · linear**  
+  avg $0.8901 \to 0.4279$ (**$\Delta$avg $-0.4622$**),  
+  $\mathrm{AUC}_\theta$ $0.8868 \to 0.4266$ (**$\Delta$AUC $-0.4602$**),  
+  worst $0.8696 \to 0.2416$ (**$\Delta$worst $-0.6280$**)
 
-* **ResNet56 · log**
-  avg (0.8777 \to 0.4200) (**(\Delta)avg (-0.4577)**),
-  AUC(_\theta) (0.8748 \to 0.4101) (**(\Delta)AUC (-0.4646)**),
-  worst (0.8548 \to 0.2645) (**(\Delta)worst (-0.5904)**)
+* **ResNet56 · log**  
+  avg $0.8777 \to 0.4200$ (**$\Delta$avg $-0.4577$**),  
+  $\mathrm{AUC}_\theta$ $0.8748 \to 0.4101$ (**$\Delta$AUC $-0.4646$**),  
+  worst $0.8548 \to 0.2645$ (**$\Delta$worst $-0.5904$**)
 
-* **VGG19 · linear**
-  avg (0.8686 \to 0.2932) (**(\Delta)avg (-0.5755)**),
-  AUC(_\theta) (0.8669 \to 0.2988) (**(\Delta)AUC (-0.5681)**),
-  worst (0.8458 \to 0.1339) (**(\Delta)worst (-0.7119)**)
+* **VGG19 · linear**  
+  avg $0.8686 \to 0.2932$ (**$\Delta$avg $-0.5755$**),  
+  $\mathrm{AUC}_\theta$ $0.8669 \to 0.2988$ (**$\Delta$AUC $-0.5681$**),  
+  worst $0.8458 \to 0.1339$ (**$\Delta$worst $-0.7119$**)
 
-* **VGG19 · log**
-  avg (0.8623 \to 0.2892) (**(\Delta)avg (-0.5731)**),
-  AUC(_\theta) (0.8614 \to 0.2956) (**(\Delta)AUC (-0.5659)**),
-  worst (0.8403 \to 0.1303) (**(\Delta)worst (-0.7100)**)
+* **VGG19 · log**  
+  avg $0.8623 \to 0.2892$ (**$\Delta$avg $-0.5731$**),  
+  $\mathrm{AUC}_\theta$ $0.8614 \to 0.2956$ (**$\Delta$AUC $-0.5659$**),  
+  worst $0.8403 \to 0.1303$ (**$\Delta$worst $-0.7100$**)
+
 
 ### Co wyszło w praktyce (GTSRB)
 
@@ -2200,7 +2202,7 @@ walidacji różni się od tego w docelowych scenariuszach, to
 ($\mathrm{AUC}*\theta$) w testach. Na koniec: **worst-case** jest
 najbardziej wrażliwy na „niedogrzanie”. Krótkie treningi po prostu nie
 dowożą dojrzałych reprezentacji, które trzymają poziom także dla
-najtrudniejszych (\Delta\theta).
+najtrudniejszych ($\Delta\theta$).
 
 ### Co z tego wynika
 
