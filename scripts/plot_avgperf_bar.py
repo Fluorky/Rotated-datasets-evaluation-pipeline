@@ -3,8 +3,34 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import annotations
-import csv, os, sys, argparse
+import csv, os, sys, argparse, re
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
+
+# ---- Family detection & colors ---------------------------------------------
+
+def detect_family(name: str) -> str:
+    n = name.lower()
+    # order matters: check "cy..." before non-cy to avoid double matches
+    if re.search(r"\bcy[-_ ]?vgg", n) or "cyvgg19" in n:
+        return "CyVGG"
+    if re.search(r"\bvgg", n) or "vgg19" in n:
+        return "VGG"
+    if re.search(r"\bcy[-_ ]?resnet", n) or "cyresnet56" in n:
+        return "CyResNet"
+    if re.search(r"\bresnet", n) or "resnet56" in n:
+        return "ResNet"
+    return "Other"
+
+FAMILY_COLORS = {
+    "CyVGG":    "#1f77b4",  # blue
+    "VGG":      "#ff7f0e",  # orange
+    "ResNet":   "#2ca02c",  # green
+    "CyResNet": "#d62728",  # red
+    "Other":    "#7f7f7f",  # gray
+}
+
+# ---- IO ---------------------------------------------------------------------
 
 def load_rows(csv_path: str):
     rows = []
@@ -23,6 +49,8 @@ def load_rows(csv_path: str):
     rows.sort(key=lambda r: r["avg_perf"], reverse=True)
     return rows
 
+# ---- Plotting ---------------------------------------------------------------
+
 def plot_avgperf(
     csv_path: str,
     out_png: str,
@@ -35,10 +63,11 @@ def plot_avgperf(
     label_font: float = 9.0,
     title_font: float = 10.0,
     legend_font: float = 8.0,
+    dpi: int = 300,
     figsize_w: float | None = None,
     figsize_h: float | None = None,
-    dpi: int = 300,
     strip_prefix: str | None = None,
+    family_colors: dict[str, str] = FAMILY_COLORS,
 ):
     rows = load_rows(csv_path)
     if not rows:
@@ -49,14 +78,15 @@ def plot_avgperf(
               for r in rows]
     avgp = [r["avg_perf"] for r in rows]
     robp = [r["robust_perf"] for r in rows]
+    fams = [detect_family(r["model"]) for r in rows]
+    colors = [family_colors.get(f, family_colors["Other"]) for f in fams]
 
-    # ---- figure size (no wrapping): widen automatically for long labels ----
+    # auto figure size (no label wrapping)
     max_label_len = max(len(s) for s in labels)
     if figsize_w is None or figsize_h is None:
         if horizontal:
             n = len(rows)
-            auto_h = max(4.0, 0.28 * n)        # 0.28" per item
-            # add width if labels are long (rough heuristic: 0.12" per char)
+            auto_h = max(4.0, 0.28 * n)            # 0.28" per item
             auto_w = max(10.0, 8.0 + 0.12 * max_label_len)
             figsize = (figsize_w or auto_w, figsize_h or auto_h)
         else:
@@ -72,28 +102,27 @@ def plot_avgperf(
 
     if horizontal:
         y = list(range(len(rows)))
-        ax.barh(y, avgp, label="avg_perf")
+        ax.barh(y, avgp, color=colors, edgecolor="none", label="avg_perf")
         if any(v is not None for v in robp):
             ys = [i for i, v in enumerate(robp) if v is not None]
             xs = [v for v in robp if v is not None]
-            ax.plot(xs, ys, marker="o", linestyle="none", label="robust_perf")
-
+            # put markers in same family color for each point
+            point_colors = [colors[i] for i in ys]
+            ax.scatter(xs, ys, marker="o", s=18, label="robust_perf", c=point_colors)
         ax.set_yticks(y, labels=labels)
         ax.tick_params(axis="y", labelsize=tick_font)
         ax.tick_params(axis="x", labelsize=tick_font)
         ax.invert_yaxis()
         ax.set_xlabel("performance per time (Acc/time)", fontsize=label_font)
-
-        # leave extra room for long y-labels on the left
         plt.subplots_adjust(left=0.28, right=0.98, top=0.90, bottom=0.06)
     else:
         x = list(range(len(rows)))
-        ax.bar(x, avgp, label="avg_perf")
+        ax.bar(x, avgp, color=colors, edgecolor="none", label="avg_perf")
         if any(v is not None for v in robp):
             xs = [i for i, v in enumerate(robp) if v is not None]
             ys = [v for v in robp if v is not None]
-            ax.plot(xs, ys, marker="o", linestyle="none", label="robust_perf")
-
+            point_colors = [colors[i] for i in xs]
+            ax.scatter(xs, ys, marker="o", s=18, label="robust_perf", c=point_colors)
         ax.set_xticks(x, labels=labels, rotation=30, ha="right")
         ax.tick_params(axis="x", labelsize=tick_font)
         ax.tick_params(axis="y", labelsize=tick_font)
@@ -104,15 +133,26 @@ def plot_avgperf(
         ax.set_title(title, fontsize=title_font)
 
     ax.grid(True, axis="both", linestyle="--", alpha=0.35)
-    ax.legend(frameon=True, prop={"size": legend_font})
+
+    # family legend (color patches) + metrics legend
+    fam_order = ["VGG", "CyVGG", "ResNet", "CyResNet", "Other"]
+    fam_patches = [Patch(facecolor=family_colors[f], label=f) for f in fam_order if any(ff == f for ff in fams)]
+    # put two legends: family colors + metric markers (avg/robust)
+    leg1 = ax.legend(handles=fam_patches, title="Family", loc="upper left", bbox_to_anchor=(1.01, 1.00),
+                     frameon=True, prop={"size": legend_font})
+    ax.add_artist(leg1)
+    ax.legend(title="Metrics", loc="upper left", bbox_to_anchor=(1.01, 0.74),
+              frameon=True, prop={"size": legend_font})
 
     os.makedirs(os.path.dirname(out_png) or ".", exist_ok=True)
-    fig.savefig(out_png, dpi=dpi)
+    fig.savefig(out_png, dpi=dpi, bbox_inches="tight")
     plt.close(fig)
     print("Saved:", out_png)
 
+# ---- CLI --------------------------------------------------------------------
+
 def parse_args(argv=None):
-    ap = argparse.ArgumentParser(description="Plot time-aware performance (avg_perf, robust_perf) without wrapping labels.")
+    ap = argparse.ArgumentParser(description="Plot time-aware performance (avg_perf, robust_perf) colored by model family.")
     ap.add_argument("csv", help="ranking_timeaware_avgperf.csv")
     ap.add_argument("out", help="output PNG")
     ap.add_argument("--top-k", type=int, default=30)
@@ -143,7 +183,7 @@ def main(argv=None):
         top_k=args.top_k, horizontal=horizontal, title=args.title,
         base_font=args.base_font, tick_font=args.tick_font, label_font=args.label_font,
         title_font=args.title_font, legend_font=args.legend_font,
-        figsize_w=args.fig_w, figsize_h=args.fig_h, dpi=args.dpi,
+        dpi=args.dpi, figsize_w=args.fig_w, figsize_h=args.fig_h,
         strip_prefix=args.strip_prefix,
     )
 
