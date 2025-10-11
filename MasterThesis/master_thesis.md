@@ -1356,12 +1356,12 @@ X, testuj na Y”.
 
 Aby wyeliminować wpływ przypadkowego doboru hiperparametrów, kolejnym kroku
 kroku wykonano **automatyczną optymalizację** (Optuna, TPE + pruning) na
-przypadkach *non_rotated*. Pokazuje ona, że początkowo ustawione parametry właściwie
-służą jako w kolejnych eksperymentach. Protokół trenowania jest stały w
-całej serii (liczba epok, rozmiar batcha, scheduler, optymalizator
-`SGD` z `momentum` i `weight_decay`), a różnice dotyczą wyłącznie
-architektury splotu (`Conv2d` → `CyConv2d`) i przygotowania danych
-pod rotacje.
+przypadkach *non_rotated*. Pokazuje ona, że początkowe parametry zostały 
+ustawione właściwie, przez co są one wykorzystywane w kolejnych eksperymentach.
+Protokół trenowania jest stały w całej serii (liczba epok, rozmiar batcha, scheduler, 
+optymalizator`SGD` z `momentum` i `weight_decay`), a różnice dotyczą
+wyłącznie architektury splotu (`Conv2d` → `CyConv2d`) i przygotowania 
+danych poprzez dodanie rotacji.
 
 Uruchomienia są orkiestrane przez pliki **JSON** opisujące scenariusze:
 każdy zestaw treningowy ma przypisaną listę zestawów testowych
@@ -1637,13 +1637,16 @@ AUC_theta liczono trapezowo po ujednoliconym koszykowaniu delta_theta
 i normalizowano do przedziału 0-1. Wariant per-time powstawał przez
 odniesienie średniej dokładności do całkowitego czasu trenowania.
 
-[Rys. 1 - „Heatmapa train-test”]
-Plik: heatmap_cyresnet56_linear.png (albo najlepiej panel 1×2: klasyk vs Cy).
-Podpis: „Mapa jakości train-test. Modele cykliczne utrzymują wysokie wartości w kolumnach odpowiadających testom odległym kątowo od treningu (lepsza generalizacja poza 
-$\theta$=0$^\circ$).”
+\newpage
+*[Rys. 1: Klasyczny model VGG19- heatmapa train-test dla zbioru GTSRB]*  \
+![Rys. 1: Klasyczny model VGG19- heatmapa train-test dla zbioru GTSRB](media/assets/heatmaps/GTSRB/heatmap_vgg19_linearpolar.png)  \
+Rys. 1: Heatmapy train–test dla zbioru GTSRB i modeli VGG19(linear) vs CyVGG19(linear)  \
+\newpage
+*[Rys. 1.1: Cykliczny model CyVGG19 - heatmapa train-test dla zbioru GTSRB]*  \
+![Rys. 1.1: Cykliczny model CyVGG19 - heatmapa train-test dla zbioru GTSRB](media/assets/heatmaps/GTSRB/heatmap_cyvgg19_linearpolar.png)  \ 
+Rys. 1.1: Mapa jakości train-test. Modele cykliczne utrzymują wysokie wartości w kolumnach odpowiadających testom odległym kątowo od treningu (lepsza generalizacja poza $\theta=0^\circ$).  \
 
 ## Metryki i interpretacja
-
 Micro-accuracy oddaje skuteczność „po wszystkich próbkach”, więc jest
 odporna na nierówne liczebności klas w stopniu typowym dla zadań
 klasyfikacji. AUC_theta syntetyzuje zachowanie krzywej Acc(delta_theta):
@@ -1654,11 +1657,10 @@ wariant pod ograniczenia budżetu czasu i energii. Wykresy heatmap
 train-test uzupełniają metryki numeryczne i pozwalają wzrokowo ocenić,
 czy model „grzeje” także w kolumnach odległych kątowo od treningu.
 
-[Rys. 2 - „Przykładowe krzywe Acc(Δθ) - duży kontrast”]
-Pliki:
-- family_acc_vs_delta_VGG19-log.csv + family_acc_vs_delta_CyVGG19-log.csv (GTSRB_RGB),
-- lub ResNet vs CyResNet (GTSRB_RGB).
-Podpis: „Krzywe Acc(Δθ) na GTSRB_RGB: przebieg cykliczny jest wyższy i bardziej płaski w całym zakresie [0°, 180°].”
+*[Rys. 2: Krzywe Acc(Δθ)  dla zbioru GTSRB RGB dla modeli ResNet56(logpolar) oraz CyResNet56(logpolar)]*  \
+![Rys. 2: Ranking AUCθ (barplot) dla zbioru GTSRB RGB](media%2Fassets%2Fplots%2Facc_vs_delta_GTSRB_RGB_ResNet_log_vs_CyResNet_log.png)  \
+
+Rys. 2: Krzywe Acc(Δθ) na zbiorze GTSRB_RGB: przebieg cykliczny jest wyższy i bardziej płaski w całym zakresie [0°, 180°].  \
 
 ## Obraz ogólny: rodziny i transformacje
 
@@ -1674,9 +1676,9 @@ ResNet. Wspólny wzorzec to lepsza generalizacja poza rozkład treningowy:
 modele cykliczne uczone non_rotated utrzymują wysokie wartości także dla
 kolumn testowych z odległymi kątami.
 
-[Rys. 3 - „Ranking AUCθ(barplot) dla jednego zbioru”]
-Plik: results/exports/<DATASET>/micro/delta_curves/auc_theta_ranking.csv (np. LEGO lub GTSRB).
-Podpis: „Globalna stabilność rotacyjna (AUCθ): najwyżej plasują się konfiguracje cykliczne, zwłaszcza z log-polar.”
+*[Rys. 3: Ranking AUCθ (barplot) dla zbioru LEGO]*  \
+![Rys. 3: Ranking AUC_\theta (barplot) dla zbioru LEGO](media%2Fassets%2Fplots%2Fauc_theta_ranking_LEGO_micro.png)
+Rys. 3. Globalna stabilność rotacyjna (AUCθ) dla datasetu LEGO: najwyżej plasują się konfiguracje cykliczne, zwłaszcza z log-polar.
 
 ## VGG vs CyVGG
 
@@ -1687,16 +1689,15 @@ co potwierdzają zarówno liczby, jak i heatmapy. Na LEGO CyVGG-log
 bywa liderem stabilności, a per-time utrzymuje rozsądny poziom. Na
 MNIST różnice są mniejsze, ale nadal widoczne w przebiegach względem
 delta_theta.
+\newpage
 
-[Rys. 4 - „Acc(Δθ) - VGG19-log vs CyVGG19-log (GTSRB_RGB)”]
-Pliki: family_acc_vs_delta_VGG19-log.csv, family_acc_vs_delta_CyVGG19-log.csv.
-Podpis: „CyVGG-log wyraźnie przewyższa VGG-log dla całego zakresu Δθ.”
-
-[Rys. 5 - „Macierze pomyłek (ten sam test, np. rotated-90-120)”]
-Pliki:
-- confusion_matrix_VGG19-..._test_on_rotated-90-120.png
-- confusion_matrix_CyVGG19-..._test_on_rotated-90-120.png
-Podpis: „Wersja cykliczna ma bardziej skupioną przekątną i mniej symetrycznych rozlań błędów.”
+*[Rys. 4 - Acc(Δθ) - VGG19-log vs CyVGG19-log (GTSRB_RGB)]*  \
+![Rys. 4 - „Acc(Δθ) - VGG19-log vs CyVGG19-log (GTSRB_RGB)”](media%2Fassets%2Fplots%2Facc_delta_gtsrb_rgb_vgglog_vs_cyvgglog.png)  \
+Rys. 4 - „CyVGG-log wyraźnie przewyższa VGG-log dla całego zakresu Δθ.”  \
+*[Rys. 5 - Macierze pomyłek VGG19-log vs CyVGG19-log (GTSRB_RGB) trenowane na rotated-90-120)]*  \
+![Rys. 5 - „Macierze pomyłek VGG19-log vs CyVGG19-log (GTSRB_RGB) trenowane na rotated-90-120)”](media%2Fassets%2Fplots%2Fconfmat_GTSRVB_RGB_VGG19_vs_CyVGG19_rot90-120.png)  \
+Rys. 5 - „Wersja cykliczna ma bardziej skupioną przekątną i mniej symetrycznych rozlań błędów.”
+\newpage
 
 ## ResNet vs CyResNet
 
@@ -1706,13 +1707,13 @@ dla dużych delta_theta i często wygrywa AUC_theta na GTSRB oraz na RGB.
 W praktyce CyResNet bywa „bezpiecznym domyślnym wyborem”: średnia jakość
 jest wysoka, krzywe są równe, a koszt obliczeń pozostaje akceptowalny.
 
-[Rys. 6 - „Acc(Δθ) - ResNet56-linear vs CyResNet56-linear (LEGO)”]
-Pliki: family_acc_vs_delta_ResNet56-linear.csv, family_acc_vs_delta_CyResNet56-linear.csv.
-Podpis: „CyResNet56-linear łączy wysoką średnią z dobrą efektywnością per-time.”
+*[Rys. 6 - „Acc(Δθ) - ResNet56-linear vs CyResNet56-linear (LEGO)”]*  \
+![Rys. 6 - „Acc(Δθ) - ResNet56-linear vs CyResNet56-linear (LEGO)”](media%2Fassets%2Fplots%2Facc_vs_delta_LEGO_ResNet_linear_vs_CyResNet_linear.png)  \
+Rys. 6: „CyResNet56-linear łączy wysoką średnią z dobrą efektywnością per-time.”  \
 
-[Rys. 7 - „Acc(Δθ) - ResNet56-log vs CyResNet56-log (GTSRB_RGB)”]
-Pliki: family_acc_vs_delta_ResNet56-log.csv, family_acc_vs_delta_CyResNet56-log.csv.
-Podpis: „Wariant log-polar u CyResNet zapewnia najwyższe AUCθ na RGB.”
+*[Rys. 7 - „Acc(Δθ) - ResNet56-log vs CyResNet56-log (GTSRB_RGB)”]*  \
+![Rys. 7 - „Acc(Δθ) - ResNet56-log vs CyResNet56-log (GTSRB_RGB)”](media%2Fassets%2Fplots%2Facc_vs_delta_LEGO_ResNet_linear_vs_CyResNet_linear.png)  \
+Rys. 7: „Wariant log-polar u CyResNet zapewnia najwyższe AUCθ na RGB.”  \
 
 ## CyVGG vs CyResNet
 
@@ -1730,9 +1731,19 @@ maksymalizować stabilności i skracać treningu. I jak to się mówi -
 nie można zjeść ciastka i mieć go też (ang. „You can’t eat your
 cake and have it too” [@kaczynski1995wp]).
 
-[Rys. 8 - „Porównanie per-time (avg_perf) - słupki”]
-Plik: results/exports/<DATASET>/micro/ranking_timeaware_avgperf.csv (np. LEGO).
-Podpis: „Efektywność per-time: CyResNet-linear zazwyczaj na czele.”
+*[Rys. 8 - Porównanie per-time (avg_perf) - GTSRB]*  \
+![Rys. 8: Porównanie per-time (avg_perf) GTSRB](media%2Fassets%2Fplots%2Favg_perf_GTSRB_10.png)  \
+Rys. 8: Porównanie per-time (avg_perf) GTSRB  \
+*[Rys. 8.1 - Porównanie per-time (avg_perf) - GTSRB-RGB]*  \
+![Rys. 8.1: Porównanie per-time (avg_perf) GTSRB RGB](media%2Fassets%2Fplots%2Favg_perf_GTSRB_RGB_10.png)  \
+Rys. 8.1: Porównanie per-time (avg_perf) GTSRB RGB \
+*[Rys. 8.2 - Porównanie per-time (avg_perf) - LEGO]*  \
+![Rys. 8.2: Porównanie per-time (avg_perf) LEGO](media%2Fassets%2Fplots%2Favg_perf_GTSRB_RGB_10.png)  \
+Rys. 8.2: Porównanie per-time (avg_perf) LEGO  \
+*[Rys. 8.3 - Porównanie per-time (avg_perf) - MNIST]*  \
+![Rys. 8.3: Porównanie per-time (avg_perf) MNIST](media%2Fassets%2Fplots%2Favg_perf_MNIST_10.png)  \
+Rys. 8.3: Porównanie per-time (avg_perf) MNIST  \
+Wniosek: Efektywność per-time w przypadku modelu CyResNet56-linear jest zazwyczaj najlepsza.
 
 ## Wpływ transformacji (linear-polar vs log-polar)
 
@@ -1754,12 +1765,13 @@ $\Delta=\mathrm{log}-\mathrm{linear}$ w obrębie **tej samej** rodziny i
 `avg 0.926 → 0.954 (Δavg +0.029), AUC 0.921 → 0.952 (ΔAUC +0.031),`
 `worst 0.916 → 0.950 (Δworst +0.034), avg_perf +0.000050)`.
 
-[Rys. 9 - „Δ (log − linear) - słupki dla MNIST (np. CyResNet)”]
-Dane: wyciągnij pary z family_acc_vs_delta_* + family_summary_*.
-Podpis: „Wpływ transformacji: na MNIST log-polar podnosi zarówno jakość, jak i stabilność oraz lekko poprawia per-time.”
+*[Rys. 9 - Δ (log − linear) - słupki dla MNIST (np. CyResNet)]*  \
+[Rys. 9 - Δ (log − linear) - słupki dla MNIST (np. CyResNet)](media%2Fassets%2Fplots%2Fdelta_log_minus_linear_MNIST_CyResNet56.png)  \
+Rys. 9: Wpływ transformacji: na MNIST log-polar podnosi zarówno jakość, jak i stabilność oraz lekko poprawia per-time.  \
 
-[Rys. 10 - „Δ (log − linear) - słupki dla GTSRB (np. CyResNet)”]
-Podpis: „Na GTSRB linear-polar częściej wygrywa w avg i AUC θ ; log-polar bywa korzystny punktowo.”
+*[Rys. 10 - Δ (log − linear) - słupki dla GTSRB (np. CyResNet)]*  \
+![Rys. 10 - Δ (log − linear) - słupki dla GTSRB (np. CyResNet)](media%2Fassets%2Fplots%2Fdelta_log_minus_linear_GTSRB_CyResNet56.png)
+Rys. 10: W przypadku zbioru GTSRB model linear-polar częściej wygrywa w avg i AUC θ ; log-polar bywa korzystny punktowo.
 
 ## GTSRB (micro)
 
@@ -1957,9 +1969,17 @@ MNIST. Różnice są niewielkie, ale CyResNet-linear bywa najlepszy w
 średniej, a CyVGG-linear w AUC_theta. Przy priorytecie przepustowości
 rozsądnym wyborem jest ResNet-linear.
 
-[Rys. 11 - „Acc(Δθ) - panel 2×2 (po 1 wykresie na zbiór)”]
-Pliki: po jednej parze CSV na zbiór (najbardziej „czytelna” rodzina).
-Podpis: „Przekrój stabilności: przewaga modeli cyklicznych utrzymuje się niezależnie od zbioru.”
+[Rys. 11 - Acc(Δθ) - panel 2×2 ]  \
+![Rys. 11 - Acc(Δθ) - panel 2×2 MNIST](media%2Fassets%2Fplots%2Facc_vs_delta_MNIST_2x2.png)  \
+Rys. 11 - Acc(Δθ) - panel 2×2 MNIST  \
+![Rys. 11 - Acc(Δθ) - panel 2×2 GTSRB-RGB](media%2Fassets%2Fplots%2Facc_vs_delta_GTSRB_RGB_2x2.png)  \
+Rys. 11 - Acc(Δθ) - panel 2×2 GTSRB-RGB  \
+![Rys. 11 - Acc(Δθ) - panel 2×2 GTSRB](media%2Fassets%2Fplots%2Facc_vs_delta_GTSRB_2x2.png)  \
+Rys. 11 - Acc(Δθ) - panel 2×2 GTSRB  \
+![Rys. 11 - Acc(Δθ) - panel 2×2 LEGO](media%2Fassets%2Fplots%2Facc_vs_delta_LEGO_2x2.png)  \
+Rys. 11 - Acc(Δθ) - panel 2×2 LEGO  \
+ 
+Przekrój stabilności: przewaga modeli cyklicznych utrzymuje się niezależnie od zbioru.  \
 
 ## Analiza błędów i wzorce pomyłek
 
@@ -1971,6 +1991,7 @@ kolorowych widoczny jest dodatkowy zysk wynikający z utrzymania informacji
 barwnej wraz z inwariancją względem rotacji.
 
 [Rys. 12 - „Macierz pomyłek (rotated-90-120) - klasyk vs Cy, ten sam test”]
+
 Pliki: confusion_matrix_<MODEL_A>_..._rotated-90-120.png + confusion_matrix_<MODEL_B>_..._rotated-90-120.png.
 Podpis: „Wersja cykliczna ma mniej rozproszonych pomyłek - ‘jaśniejsza’ przekątna.”
 
@@ -1983,9 +2004,17 @@ budżet energii, lepiej sprawdzi się linear-polar, często w parze z
 rozważyć parę modeli i wybierać ścieżkę decyzyjną zależnie od profilu
 zapytania.
 
-[Rys. 13 - „Per-time vs Avg (scatter)”] (opcjonalnie, jeśli zrobisz)
-Dane: ranking_quality.csv (avg) + ranking_timeaware_avgperf.csv (avg_perf) - połącz po model.
-Podpis: „Trade-off jakość↔czas: punkty w prawym górnym rogu to konfiguracje najkorzystniejsze.”
+[Rys. 13 - „Per-time vs Avg (scatter)”]
+
+![Rys. 13 - Per-time vs Avg (scatter) GTSRB](media%2Fassets%2Fplots%2Fperf_vs_time_scatter_GTSRB_micro.png)  \
+Rys. 13 - Per-time vs Avg (scatter) GTSRB  \
+![Rys. 13 - Per-time vs Avg (scatter) GTSRB RGB](media%2Fassets%2Fplots%2Fperf_vs_time_scatter_GTSRB_RGB_micro.png)  \
+Rys. 13 - Per-time vs Avg (scatter) GTSRB RGB \
+![ys. 13 - Per-time vs Avg (scatter) LEGO](media%2Fassets%2Fplots%2Fperf_vs_time_scatter_LEGO_micro.png)  \
+Rys. 13 - Per-time vs Avg (scatter) LEGO  \
+![Rys. 13 - Per-time vs Avg (scatter) MNIST](media%2Fassets%2Fplots%2Fperf_vs_time_scatter_MNIST_micro.png)  \
+Rys. 13 - „Per-time vs Avg (scatter)”MNIST  \
+Wskazówka: „Trade-off jakość↔czas: punkty w prawym górnym rogu to konfiguracje najkorzystniejsze.”
 
 ## Rekomendacje praktyczne
 
@@ -2053,22 +2082,122 @@ Zdarzają się lokalne plusy (pojedyncze pary model-transformacja), jednak
 w ujęciu przekrojowym dominują wyniki neutralne lub lekko ujemne zarówno
 w **AUC\(_\theta\)**, jak i w **worst**.
 
-#### Przykłady(po 1-2 na zbiór)
+#### Przykłady
+#### optuna_vs_baseline_nonrot_GTSRB_RGB_micro
 
-> **GTSRB - ResNet-linear**  
-> `avg a_b → a_o (Δavg …)`  
-> `AUC u_b → u_o (ΔAUC …)`  
-> `worst w_b → w_o (Δworst …)`
+| arch | act | avg_opt | AUC_opt | worst_opt | avg_base | AUC_base | worst_base |
+|---|---|---|---|---|---|---|---|
+| cyresnet56 | linearpolar | 0.872 | 0.861 | 0.831 | 0.924 | 0.923 | 0.919 |
+| cyresnet56 | logpolar | 0.868 | 0.857 | 0.822 | 0.930 | 0.928 | 0.923 |
+| cyvgg19 | linearpolar | 0.839 | 0.835 | 0.766 | 0.939 | 0.939 | 0.933 |
+| cyvgg19 | logpolar | 0.790 | 0.791 | 0.688 | 0.938 | 0.938 | 0.931 |
+| resnet56 | linearpolar | 0.588 | 0.582 | 0.389 | 0.890 | 0.887 | 0.869 |
+| resnet56 | logpolar | 0.534 | 0.524 | 0.323 | 0.893 | 0.890 | 0.869 |
+| vgg19 | linearpolar | 0.360 | 0.364 | 0.180 | 0.883 | 0.881 | 0.863 |
+| vgg19 | logpolar | 0.335 | 0.338 | 0.141 | 0.882 | 0.881 | 0.862 |
+
+| arch | act | d_avg | d_AUC | d_worst |
+|---|---|---|---|---|
+| cyresnet56 | linearpolar | -0.052 | -0.062 | -0.088 |
+| cyresnet56 | logpolar | -0.061 | -0.071 | -0.101 |
+| cyvgg19 | linearpolar | -0.100 | -0.104 | -0.167 |
+| cyvgg19 | logpolar | -0.148 | -0.147 | -0.242 |
+| resnet56 | linearpolar | -0.301 | -0.305 | -0.481 |
+| resnet56 | logpolar | -0.359 | -0.366 | -0.546 |
+| vgg19 | linearpolar | -0.523 | -0.517 | -0.684 |
+| vgg19 | logpolar | -0.547 | -0.542 | -0.722 |
 
 > **GTSRB_RGB - CyResNet-log**  
-> analogiczna linia z CSV
+> `avg 0.930 → 0.868` (**$\Delta$avg -0.061**)  
+> `AUC 0.928 → 0.857` (**$\Delta$AUC -0.071**)  
+> `worst 0.923 → 0.822` (**$\Delta$worst -0.101**)
+
+#### optuna_vs_baseline_nonrot_GTSRB_micro
+
+| arch | act | avg_opt | AUC_opt | worst_opt | avg_base | AUC_base | worst_base |
+|---|---|---|---|---|---|---|---|
+| cyresnet56 | linearpolar | 0.844 | 0.838 | 0.793 | 0.937 | 0.935 | 0.927 |
+| cyresnet56 | logpolar | 0.790 | 0.770 | 0.680 | 0.927 | 0.924 | 0.911 |
+| cyvgg19 | linearpolar | 0.690 | 0.692 | 0.573 | 0.923 | 0.921 | 0.904 |
+| cyvgg19 | logpolar | 0.639 | 0.648 | 0.473 | 0.916 | 0.915 | 0.898 |
+| resnet56 | linearpolar | 0.351 | 0.345 | 0.212 | 0.890 | 0.887 | 0.870 |
+| resnet56 | logpolar | 0.445 | 0.437 | 0.264 | 0.878 | 0.875 | 0.855 |
+| vgg19 | linearpolar | 0.299 | 0.304 | 0.142 | 0.869 | 0.867 | 0.846 |
+| vgg19 | logpolar | 0.291 | 0.296 | 0.137 | 0.862 | 0.861 | 0.840 |
+
+| arch | act | d_avg | d_AUC | d_worst |
+|---|---|---|---|---|
+| cyresnet56 | linearpolar | -0.093 | -0.096 | -0.135 |
+| cyresnet56 | logpolar | -0.137 | -0.155 | -0.231 |
+| cyvgg19 | linearpolar | -0.233 | -0.229 | -0.331 |
+| cyvgg19 | logpolar | -0.276 | -0.267 | -0.425 |
+| resnet56 | linearpolar | -0.539 | -0.542 | -0.658 |
+| resnet56 | logpolar | -0.433 | -0.438 | -0.590 |
+| vgg19 | linearpolar | -0.570 | -0.563 | -0.703 |
+| vgg19 | logpolar | -0.572 | -0.565 | -0.703 |
+
+> **GTSRB - ResNet-linear**  
+> `avg 0.890 → 0.351` (**$\Delta$avg -0.539**)  
+> `AUC 0.887 → 0.345` (**$\Delta$AUC -0.542**)  
+> `worst 0.870 → 0.212` (**$\Delta$worst -0.658**)
+
+#### optuna_vs_baseline_nonrot_LEGO_micro
+
+| arch | act | avg_opt | AUC_opt | worst_opt | avg_base | AUC_base | worst_base |
+|---|---|---|---|---|---|---|---|
+| cyresnet56 | linearpolar | 0.660 | 0.638 | 0.562 | 0.871 | 0.867 | 0.853 |
+| cyresnet56 | logpolar | 0.728 | 0.718 | 0.671 | 0.878 | 0.876 | 0.868 |
+| cyvgg19 | linearpolar | 0.789 | 0.783 | 0.753 | 0.905 | 0.905 | 0.901 |
+| cyvgg19 | logpolar | 0.770 | 0.768 | 0.755 | 0.903 | 0.902 | 0.899 |
+| resnet56 | linearpolar | 0.513 | 0.494 | 0.452 | 0.878 | 0.875 | 0.864 |
+| resnet56 | logpolar | 0.609 | 0.594 | 0.541 | 0.868 | 0.866 | 0.857 |
+| vgg19 | linearpolar | 0.706 | 0.702 | 0.660 | 0.903 | 0.903 | 0.897 |
+| vgg19 | logpolar | 0.581 | 0.576 | 0.559 | 0.898 | 0.898 | 0.893 |
+
+| arch | act | d_avg | d_AUC | d_worst |
+|---|---|---|---|---|
+| cyresnet56 | linearpolar | -0.212 | -0.229 | -0.291 |
+| cyresnet56 | logpolar | -0.150 | -0.158 | -0.197 |
+| cyvgg19 | linearpolar | -0.116 | -0.122 | -0.148 |
+| cyvgg19 | logpolar | -0.133 | -0.134 | -0.145 |
+| resnet56 | linearpolar | -0.365 | -0.381 | -0.412 |
+| resnet56 | logpolar | -0.259 | -0.272 | -0.316 |
+| vgg19 | linearpolar | -0.197 | -0.201 | -0.236 |
+| vgg19 | logpolar | -0.317 | -0.322 | -0.335 |
 
 > **LEGO - CyVGG-log**  
-> analogiczna linia z CSV
+> `avg 0.903 → 0.770` (**$\Delta$avg -0.133**)  
+> `AUC 0.902 → 0.768` (**$\Delta$AUC -0.134**)  
+> `worst 0.899 → 0.755` (**$\Delta$worst -0.145**)
+
+#### optuna_vs_baseline_nonrot_MNIST_micro
+
+| arch | act | avg_opt | AUC_opt | worst_opt | avg_base | AUC_base | worst_base |
+|---|---|---|---|---|---|---|---|
+| cyresnet56 | linearpolar | 0.866 | 0.866 | 0.694 | 0.958 | 0.957 | 0.925 |
+| cyresnet56 | logpolar | 0.921 | 0.919 | 0.851 | 0.975 | 0.975 | 0.965 |
+| cyvgg19 | linearpolar | 0.750 | 0.751 | 0.614 | 0.949 | 0.948 | 0.927 |
+| cyvgg19 | logpolar | 0.782 | 0.782 | 0.633 | 0.953 | 0.953 | 0.930 |
+| resnet56 | linearpolar | 0.604 | 0.604 | 0.428 | 0.933 | 0.932 | 0.902 |
+| resnet56 | logpolar | 0.607 | 0.607 | 0.396 | 0.941 | 0.940 | 0.923 |
+| vgg19 | linearpolar | 0.512 | 0.513 | 0.265 | 0.921 | 0.920 | 0.894 |
+| vgg19 | logpolar | 0.495 | 0.495 | 0.255 | 0.920 | 0.920 | 0.890 |
+
+| arch | act | d_avg | d_AUC | d_worst |
+|---|---|---|---|---|
+| cyresnet56 | linearpolar | -0.092 | -0.091 | -0.230 |
+| cyresnet56 | logpolar | -0.055 | -0.056 | -0.114 |
+| cyvgg19 | linearpolar | -0.198 | -0.197 | -0.313 |
+| cyvgg19 | logpolar | -0.171 | -0.171 | -0.297 |
+| resnet56 | linearpolar | -0.329 | -0.329 | -0.473 |
+| resnet56 | logpolar | -0.334 | -0.334 | -0.528 |
+| vgg19 | linearpolar | -0.408 | -0.408 | -0.630 |
+| vgg19 | logpolar | -0.426 | -0.425 | -0.636 |
 
 > **MNIST - ResNet-linear**  
-> analogiczna linia z CSV
-
+> `avg 0.933 → 0.604` (**$\Delta$avg -0.329**)  
+> `AUC 0.932 → 0.604` (**$\Delta$AUC -0.329**)  
+> `worst 0.902 → 0.428` (**$\Delta$worst -0.473**)
 
 
 *(Komentarz: „walidacja `non_rotated` nie podnosi
@@ -2215,7 +2344,7 @@ wszystkim z **CyCNN** (oś orientacji, cykliczny padding) oraz z
 **nie tworzy ekwiwariancji** – co najwyżej wybiera trochę lepszy punkt
 na istniejącej, dość płaskiej krzywej.
 
-### Gdybym to rozwijał dalej
+### Gdyby to rozwijać dalej
 
 Żeby taki wariant miał sens, trzeba **wyrównać budżet** z baseline’ami
 (epoki, batch, scheduler), dopasować **walidację kątową** do tego, co
@@ -2227,11 +2356,11 @@ i łagodniejsza dynamika uczenia (dłuższy warm-up, cosine LR, ewentualnie
 zamrożone BN) często poprawiają dół krzywej, czyli to, co najbardziej
 nas boli w kontekście rotacji.
 
-
 **Jedno zdanie na koniec.**
 Rotation-aware validation to dobry pomysł na **lepszy wybór checkpointu**,
 ale **nie magiczna różdżka** – bez czasu i bez wsparcia architektury nie
 podniesie stabilności tak, jak robią to **CyCNN** i **log/linear-polar**.
+Szczególnie, gdy wykorzystamy do treningu dane w których obrazy były obrócone o jakiś kąt.
 
 ### Wniosek syntetyczny
 
