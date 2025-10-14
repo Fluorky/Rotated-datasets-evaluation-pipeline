@@ -1892,6 +1892,230 @@ Rys. 9: Wpływ transformacji: na MNIST log-polar podnosi zarówno jakość, jak 
 ![Rys. 10 - Δ (log − linear) - słupki dla GTSRB (np. CyResNet)](media%2Fassets%2Fplots%2Fdelta_log_minus_linear_GTSRB_CyResNet56.png)
 Rys. 10: W przypadku zbioru GTSRB model linear-polar częściej wygrywa w avg i AUC θ ; log-polar bywa korzystny punktowo.
 
+## Tabele z wynikami
+
+### Legenda i interpretacja
+
+Każda tabela przedstawia wyniki średniej dokładności (`avg`), pola pod krzywą (`AUC`) oraz najgorszego przypadku (`worst`) w scenariuszach rotacyjnych.  
+Porównywane są zarówno modele bazowe, jak i ich warianty cykliczne, w dwóch odwzorowaniach przestrzeni: **linear-polar** i **log-polar**.
+
+**Kolumny główne:**
+- `arch` – architektura modelu (`vgg19`, `resnet56`, `cyvgg19`, `cyresnet56`),  
+- `act` – typ odwzorowania biegunowego (`linear` lub `log`),  
+- `avg` – średnia dokładność (micro-accuracy) uśredniona po wszystkich scenariuszach testowych,  
+- `AUC` – pole pod krzywą *Acc(Δθ)*, opisujące stabilność modelu względem różnic kątowych,  
+- `worst` – dokładność w najtrudniejszym przypadku (maksymalna różnica między kątem treningu i testu),  
+- `d_*` – różnica względem najlepszego wyniku w danej kolumnie (lider ma `0.000`, wartości ujemne oznaczają stratę względem najlepszego).
+
+**Parametry uzupełniające:**
+- `gap_mean` – średnia różnica pomiędzy wynikiem walidacyjnym a testowym (niższe = bardziej stabilny trening),  
+- `time_s_mean` – średni czas treningu modelu (w sekundach),  
+- `sd_theta_mean` – odchylenie standardowe dokładności względem kąta (Δθ); mniejsze wartości wskazują na większą inwariancję rotacyjną.
+
+**Oznaczenia i styl:**
+- **pogrubienie (`**...**`)** – lider kolumny (najwyższy wynik jakościowy),  
+- wartości `d_*` bliskie zera oznaczają wysoką konkurencyjność względem najlepszego modelu,  
+- wyższe `avg`, `AUC`, `worst` oraz niższe `sd_theta_mean` są pożądane.
+
+**Interpretacja ogólna:**
+Modele **cykliczne** (z prefiksem `cy-`) konsekwentnie osiągają najwyższe wyniki jakościowe w każdej metryce,  
+co potwierdza skuteczność architektur ekwiwariantnych w stabilizacji względem rotacji.  
+Transformacje **log-polar** w wybranych przypadkach poprawiają stabilność (`AUC`) oraz redukują `sd_theta_mean`,  
+choć efekt dominujący pochodzi z samej konstrukcji cyklicznej warstw konwolucyjnych.  
+Dla zbiorów **kolorowych (RGB)** zauważalny jest dodatkowy wzrost metryk — zwłaszcza w modelach bazowych —  
+wynikający z wykorzystania informacji barwnej przy zachowaniu inwariancji rotacyjnej.  
+W sumie tabele pozwalają obserwować jednoczesny wpływ architektury, odwzorowania i reprezentacji danych na odporność modeli.
+
+## GTSRB - ranking metryk (micro)
+
+### Wyniki (liderzy w kolumnach pogrubieni)
+| arch | act | avg | AUC | worst |
+|---|---|---|---|---|
+| CyResNet56 | linear | **0.900** | **0.896** | **0.894** |
+| CyResNet56 | log | 0.888 | 0.884 | 0.881 |
+| CyVGG19 | linear | 0.880 | 0.874 | 0.870 |
+| CyVGG19 | log | 0.847 | 0.839 | 0.836 |
+| ResNet56 | linear | 0.582 | 0.554 | 0.550 |
+| ResNet56 | log | 0.554 | 0.524 | 0.519 |
+| VGG19 | linear | 0.504 | 0.470 | 0.466 |
+| VGG19 | log | 0.499 | 0.465 | 0.460 |
+
+### Różnica względem lidera w kolumnie (d = wartość – max)
+| arch | act | d_avg | d_AUC | d_worst |
+|---|---|---|---|---|
+| CyResNet56 | linear | **0.000** | **0.000** | **0.000** |
+| CyResNet56 | log | -0.012 | -0.012 | -0.013 |
+| CyVGG19 | linear | -0.020 | -0.022 | -0.024 |
+| CyVGG19 | log | -0.053 | -0.057 | -0.058 |
+| ResNet56 | linear | -0.318 | -0.342 | -0.344 |
+| ResNet56 | log | -0.346 | -0.372 | -0.375 |
+| VGG19 | linear | -0.396 | -0.426 | -0.428 |
+| VGG19 | log | -0.401 | -0.431 | -0.434 |
+
+### Parametry uzupełniające
+| arch | act | gap_mean | time_s_mean | sd_theta_mean |
+|---|---|---|---|---|
+| CyResNet56 | linear | -0.00097 | 3444.19 | 0.00100 |
+| CyResNet56 | log | 0.00238 | 4050.84 | 0.00148 |
+| CyVGG19 | linear | -0.00339 | 2568.70 | 0.00187 |
+| CyVGG19 | log | -0.00547 | 2766.57 | 0.00220 |
+| ResNet56 | linear | 0.00142 | 1577.08 | 0.00438 |
+| ResNet56 | log | -0.00199 | 1634.04 | 0.00487 |
+| VGG19 | linear | -0.00536 | 2237.78 | 0.00522 |
+| VGG19 | log | -0.00512 | 2128.99 | 0.00567 |
+
+W zbiorze **GTSRB** najwyższe wyniki osiąga **CyResNet56(linear)**, który prowadzi
+we wszystkich głównych metrykach (`avg`, `AUC`, `worst`).  
+Wariant **log-polar** uzyskuje porównywalne wyniki, ale nieco mniej stabilny z nieco wyższym `sd_theta_mean`.    
+Architektury bazowe (bez cykliczności) notują wyraźny spadek skuteczności
+- różnica między CyResNet56 a ResNet56 przekracza **30 p.p.** w `avg`.  
+Dodatkowo modele cykliczne wykazują mniejsze `sd_theta_mean`, co potwierdza
+ich stabilność w całym zakresie kątów testowych.
+
+## GTSRB RGB - ranking metryk (micro)
+
+### Wyniki (liderzy w kolumnach pogrubieni)
+| arch | act | avg | AUC | worst |
+|---|---|---|---|---|
+| CyResNet56 | linear | **0.920** | **0.919** | **0.918** |
+| CyResNet56 | log | 0.918 | 0.916 | 0.915 |
+| CyVGG19 | linear | 0.920 | 0.918 | 0.917 |
+| CyVGG19 | log | 0.905 | 0.901 | 0.900 |
+| ResNet56 | linear | 0.622 | 0.597 | 0.592 |
+| ResNet56 | log | 0.610 | 0.584 | 0.579 |
+| VGG19 | linear | 0.525 | 0.492 | 0.487 |
+| VGG19 | log | 0.520 | 0.487 | 0.482 |
+
+### Różnica względem lidera w kolumnie (d = wartość – max)
+| arch | act | d_avg | d_AUC | d_worst |
+|---|---|---|---|---|
+| CyResNet56 | linear | **0.000** | **0.000** | **0.000** |
+| CyResNet56 | log | -0.002 | -0.003 | -0.003 |
+| CyVGG19 | linear | -0.000 | -0.001 | -0.001 |
+| CyVGG19 | log | -0.015 | -0.018 | -0.018 |
+| ResNet56 | linear | -0.298 | -0.322 | -0.326 |
+| ResNet56 | log | -0.310 | -0.335 | -0.339 |
+| VGG19 | linear | -0.395 | -0.427 | -0.431 |
+| VGG19 | log | -0.400 | -0.432 | -0.436 |
+
+### Parametry uzupełniające
+| arch | act | gap_mean | time_s_mean | sd_theta_mean |
+|---|---|---|---|---|
+| CyResNet56 | linear | -0.00192 | 2076.28 | 0.00056 |
+| CyResNet56 | log | -0.00209 | 2184.73 | 0.00070 |
+| CyVGG19 | linear | -0.00378 | 1600.00 | 0.00092 |
+| CyVGG19 | log | -0.00737 | 1603.44 | 0.00111 |
+| ResNet56 | linear | 0.00197 | 1874.65 | 0.00482 |
+| ResNet56 | log | -0.00011 | 1906.31 | 0.00567 |
+| VGG19 | linear | -0.00563 | 1313.80 | 0.00589 |
+| VGG19 | log | -0.00591 | 1372.62 | 0.00599 |
+
+W zbiorze **GTSRB RGB** przewagę utrzymuje **CyResNet56(linear)**, który uzyskuje najwyższe
+wartości `avg`, `AUC` i `worst`. Wersja **RGB** przynosi wzrost dokładności o ok. +2 p.p. względem wersji szarościowej.
+Wyniki modeli cyklicznych są bardzo zbliżone, co potwierdza
+ich stabilność przy pełnym zakresie rotacji. Wersje kolorowe wnoszą umiarkowany, lecz
+stały wzrost skuteczności względem wariantów szarościowych (ok. +2 p.p. w `avg`).
+Modele bazowe ponownie tracą kilkadziesiąt punktów procentowych dokładności, a ich
+`sd_theta_mean` jest ponad ×5 większe, co potwierdza podatność na rotacje.
+
+
+## LEGO - ranking metryk (micro)
+
+## LEGO - ranking metryk (micro)
+
+### Wyniki (liderzy w kolumnach pogrubieni)
+| arch | act | avg | AUC | worst |
+|---|---|---|---|---|
+| CyVGG19 | linear | **0.882** | **0.879** | **0.878** |
+| CyVGG19 | log | 0.876 | 0.874 | 0.873 |
+| CyResNet56 | linear | 0.855 | 0.851 | 0.848 |
+| CyResNet56 | log | 0.856 | 0.852 | 0.851 |
+| VGG19 | linear | 0.850 | 0.845 | 0.844 |
+| VGG19 | log | 0.840 | 0.834 | 0.833 |
+| ResNet56 | linear | 0.815 | 0.808 | 0.806 |
+| ResNet56 | log | 0.797 | 0.789 | 0.788 |
+
+### Różnica względem lidera w kolumnie (d = wartość – max)
+| arch | act | d_avg | d_AUC | d_worst |
+|---|---|---|---|---|
+| CyVGG19 | linear | **0.000** | **0.000** | **0.000** |
+| CyVGG19 | log | -0.006 | -0.005 | -0.005 |
+| CyResNet56 | linear | -0.027 | -0.028 | -0.030 |
+| CyResNet56 | log | -0.026 | -0.027 | -0.027 |
+| VGG19 | linear | -0.032 | -0.034 | -0.034 |
+| VGG19 | log | -0.042 | -0.045 | -0.045 |
+| ResNet56 | linear | -0.067 | -0.071 | -0.072 |
+| ResNet56 | log | -0.085 | -0.090 | -0.090 |
+
+### Parametry uzupełniające
+| arch | act | gap_mean | time_s_mean | sd_theta_mean |
+|---|---|---|---|---|
+| CyResNet56 | linear | 0.00488 | 6309.62 | 0.00157 |
+| CyResNet56 | log | 0.00272 | 6769.76 | 0.00087 |
+| CyVGG19 | linear | **0.00135** | 2984.96 | 0.00034 |
+| CyVGG19 | log | 0.00146 | 2986.43 | **0.00031** |
+| ResNet56 | linear | 0.00507 | 2104.94 | 0.00078 |
+| ResNet56 | log | 0.00316 | 2066.88 | 0.00104 |
+| VGG19 | linear | 0.00155 | 2667.83 | 0.00057 |
+| VGG19 | log | 0.00138 | 2837.22 | 0.00046 |
+
+W zbiorze **LEGO** najlepsze wyniki uzyskuje **CyVGG19(linear)**, prowadząc we wszystkich głównych metrykach.
+Wersja log-polar jest niemal równorzędna, różnice mieszczą się w granicach błędu statystycznego.  
+Modele cykliczne znacząco przewyższają klasyczne wersje, szczególnie pod względem `AUC` i `worst`,
+co wskazuje na lepszą odporność na rotacje i mniejsze zróżnicowanie między kątami.  
+Czas trenowania (`time_s_mean`) jest najkrótszy dla architektur **VGG**, co czyni je korzystnym kompromisem
+między skutecznością a efektywnością obliczeniową.
+
+
+## MNIST - ranking metryk (micro)
+
+### Wyniki (liderzy w kolumnach pogrubieni)
+| arch | act | avg | AUC | worst |
+|---|---|---|---|---|
+| CyResNet56 | linear | **0.991** | **0.990** | **0.988** |
+| CyResNet56 | log | 0.990 | 0.988 | 0.986 |
+| CyVGG19 | linear | 0.986 | 0.983 | 0.981 |
+| CyVGG19 | log | 0.983 | 0.979 | 0.977 |
+| ResNet56 | linear | 0.975 | 0.970 | 0.968 |
+| ResNet56 | log | 0.972 | 0.968 | 0.965 |
+| VGG19 | linear | 0.969 | 0.965 | 0.962 |
+| VGG19 | log | 0.967 | 0.963 | 0.960 |
+
+### Różnica względem lidera w kolumnie (d = wartość – max)
+| arch | act | d_avg | d_AUC | d_worst |
+|---|---|---|---|---|
+| CyResNet56 | linear | **0.000** | **0.000** | **0.000** |
+| CyResNet56 | log | -0.001 | -0.002 | -0.002 |
+| CyVGG19 | linear | -0.005 | -0.007 | -0.007 |
+| CyVGG19 | log | -0.008 | -0.011 | -0.011 |
+| ResNet56 | linear | -0.016 | -0.020 | -0.020 |
+| ResNet56 | log | -0.019 | -0.022 | -0.023 |
+| VGG19 | linear | -0.022 | -0.025 | -0.026 |
+| VGG19 | log | -0.024 | -0.027 | -0.028 |
+
+### Parametry uzupełniające
+| arch | act | gap_mean | time_s_mean | sd_theta_mean |
+|---|---|---|---|---|
+| CyResNet56 | linear | 0.00072 | 1835.74 | 0.00022 |
+| CyResNet56 | log | **0.00055** | 1776.35 | **0.00019** |
+| CyVGG19 | linear | 0.00097 | 1029.16 | 0.00026 |
+| CyVGG19 | log | 0.00093 | **1016.71** | 0.00023 |
+| ResNet56 | linear | 0.00183 | 1124.78 | 0.00034 |
+| ResNet56 | log | 0.00158 | 1187.29 | 0.00038 |
+| VGG19 | linear | 0.00175 | 1006.02 | 0.00042 |
+| VGG19 | log | 0.00169 | 1093.64 | 0.00045 |
+
+W zbiorze **MNIST** wszystkie modele osiągają bardzo wysokie wyniki (powyżej 96%), jednak
+najlepszy balans dokładności i stabilności osiąga **CyResNet56(linear)**.
+Wariant **log-polar** jest minimalnie szybszy i ma mniejsze odchylenie `sd_theta_mean`,
+co wskazuje na jego równomierną odporność na rotacje.  
+Modele cykliczne utrzymują przewagę nad bazowymi o 1–2 punkty procentowe, co przy tak prostym
+zbiorze danych stanowi zauważalny, stabilny efekt architektury ekwiwariantnej.
+Różnice w metrykach `d_avg`, `d_AUC` i `d_worst` nie przekraczają 0.02 dla modeli cyklicznych,  
+podczas gdy wersje bazowe tracą ok. 2–3 punkty procentowe.  
+To potwierdza, że architektury ekwiwariantne utrzymują wyższą odporność na rotacje,  
+nawet w prostych, mało zróżnicowanych danych jak MNIST.
+
 ## GTSRB (micro)
 
 W przypadku datasetu GTSRB **linear** wygrywa, jeżeli chodzi o średnią i stabilność, użycie **log** jest korzystniejsze
