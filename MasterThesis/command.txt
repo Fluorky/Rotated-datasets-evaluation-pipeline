@@ -10,4 +10,6 @@ pandoc master_thesis.md -o master_thesis.pdf \
   -V geometry=margin=2.5cm \
   -V hyperrefoptions=unicode=false \
   -M link-citations=true \
-  -M reference-section-title=Bibliografia
+  -M reference-section-title=Bibliografia \
+  --listings \
+  -H listings-setup.tex
