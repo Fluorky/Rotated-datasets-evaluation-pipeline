@@ -1,4 +1,5 @@
- pandoc master_thesis.md -o master_thesis.pdf \
+pandoc master_thesis.md -o master_thesis.pdf \
+  -f markdown+tex_math_single_backslash \
   --pdf-engine=xelatex \
   --citeproc \
   --bibliography=sources.bib \
@@ -7,5 +8,8 @@
   -V fontsize=12pt \
   -V lang=pl-PL \
   -V geometry=margin=2.5cm \
+  -V hyperrefoptions=unicode=false \
   -M link-citations=true \
-  -M reference-section-title=Bibliografia
+  -M reference-section-title=Bibliografia \
+  --listings \
+  -H listings-setup.tex
