@@ -122,13 +122,40 @@ def extract_sort_key(col_name: str):
 
 
 # ----------------------------- main ----------------------------------------
-
 def process_dataset(dataset_name: str, logs_base: Path, output_base: Path):
     """
     Process test logs for the given dataset and produce:
       - CSV accuracy matrices for each group in MODEL_KEYS
-      - Heatmap PNGs (all using the same vmin/vmax within the dataset)
+      - Heatmap PNGs using a unified vmin/vmax per dataset
     """
+
+    # ---- Display & export tuning ----
+    ACC_DECIMALS   = 2
+    BASE_ANNOT_FS  = 9
+    BASE_TICK_FS   = 10
+    LABEL_FONTSIZE = 10
+    TITLE_FONTSIZE = 14
+
+    # cell sizing
+    BASE_CELL_IN   = 0.45   # inches per cell (width/height) in your previous setup
+    CELL_SCALE     = 4    # <--- enlarge cells by 1.5x
+    CELL_W_IN      = BASE_CELL_IN * CELL_SCALE
+    CELL_H_IN      = BASE_CELL_IN * CELL_SCALE
+
+    # fonts scale a bit with cells
+    ANNOT_FONTSIZE = int(round(BASE_ANNOT_FS*1.5))
+    TICK_FONTSIZE  = int(round(BASE_TICK_FS  * (0.9 + 0.1*1.3)))  # subtle bump
+
+    MAX_FIG_W, MAX_FIG_H = 40, 40
+    BASE_DPI = 96
+
+    # Optional post-processing (Pillow)
+    ENABLE_PNG_OPTIM = True
+    PNG_COMPRESS_LEVEL = 9
+    WRITE_JPG = True
+    JPG_QUALITY = 85
+    # ---------------------------------
+
     # Locate /test
     log_path = resolve_log_path(Path(logs_base), dataset_name)
     output_path = Path(output_base) / dataset_name
@@ -141,22 +168,16 @@ def process_dataset(dataset_name: str, logs_base: Path, output_base: Path):
         print(f"   - {Path(logs_base) / dataset_name / 'test'}")
         return
 
-    # results[group_key][train_label][test_case] = accuracy
     results: Dict[str, Dict[str, Dict[str, float]]] = {key: defaultdict(dict) for key in MODEL_KEYS}
 
-    # accepted log file extensions (recursive)
     patterns = ("**/*.txt", "**/*.log", "**/*.out")
-
-    # Scan files recursively to handle flat or nested layouts
     log_files = []
     for pat in patterns:
         log_files.extend(log_path.glob(pat))
-
     if not log_files:
         print(f"⚠️ No log files found under: {log_path}")
         return
 
-    # Collect values and track global min/max for a unified color scale
     all_values: List[float] = []
 
     for log_file in sorted(log_files):
@@ -168,21 +189,19 @@ def process_dataset(dataset_name: str, logs_base: Path, output_base: Path):
             if not m:
                 continue
 
-            accuracy = float(m.group(1))  # e.g., 98.1234 (percent)
+            accuracy = float(m.group(1))
             stem = log_file.stem
 
             train_label = extract_train_label(stem)
-            test_case = extract_test_case(stem)
+            test_case   = extract_test_case(stem)
 
             arch = detect_arch_from_train_label(train_label)
             act  = detect_activation_from_train_label(train_label)
             if not arch or not act:
-                # Unknown or unsupported model/activation — skip
                 continue
 
             group_key = f"{arch}_{act}"
             if group_key not in results:
-                # Ignore unexpected groups (keeps outputs consistent)
                 continue
 
             results[group_key][train_label][test_case] = accuracy
@@ -191,7 +210,6 @@ def process_dataset(dataset_name: str, logs_base: Path, output_base: Path):
         except Exception as e:
             print(f"⚠️ Error processing {log_file}: {e}")
 
-    # Determine a GLOBAL color scale per dataset
     vmin = min(all_values) if all_values else None
     vmax = max(all_values) if all_values else None
 
@@ -201,19 +219,14 @@ def process_dataset(dataset_name: str, logs_base: Path, output_base: Path):
             print(f"⚠️ No data found for: {group_key}")
             continue
 
-        df = pd.DataFrame(data).T  # rows: train labels; cols: test cases
+        df = pd.DataFrame(data).T
         if df.empty:
             print(f"⚠️ Empty DataFrame for: {group_key}")
             continue
 
-        # sort columns by first integer (if any)
         df = df[sorted(df.columns, key=extract_sort_key)]
-
-        # shorten labels (drop long prefixes)
-        df.index = df.index.str.replace(r'^.+?-[^-]+-[^_]+_', '', regex=True)
+        df.index   = df.index.str.replace(r'^.+?-[^-]+-[^_]+_', '', regex=True)
         df.columns = df.columns.str.replace(r'^.+?-[^-]+-[^_]+_', '', regex=True)
-
-        # semantic sorting for train/test labels (dataset/merged/rotated + angle)
         df = df.sort_index(key=lambda idx: [rotation_sort_key(name) for name in idx])
         df = df[sorted(df.columns, key=rotation_sort_key)]
 
@@ -222,35 +235,74 @@ def process_dataset(dataset_name: str, logs_base: Path, output_base: Path):
         df.to_csv(csv_path)
         print(f"✅ Saved CSV: {csv_path}")
 
-        # --- Heatmap (square tiles)
+        # --- Heatmap (cells enlarged 1.5x)
         n_rows, n_cols = df.shape
-        # Figure size can stay generous; square=True forces square cells in the Axes
-        figsize = (max(20, n_cols * 1.5), max(8, n_rows * 1.5))
+
+        # per-cell sizing -> figure size, clamped
+        fig_w = min(MAX_FIG_W, max(8, n_cols * CELL_W_IN))
+        fig_h = min(MAX_FIG_H, max(6, n_rows * CELL_H_IN))
+        figsize = (fig_w, fig_h)
 
         plt.figure(figsize=figsize)
         ax = sns.heatmap(
             df.astype(float),
             annot=True,
-            fmt=".4f",
+            fmt=f".{ACC_DECIMALS}f",
+            annot_kws={"fontsize": ANNOT_FONTSIZE},
             cmap="Purples",
-            vmin=vmin,   # global minimum across the dataset
-            vmax=vmax,   # global maximum across the dataset
-            square=True,  # <-- make tiles square
-            cbar_kws={"label": "Accuracy [%]"},
+            vmin=vmin,
+            vmax=vmax,
+            square=True,
+            cbar_kws={"label": "Accuracy [%]", "shrink": 0.85},
         )
-        # Ensure equal aspect for safety (helps with very rectangular matrices)
         ax.set_aspect("equal", adjustable="box")
 
-        plt.title(f"Accuracy Heatmap – {group_key.replace('_', ' ').title()}")
-        plt.ylabel("Train Model")
-        plt.xlabel("Test Dataset")
-        plt.xticks(rotation=45, ha="right")
-        plt.yticks(rotation=0)
+        ax.set_title(f"Accuracy Heatmap – {group_key.replace('_', ' ').title()}",
+                     fontsize=TITLE_FONTSIZE, pad=8)
+        ax.set_ylabel("Train Model", fontsize=LABEL_FONTSIZE)
+        ax.set_xlabel("Test Dataset", fontsize=LABEL_FONTSIZE)
+        # Tick labels (consistent spacing on X)
+        labels = [t.get_text() for t in ax.get_xticklabels()]
+        ax.set_xticklabels(
+            labels,
+            rotation=45,
+            ha="right",  # align to the tick position
+            rotation_mode="anchor",  # rotate around the anchor (keeps spacing visually even)
+        )
+        ax.tick_params(axis="x", pad=6, labelsize=TICK_FONTSIZE)
+        ax.tick_params(axis="y", labelrotation=0, labelsize=TICK_FONTSIZE)
+
+        # ax.tick_params(axis="x", labelrotation=60, labelsize=TICK_FONTSIZE)
+        # ax.tick_params(axis="y", labelrotation=0,  labelsize=TICK_FONTSIZE)
+
+        if ax.collections and ax.collections[0].colorbar:
+            ax.collections[0].colorbar.ax.tick_params(labelsize=TICK_FONTSIZE)
+
         plt.tight_layout()
 
-        heatmap_path = output_path / f"heatmap_{group_key}.png"
-        plt.savefig(heatmap_path, dpi=150)
+        png_path = output_path / f"heatmap_{group_key}.png"
+        plt.savefig(png_path, dpi=BASE_DPI, bbox_inches="tight")
         plt.close()
-        print(f"🖼️ Saved heatmap: {heatmap_path}")
+        print(f"🖼️ Saved heatmap: {png_path}")
+
+        # Optional: compress/convert via Pillow
+        if ENABLE_PNG_OPTIM:
+            try:
+                from PIL import Image
+                Image.open(png_path).save(
+                    png_path, format="PNG", optimize=True, compress_level=PNG_COMPRESS_LEVEL
+                )
+            except Exception as e:
+                print(f"⚠️ PNG optimization skipped: {e}")
+
+        if WRITE_JPG:
+            try:
+                from PIL import Image
+                jpg_path = output_path / f"heatmap_{group_key}.jpg"
+                Image.open(png_path).convert("RGB").save(
+                    jpg_path, format="JPEG", quality=JPG_QUALITY, optimize=True, progressive=True
+                )
+            except Exception as e:
+                print(f"⚠️ JPEG export skipped: {e}")
 
     print(f"✅ Finished dataset: {dataset_name}")

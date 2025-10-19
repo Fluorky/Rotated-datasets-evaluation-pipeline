@@ -90,75 +90,285 @@ def _tee_stdout(log_path: Optional[str]):
 
 
 
+# in src/cli.py
+from src.analysis import matrix_analyzer as ma
+from typing import Optional
+from pathlib import Path
+import typer
+from src.analysis import matrix_analyzer as ma
+
 @app.command("matrix-analyzer")
 def matrix_analyzer_cmd(
-    cm_root: Path = typer.Option(..., "--cm-root", help="Path to confusion_matrices root for ONE dataset"),
-    db_path: Path = typer.Option(Path("results/db/experiment_logs.db"), "--db", help="SQLite DB path"),
-    dataset: str = typer.Option(..., "--dataset", help="Dataset name: MNIST | GTSRB | GTSRB_RGB | LEGO"),
-    log_file: Optional[Path] = typer.Option(None, "--log-file", help="Append console output to this file as well"),
+    cm_root: Path = typer.Option(
+        ...,
+        "--cm-root",
+        help="Root of confusion matrices: <MODEL>/<TEST_CASE>/confusion_matrix.npy",
+    ),
+    db_path: Path = typer.Option(
+        Path("results/db/experiment_logs.db"),
+        "--db",
+        help="SQLite DB path",
+    ),
+    dataset: str = typer.Option(
+        ...,
+        "--dataset", "-d",
+        help="Dataset: MNIST | GTSRB | GTSRB_RGB | LEGO",
+    ),
+    metric: str = typer.Option(
+        "micro",
+        "--metric",
+        help="Accuracy from confusion matrix: micro | macro",
+        case_sensitive=False,
+    ),
+    clear: bool = typer.Option(
+        True,
+        "--clear/--no-clear",
+        help="Clear existing rows for this dataset before inserting new ones",
+    ),
+    theta_step: int = typer.Option(
+        15,
+        "--theta-step",
+        help="Angle bin width (degrees) for Δθ curves/AUCθ, e.g. 15",
+    ),
+    alpha: float = typer.Option(
+        0.70,
+        "--alpha",
+        help="Balanced score α: score = α·norm(avg) + (1-α)·norm(avg_perf)",
+    ),
+    top_n: int = typer.Option(
+        50,
+        "--top-n",
+        help="How many models to show in the tops",
+    ),
+    log_file: Optional[Path] = typer.Option(
+        None,
+        "--log-file",
+        help="Optional: write a tee'd console log to this file",
+    ),
 ):
     """
-    Analyze confusion matrices and training logs, scoped to ONE dataset.
+    Analyze confusion matrices and produce per-dataset rankings and CSV exports.
     """
+
+    # Small helper: create DB indices for faster queries on large runs.
+    def _ensure_indices(dbp: Path):
+        conn = ma.sqlite3.connect(str(dbp)); cur = conn.cursor()
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_eval_model   ON evaluations(model)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_eval_dataset ON evaluations(dataset)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_eval_metric  ON evaluations(metric)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_eval_m_t     ON evaluations(model, test_case)")
+        conn.commit(); conn.close()
+
+    with ma.tee_to_file(str(log_file) if log_file else None):
+        ma._log_header(dataset=dataset, alpha=alpha, metric=metric, theta_step=theta_step, top_n=top_n)
+
+        # Build/refresh training time table from training_logs (if present)
+        ma.create_training_runs_table(str(db_path))
+        ma.compute_training_times(str(db_path))
+
+        # Ensure schema migration (adds columns: dataset, metric) **before** any UPDATEs
+        ma._ensure_eval_extra_cols(str(db_path))
+
+        # Scan CMs and insert enriched rows
+        ma.collect_and_store_results(
+            cm_root=str(cm_root),
+            db_path=str(db_path),
+            dataset=dataset,
+            metric=metric,
+            clear_dataset=clear,
+        )
+
+        # Optional legacy table
+        ma.create_model_summary_table(str(db_path))
+        ma.compute_and_insert_model_summaries(str(db_path))
+
+        # Reports + CSV exports
+        _ensure_indices(db_path)
+        ma.query_best_models(
+            db_path=str(db_path),
+            dataset=dataset,
+            alpha=alpha,
+            top_n=top_n,
+            theta_step=theta_step,
+        )
+
+        # # make metric visible for matrix_analyzer (export folder naming)
+        # ma._CURRENT_METRIC = (metric or "micro").lower().strip()
+        #
+        # ma._log_header(dataset=dataset, alpha=alpha, metric=metric, theta_step=theta_step, top_n=top_n)
+        # ma.create_training_runs_table(str(db_path))
+        # ma.compute_training_times(str(db_path))
+        #
+        # ma.collect_and_store_results(
+        #     cm_root=str(cm_root),
+        #     db_path=str(db_path),
+        #     dataset=dataset,
+        #     metric=metric,
+        #     clear_dataset=clear
+        # )
+        #
+        # # pass metric so CSVs land in .../<dataset>/<micro|macro>/
+        # ma.query_best_models(
+        #     db_path=str(db_path),
+        #     dataset=dataset,
+        #     alpha=alpha,
+        #     top_n=top_n,
+        #     theta_step=theta_step,
+        #     metric=metric,
+        # )
+
+
+#
+# @app.command("matrix-analyzer")
+# def matrix_analyzer_cmd(
+#     cm_root: Path = typer.Option(..., "--cm-root", help="Path to root directory of confusion matrices"),
+#     db_path: Path = typer.Option(..., "--db", help="Path to SQLite database"),
+#     dataset: str = typer.Option(..., "--dataset", help="Dataset name: MNIST, GTSRB, GTSRB_RGB, LEGO"),
+#     log_file: Path = typer.Option(None, "--log-file", help="Optional path to save console output"),
+#     alpha: float = typer.Option(0.70, "--alpha", help="Balance weight for quality vs efficiency"),
+#     metric: str = typer.Option("micro", "--metric", help="Accuracy metric: micro or macro"),
+#     theta_step: int = typer.Option(15, "--theta-step", help="Angle bin in degrees (for Δθ curves)"),
+#     top_n: int = typer.Option(50, "--top-n", help="How many items to show in rankings"),
+#     clear: bool = typer.Option(False, "--clear", help="Clear existing eval rows for this dataset before inserting"),
+# ):
+#     """
+#     Analyze confusion matrices for a single dataset and print/export rankings.
+#     """
+#     from src.analysis import matrix_analyzer as ma
+#
+#
+#     with ma.tee_to_file(str(log_file) if log_file else None):
+#         ma._log_header(dataset=dataset, alpha=alpha, metric=metric, theta_step=theta_step, top_n=top_n)
+#         ma.create_training_runs_table(str(db_path))
+#         ma.compute_training_times(str(db_path))
+#         ma.collect_and_store_results(
+#             cm_root=str(cm_root),
+#             db_path=str(db_path),
+#             dataset=dataset,
+#             metric=metric,
+#             clear_dataset=clear,
+#         )
+#
+#         ma.create_model_summary_table(str(db_path))
+#         ma.compute_and_insert_model_summaries(str(db_path))
+#
+#         ma.query_best_models(
+#             db_path=str(db_path),
+#             dataset=dataset,
+#             alpha=alpha,
+#             top_n=top_n,
+#             theta_step=theta_step,
+#         )
+
+#
+# @app.command("matrix-analyzer")
+# def matrix_analyzer_cmd(
+#     cm_root: Path = typer.Option(..., "--cm-root", help="Path to <json_DATASET>/confusion_matrices"),
+#     db_path: Path = typer.Option(Path("results/db/experiment_logs.db"), "--db", help="SQLite DB path"),
+#     dataset: str = typer.Option(..., "--dataset", "-d", help="Dataset name: MNIST | GTSRB | GTSRB_RGB | LEGO"),
+#     log_file: Path = typer.Option(None, "--log-file", help="Optional log file (tee stdout)"),
+#     alpha: float = typer.Option(0.70, "--alpha", help="Weight for balanced score (quality vs efficiency)"),
+#     top_n: int = typer.Option(500, "--top", help="Top-N in printed rankings")
+# ):
+#     """
+#     Analyze confusion matrices and training logs (per dataset). Populates DB and prints rankings.
+#     """
+#     with ma.tee_to_file(str(log_file) if log_file else None):
+#         print("🛠️ Rebuilding training_runs table...")
+#         ma.create_training_runs_table(str(db_path))
+#         ma.compute_training_times(str(db_path))
+#
+#         print("📥 Collecting evaluation results...")
+#         ma.collect_and_store_results(str(cm_root), str(db_path), dataset=dataset)
+#
+#         print("📈 Querying best models (per dataset)...")
+#         ma.query_best_models(str(db_path), dataset=dataset, alpha=alpha, top_n=top_n)
+
+@app.command("matrix-analyzer")
+def matrix_analyzer_cmd(
+    cm_root: Path = typer.Option(..., "--cm-root", help="Root of confusion matrices"),
+    db_path: Path = typer.Option(Path("results/db/experiment_logs.db"), "--db", help="SQLite DB"),
+    dataset: str = typer.Option(..., "--dataset", help="Dataset name"),
+    metric: str = typer.Option("micro", "--metric", help="micro|macro"),
+    clear: bool = typer.Option(False, "--clear", help="Clear previous rows for this dataset"),
+    theta_step: int = typer.Option(15, "--theta-step", help="Angle bin (deg)"),
+    alpha: float = typer.Option(0.70, "--alpha", help="Balanced score alpha"),
+    top_n: int = typer.Option(50, "--top-n", help="How many to print"),
+    log_file: Path = typer.Option(None, "--log-file", help="Log file"),
+    per_class_angles: bool = typer.Option(False, "--per-class-angles", help="Export per-class vs angle"),
+    by_delta: bool = typer.Option(False, "--by-delta", help="Use Δθ instead of test-angle"),
+):
     from src.analysis import matrix_analyzer as ma
 
-    with _tee_stdout(str(log_file) if log_file else None) as fp:
-        print(f"📝 Logging to: {log_file}" if log_file else "📝 Logging to: <stdout only>")
-        print("🛠️ Rebuilding training_runs table...")
-        ma.create_training_runs_table(str(db_path), log_fp=fp)
-        ma.compute_training_times(str(db_path), log_fp=fp)
+    with ma.tee_to_file(str(log_file) if log_file else None):
+        ma._log_header(dataset=dataset, alpha=alpha, metric=metric, theta_step=theta_step, top_n=top_n)
 
-        print("📥 Collecting evaluation results...")
-        ma.collect_and_store_results(str(cm_root), str(db_path), dataset=dataset, log_fp=fp)
+        ma.create_training_runs_table(str(db_path))
+        ma.compute_training_times(str(db_path))
+        ma.collect_and_store_results(
+            cm_root=str(cm_root),
+            db_path=str(db_path),
+            dataset=dataset,
+            metric=metric,
+            clear_dataset=clear,
+        )
+        ma.create_model_summary_table(str(db_path))
+        ma.compute_and_insert_model_summaries(str(db_path))
+        ma.query_best_models(
+            db_path=str(db_path), dataset=dataset,
+            alpha=alpha, top_n=top_n, theta_step=theta_step
+        )
 
-        print("📊 Creating model summary table...")
-        ma.create_model_summary_table(str(db_path), log_fp=fp)
-        ma.compute_and_insert_model_summaries(str(db_path), dataset=dataset, log_fp=fp)
+        if per_class_angles:
+            ma.export_per_class_vs_angle(
+                cm_root=str(cm_root),
+                dataset=dataset,
+                theta_step=theta_step,
+                by_delta=by_delta,
+            )
 
-        print("📈 Querying best models (scoped)...")
-        ma.query_best_models(str(db_path), dataset=dataset, log_fp=fp)
 
-@app.command("preprocess")
-def preprocess_cmd(
-    dataset: str = typer.Option(..., "--dataset", "-d", help="Dataset name: MNIST, GTSRB, LEGO"),
-    base_dir: Path = typer.Option(Path("dataset"), help="Base directory containing datasets"),
-    merged_dir_name: str = typer.Option("merged_datasets", help="Name of the merged output subdirectory"),
-    max_tests: int = typer.Option(2000, help="Maximum number of generated test scenarios"),
-    file_format: str = typer.Option("ubyte", "--format", "-f", help="File format: ubyte or npy")
-):
-    """
-    Preprocess dataset: rotate images, merge datasets, generate scenarios.
-    """
-    dataset_config = {
-        "MNIST": "dataset_mnist_non_rotated",
-        "GTSRB": "dataset_GTSRB_non_rotated",
-        "GTSRB_RGB": "dataset_GTSRB_RGB_non_rotated",
-        "LEGO": "dataset_LEGO_non_rotated"
-    }
-
-    if dataset not in dataset_config:
-        print(f"❌ Unsupported dataset: {dataset}")
-        raise typer.Exit(code=1)
-
-    if file_format.lower() == "npy":
-        if not dataset.endswith("_RGB"):
-            dataset_key = dataset + "_RGB"
-            dataset_name = dataset_config.get(dataset_key, dataset_config[dataset])
-        else:
-            dataset_key = dataset
-            dataset_name = dataset_config[dataset]
-    else:
-        dataset_key = dataset
-        dataset_name = dataset_config[dataset]
-
-    run_pipeline(
-        base_dir=os.path.join(base_dir, dataset_key),
-        dataset_name=dataset_name,
-        dataset_key=dataset_key,
-        merged_dir_name=merged_dir_name,
-        max_tests=max_tests,
-        file_format=file_format.lower()
-    )
+# @app.command("preprocess")
+# def preprocess_cmd(
+#     dataset: str = typer.Option(..., "--dataset", "-d", help="Dataset name: MNIST, GTSRB, LEGO"),
+#     base_dir: Path = typer.Option(Path("dataset"), help="Base directory containing datasets"),
+#     merged_dir_name: str = typer.Option("merged_datasets", help="Name of the merged output subdirectory"),
+#     max_tests: int = typer.Option(2000, help="Maximum number of generated test scenarios"),
+#     file_format: str = typer.Option("ubyte", "--format", "-f", help="File format: ubyte or npy")
+# ):
+#     """
+#     Preprocess dataset: rotate images, merge datasets, generate scenarios.
+#     """
+#     dataset_config = {
+#         "MNIST": "dataset_mnist_non_rotated",
+#         "GTSRB": "dataset_GTSRB_non_rotated",
+#         "GTSRB_RGB": "dataset_GTSRB_RGB_non_rotated",
+#         "LEGO": "dataset_LEGO_non_rotated"
+#     }
+#
+#     if dataset not in dataset_config:
+#         print(f"❌ Unsupported dataset: {dataset}")
+#         raise typer.Exit(code=1)
+#
+#     if file_format.lower() == "npy":
+#         if not dataset.endswith("_RGB"):
+#             dataset_key = dataset + "_RGB"
+#             dataset_name = dataset_config.get(dataset_key, dataset_config[dataset])
+#         else:
+#             dataset_key = dataset
+#             dataset_name = dataset_config[dataset]
+#     else:
+#         dataset_key = dataset
+#         dataset_name = dataset_config[dataset]
+#
+#     run_pipeline(
+#         base_dir=os.path.join(base_dir, dataset_key),
+#         dataset_name=dataset_name,
+#         dataset_key=dataset_key,
+#         merged_dir_name=merged_dir_name,
+#         max_tests=max_tests,
+#         file_format=file_format.lower()
+#     )
 
 @app.command("learning-curves")
 def learning_curves_cmd(

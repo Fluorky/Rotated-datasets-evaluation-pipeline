@@ -23,8 +23,10 @@ def parse_filename(filename):
 
 
 def parse_log_file(filepath):
-    with open(filepath, 'r', encoding='utf-8') as f:
+    with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
         lines = f.readlines()
+    # with open(filepath, 'r', encoding='utf-8') as f:
+    #     lines = f.readlines()
 
     config_line = next((line for line in lines if line.startswith("configuration:")), None)
     if not config_line:
@@ -176,6 +178,7 @@ def ingest_logs(
         init_database(db_path)
 
     log_files = collect_log_files(local_logs_path)
+    log_files = [p for p in log_files if "robocopy" not in p.lower()]
 
     for file_path in log_files:
         print(f"\n📂 Processing: {file_path}")

@@ -2,22 +2,18 @@
 """
 Generate combined learning curves from training logs.
 
-What it plots (per run):
+Per run it plots:
 - Left Y:  train_loss (green, solid) + val_loss (blue, dashed)
 - Right Y: train_acc  (orange, solid) + val_acc  (red, dashed) — in %
 
-Robust parsing:
-- Supports "Train Loss:" / "Training loss" / "trn loss", plain "loss:", and "Validation loss:".
-- Accuracy as:
-    * fraction "A/B"  -> converted to percent,
-    * explicit "(xx.xx%)" in parentheses -> used as percent,
-    * plain number (0..1 converted to %; >100 treated as count and divided by set size).
-- Reads dataset sizes from lines like:
-    "✔️ Train data: 35289 samples" / "✔️ Validation data: 3920 samples"
-  to convert counts -> percent when needed.
-- Works with both layouts for logs_dir:
-    (A) <logs_dir>/train/*.txt|.log|.out  (flat)
-    (B) <logs_dir>/json_<DATASET>/train/** (nested)
+Extras:
+- Detects the LAST "Model saved at:" checkpoint and marks it with a vertical line.
+- Robust parsing:
+    * "Train/Training/trn loss", plain "loss", and "Validation loss".
+    * Accuracy as A/B -> %, "(xx.xx%)", or plain number (0..1 -> %, >100 treated as count).
+    * Converts raw counts to % using dataset sizes from lines like:
+      "✔️ Train data: 35289 samples" / "✔️ Validation data: 3920 samples".
+- Works when --logs-dir points either to the parent of json_* or directly to json_DATASET.
 """
 
 from __future__ import annotations
@@ -31,13 +27,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import PercentFormatter
 
-# ---------- Colors (distinct) ----------
+# ---------- Colors ----------
 TRAIN_LOSS_COLOR = "#2ca02c"  # green
 VAL_LOSS_COLOR   = "#1f77b4"  # blue
 TRAIN_ACC_COLOR  = "#ff7f0e"  # orange
 VAL_ACC_COLOR    = "#d62728"  # red
+CKPT_LINE_COLOR  = "#555555"  # grey
 
-# ---------- Model group detection (optional grouping by arch/activation) ----------
+# ---------- Grouping tokens (optional) ----------
 MODEL_KEYS: List[str] = [
     "cyresnet56_logpolar", "cyresnet56_linearpolar",
     "cyvgg19_logpolar",    "cyvgg19_linearpolar",
@@ -70,7 +67,7 @@ ACC_FRAC_RE     = re.compile(
     rf"\b(?:acc|accuracy|top1|top-1)[^0-9]*{FRAC}"
 )
 
-# Accuracy as plain number (block the A/B form via negative lookahead)
+# Accuracy as plain number (block the A/B form)
 VAL_ACC_RE = re.compile(
     rf"(?i)\b(?:val(?:idation)?[_\s-]?(?:acc|accuracy|top1|top-1))\s*[:=]\s*(?!{NUM}\s*/)\s*({NUM})%?"
 )
@@ -87,6 +84,9 @@ VAL_KEYWORD_RE = re.compile(r"(?i)\bval(?:idation)?\b")
 # Dataset sizes
 TRAIN_SAMPLES_RE = re.compile(r"(?i)\btrain\s+data:\s*([0-9][0-9,]*)\s*samples")
 VAL_SAMPLES_RE   = re.compile(r"(?i)\bval(?:idation)?\s+data:\s*([0-9][0-9,]*)\s*samples")
+
+# Checkpoint (accepts optional emoji)
+CKPT_RE = re.compile(r"(?i)(?:💾\s*)?model\s+saved\s+at\s*:")
 
 
 # ---------- Small helpers ----------
@@ -191,24 +191,27 @@ def _parse_acc_from_line(line: str, prefer_val: bool) -> Tuple[Optional[float], 
 
 # ---------- Core parsing & plotting ----------
 
-def parse_training_log(path: Path) -> pd.DataFrame:
+def parse_training_log(path: Path) -> Tuple[pd.DataFrame, Optional[int]]:
     """
     Parse one training log into a DataFrame with columns:
       epoch, loss, val_loss, acc, val_acc
-    Accuracy is converted to percent whenever possible.
+    Returns (df, last_checkpoint_epoch).
     """
     try:
         text = path.read_text(encoding="utf-8", errors="ignore")
     except Exception:
-        return pd.DataFrame(columns=["epoch", "loss", "val_loss", "acc", "val_acc"])
+        return pd.DataFrame(columns=["epoch", "loss", "val_loss", "acc", "val_acc"]), None
 
     rows: List[Dict[str, float]] = []
     current_epoch: Optional[int] = None
     current: Dict[str, Optional[float]] = {"epoch": None, "loss": None, "val_loss": None, "acc": None, "val_acc": None}
 
-    # capture dataset sizes to turn raw counts into %
+    # dataset sizes to convert counts to %
     train_n: Optional[int] = None
     val_n: Optional[int] = None
+
+    # last checkpoint epoch
+    last_ckpt_epoch: Optional[int] = None
 
     def flush():
         if current["epoch"] is not None and any(v is not None for k, v in current.items() if k != "epoch"):
@@ -271,22 +274,27 @@ def parse_training_log(path: Path) -> pd.DataFrame:
         if val_acc is not None:
             current["val_acc"] = val_acc
 
+        # checkpoint detection: keep the LAST occurrence
+        if CKPT_RE.search(line):
+            if current_epoch is not None:
+                last_ckpt_epoch = current_epoch
+
     flush()
 
-    if not rows:
-        return pd.DataFrame(columns=["epoch", "loss", "val_loss", "acc", "val_acc"])
+    df = pd.DataFrame(rows, columns=["epoch", "loss", "val_loss", "acc", "val_acc"])
+    if df.empty:
+        return df, last_ckpt_epoch
 
-    df = pd.DataFrame(rows).sort_values("epoch")
-    # if duplicates per epoch, keep the last
-    df = df.drop_duplicates(subset=["epoch"], keep="last").reset_index(drop=True)
-    return df
+    df = df.sort_values("epoch").drop_duplicates(subset=["epoch"], keep="last").reset_index(drop=True)
+    return df, last_ckpt_epoch
 
 
-def _plot_combined(df: pd.DataFrame, title: str, out_path: Path):
+def _plot_combined(df: pd.DataFrame, title: str, out_path: Path, ckpt_epoch: Optional[int] = None):
     """
     One figure per run:
       - Left Y: train_loss (green) + val_loss (blue)
       - Right Y: train_acc (orange) + val_acc (red) in %
+      - Vertical dotted line at the last checkpoint epoch (if present).
     """
     if df.empty:
         return
@@ -330,12 +338,16 @@ def _plot_combined(df: pd.DataFrame, title: str, out_path: Path):
         lines.append(l4); labels.append("val_acc")
 
     ax2.set_ylabel("Accuracy [%]")
-
-    # If values look like percent, clamp & show % ticks
     is_percent = (not acc_series.empty and acc_series.min() >= 0.0 and acc_series.max() <= 100.0)
     if is_percent:
         ax2.set_ylim(0, 100)
         ax2.yaxis.set_major_formatter(PercentFormatter(xmax=100, decimals=0))
+
+    # Checkpoint marker (vertical line on the left axis)
+    if ckpt_epoch is not None:
+        v = ax.axvline(x=ckpt_epoch, color=CKPT_LINE_COLOR, linestyle=":", linewidth=2,
+                       label=f"ckpt@{ckpt_epoch}")
+        lines.append(v); labels.append(f"ckpt@{ckpt_epoch}")
 
     # Legend below
     ncols = min(4, max(1, len(labels)))
@@ -395,12 +407,13 @@ def generate_learning_curves(dataset_name: str, logs_base: Path, output_base: Pa
         out_dir.mkdir(parents=True, exist_ok=True)
 
         for train_label, path in runs:
-            df = parse_training_log(path)
+            df, ckpt_epoch = parse_training_log(path)
             short = shorten_label(train_label)
             _plot_combined(
                 df,
                 title=f"Learning Curve – {short}",
                 out_path=out_dir / f"{short}_combined.png",
+                ckpt_epoch=ckpt_epoch,
             )
 
     print(f"✅ Learning curves generated under: {output_root}")
