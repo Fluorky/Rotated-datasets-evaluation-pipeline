@@ -11,7 +11,6 @@ from matplotlib.patches import Patch
 
 def detect_family(name: str) -> str:
     n = name.lower()
-    # order matters: check "cy..." before non-cy to avoid double matches
     if re.search(r"\bcy[-_ ]?vgg", n) or "cyvgg19" in n:
         return "CyVGG"
     if re.search(r"\bvgg", n) or "vgg19" in n:
@@ -36,18 +35,22 @@ def load_rows(csv_path: str):
     rows = []
     with open(csv_path, newline="", encoding="utf-8") as f:
         rdr = csv.DictReader(f)
+        has_robust = "robust_perf" in rdr.fieldnames  # check if robust_perf exists
         for row in rdr:
             try:
-                rows.append({
+                r = {
                     "model": row["model"],
                     "avg_perf": float(row["avg_perf"]),
-                    "robust_perf": float(row["robust_perf"]) if row.get("robust_perf") not in ("", None) else None,
                     "time_s": float(row["time_s"]) if row.get("time_s") not in ("", None) else None,
-                })
+                    "robust_perf": None,
+                }
+                if has_robust and row.get("robust_perf") not in ("", None):
+                    r["robust_perf"] = float(row["robust_perf"])
+                rows.append(r)
             except Exception:
                 pass
     rows.sort(key=lambda r: r["avg_perf"], reverse=True)
-    return rows
+    return rows, has_robust
 
 # ---- Plotting ---------------------------------------------------------------
 
@@ -69,7 +72,7 @@ def plot_avgperf(
     strip_prefix: str | None = None,
     family_colors: dict[str, str] = FAMILY_COLORS,
 ):
-    rows = load_rows(csv_path)
+    rows, has_robust = load_rows(csv_path)
     if not rows:
         raise SystemExit("No data rows in CSV.")
     rows = rows[:max(1, top_k)]
@@ -81,12 +84,12 @@ def plot_avgperf(
     fams = [detect_family(r["model"]) for r in rows]
     colors = [family_colors.get(f, family_colors["Other"]) for f in fams]
 
-    # auto figure size (no label wrapping)
+    # auto figure size
     max_label_len = max(len(s) for s in labels)
     if figsize_w is None or figsize_h is None:
         if horizontal:
             n = len(rows)
-            auto_h = max(4.0, 0.28 * n)            # 0.28" per item
+            auto_h = max(4.0, 0.28 * n)
             auto_w = max(10.0, 8.0 + 0.12 * max_label_len)
             figsize = (figsize_w or auto_w, figsize_h or auto_h)
         else:
@@ -102,13 +105,16 @@ def plot_avgperf(
 
     if horizontal:
         y = list(range(len(rows)))
-        ax.barh(y, avgp, color=colors, edgecolor="none", label="avg_perf")
-        if any(v is not None for v in robp):
+        # ax.barh(y, avgp, color=colors, edgecolor="none", label="avg_perf")
+        ax.barh(y, avgp, color=colors, edgecolor="none", label="avg_perf", alpha=0.8)
+
+        if has_robust and any(v is not None for v in robp):
             ys = [i for i, v in enumerate(robp) if v is not None]
             xs = [v for v in robp if v is not None]
-            # put markers in same family color for each point
             point_colors = [colors[i] for i in ys]
-            ax.scatter(xs, ys, marker="o", s=18, label="robust_perf", c=point_colors)
+            # ax.scatter(xs, ys, marker="o", s=18, label="robust_perf", c=point_colors)
+            ax.scatter(xs, ys, marker="o", s=18, label="robust_perf", c=point_colors, zorder=3)
+
         ax.set_yticks(y, labels=labels)
         ax.tick_params(axis="y", labelsize=tick_font)
         ax.tick_params(axis="x", labelsize=tick_font)
@@ -118,11 +124,14 @@ def plot_avgperf(
     else:
         x = list(range(len(rows)))
         ax.bar(x, avgp, color=colors, edgecolor="none", label="avg_perf")
-        if any(v is not None for v in robp):
+
+        if has_robust and any(v is not None for v in robp):
             xs = [i for i, v in enumerate(robp) if v is not None]
             ys = [v for v in robp if v is not None]
             point_colors = [colors[i] for i in xs]
-            ax.scatter(xs, ys, marker="o", s=18, label="robust_perf", c=point_colors)
+            # ax.scatter(xs, ys, marker="o", s=18, label="robust_perf", c=point_colors)
+            ax.scatter(xs, ys, marker="o", s=18, label="robust_perf", c=point_colors, zorder=3)
+
         ax.set_xticks(x, labels=labels, rotation=30, ha="right")
         ax.tick_params(axis="x", labelsize=tick_font)
         ax.tick_params(axis="y", labelsize=tick_font)
@@ -134,20 +143,22 @@ def plot_avgperf(
 
     ax.grid(True, axis="both", linestyle="--", alpha=0.35)
 
-    # family legend (color patches) + metrics legend
+    # family legend
     fam_order = ["VGG", "CyVGG", "ResNet", "CyResNet", "Other"]
     fam_patches = [Patch(facecolor=family_colors[f], label=f) for f in fam_order if any(ff == f for ff in fams)]
-    # put two legends: family colors + metric markers (avg/robust)
+
     leg1 = ax.legend(handles=fam_patches, title="Family", loc="upper left", bbox_to_anchor=(1.01, 1.00),
                      frameon=True, prop={"size": legend_font})
     ax.add_artist(leg1)
-    ax.legend(title="Metrics", loc="upper left", bbox_to_anchor=(1.01, 0.74),
-              frameon=True, prop={"size": legend_font})
+
+    if has_robust:
+        ax.legend(title="Metrics", loc="upper left", bbox_to_anchor=(1.01, 0.74),
+                  frameon=True, prop={"size": legend_font})
 
     os.makedirs(os.path.dirname(out_png) or ".", exist_ok=True)
     fig.savefig(out_png, dpi=dpi, bbox_inches="tight")
     plt.close(fig)
-    print("Saved:", out_png)
+    print(f"Saved: {out_png}")
 
 # ---- CLI --------------------------------------------------------------------
 
