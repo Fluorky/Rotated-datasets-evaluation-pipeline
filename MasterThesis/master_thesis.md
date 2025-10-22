@@ -3359,10 +3359,10 @@ warunkach rotacyjnych.
 Pełne źródła wykorzystane w pracy są publicznie dostępne w dwóch
 repozytoriach:
 
-* **Część badawcza / tekst pracy**
+* **Część badawcza / tekst pracy**  \
   [github.com/Fluorky/MasterThesis](https://github.com/Fluorky/MasterThesis)
 
-* **Implementacja modeli i pipeline’u (CyCNN, CUDA, trening/testy)**
+* **Implementacja modeli i pipeline’u (CyCNN, CUDA, trening/testy)**  \
   [github.com/Fluorky/CyCNN-Enhanced](https://github.com/Fluorky/CyCNN-Enhanced)
 
 
@@ -3372,8 +3372,9 @@ Komplet artefaktów eksperymentalnych (logi, macierze pomyłek `.npy/.png`,
 heatmapy train–test, CSV z rankingami, checkpointy modeli `.pt`) został
 zarchiwizowany w katalogu zbiorczym na udostępniony dysku:
 
-* **Lokalizacja:** *Dysk XYZ*
-* **Ścieżka / link:** *(udostępniony promotorowi i komisji wraz z pracą)*
+* **Lokalizacja:** *Dysk Google*
+* **Ścieżka / link:**  \
+https://drive.google.com/drive/folders/1C8QnvG8NkCgbtI8bVZrU9cm5SnN7XL92?usp=sharing  \
 * **Struktura:**
 
   * `db/experiment_logs.db`- baza **SQLite** z metrykami i metadanymi,
