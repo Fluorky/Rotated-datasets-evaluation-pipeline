@@ -63,20 +63,23 @@ Choć współczesne modele rozpoznawania obrazu radzą sobie bardzo dobrze,
 w praktyce bywają wrażliwe na pozornie drobne zmiany takie jak
 obrócenie obiektu o kilkanaście stopni czy niewielki przechył kamery.
 To, co dla człowieka jest naturalne i natychmiast rozpoznawalne (znak
-drogowy pod kątem, cyfra obrócona na kartce), dla klasycznej
-konwolucyjnej sieci neuronowej bywa problemem. Największy problem to brak
-naturalnej inwariantności względem rotacji, standardowe CNN-y z
-definicji lepiej radzą sobie z przesunięciami niż z obrotami
+drogowy pod kątem, cyfra obrócona na kartce), dla klasycznej konwolucyjnej 
+sieci neuronowej (ang. Convolutional Neural Network, CNN) bywa problemem. 
+Największy problem to brak naturalnej inwariantności względem rotacji, 
+standardowe CNN-y z definicji lepiej radzą sobie z przesunięciami niż z obrotami
 [@goodfellow2016deep; @dumoulin2016guide].
 
 W ostatnich latach pojawiło się kilka propozycji rozwiązania tego problemu. 
-Jedna z nichto poszerzanie danych o zrotowane przykłady, które poprawiają 
+Jedna z nich to poszerzanie danych o zrotowane przykłady, które poprawiają 
 odporność, ale wydłużają trening i nie gwarantują uogólnienia na wszystkie kąty. 
-Druga to architektury z wbudowaną geometrią: sieci grupowo równoważne (G-CNN,
-E(2)-equivariant) [@cohen2016group; @kim2020cycnn], sieci cykliczne
-(CyCNN, a w szczególności **CyVGG** i **CyResNet**) operujące na wielu
-orientacjach oraz przekształcenia do układów polarnych (linear-polar i
-log-polar), które przekształcają rotacje do przesunięć. Cel jest wspólny,
+Druga to architektury z wbudowaną geometrią: sieci grupowo równoważne 
+(ang. Group Equivariant Convolutional Neural Networks, G-CNN), w tym sieci 
+równoważne względem grupy przekształceń euklidesowych w dwóch wymiarach 
+(ang. Euclidean(2)-equivariant networks, E(2)-equivariant) [@cohen2016group; @kim2020cycnn], 
+oraz modele oparte na mapowaniu polarnym i konwolucjach cylindrycznych 
+(ang. Cylindrical Convolutional Neural Networks, CyCNN, a w szczególności CyVGG i CyResNet) 
+operujące na wielu orientacjach, a także przekształcenia do układów polarnych 
+(linear-polar i log-polar), które przekształcają rotacje do przesunięć. Cel jest wspólny,
 mianowicie by model rozpoznawał tak samo niezależnie od orientacji,
 bez agresywnego dublowania danych i powiększania datasetu o te same, 
 lecz zrotowane dane.
@@ -86,21 +89,21 @@ Przygotowano zbiory obejmujące m.in. odręcznie napisane cyfry, znaki
 drogowe (w kolorze i w odcieniach szarości) oraz syntetyczne obiekty 3D
 rzutowane na 2D (klocki LEGO), a następnie rozszerzono je o kontrolowane
 rotacje. Zaimplementowano i porównano wybrane architektury rotacyjnie
-inwariantne i ich warianty bazowe w **PyTorchu** [@paszke2019pytorch],
+inwariantne i ich warianty bazowe w PyTorchu [@paszke2019pytorch],
 mierząc wpływ transformacji (linear-polar vs. log-polar), wyboru
 architektury i zakresu kątów na jakość predykcji. Obliczenia realizowane 
 zostały na nastpępujących kartach graficznych: 
-**NVIDIA GeForce RTX 3070 Ti 8 GB** oraz **RTX 3060 12 GB**,
+NVIDIA GeForce RTX 3070 Ti 8 GB oraz RTX 3060 12 GB,
 co skróciło czas trenowania i umożliwiło szeroki przegląd eksperymentów.
-Środowisko uruchomieniowe ustandaryzowane zostało z użyciem **Dockera** 
+Środowisko uruchomieniowe ustandaryzowane zostało z użyciem Dockera
 celem użyskania powtarzalności i przenośności.
 
 Celem pracy jest nie tylko pokazanie, że jest możliwe uzyskanie odporności na
-rotacje, ale przede wszystkim wskazanie, **kiedy** i **jakim kosztem**
+rotacje, ale przede wszystkim wskazanie, kiedy i jakim kosztem
 ją osiągamy oraz które techniki przynoszą największy zysk względem
-klasycznych CNN-ów, ich wpływ na stabilność i szybkość uczenia, a
-także które konfiguracje są najpraktyczniejsze w realnych
-zastosowaniach (OCR, rozpoznawanie znaków, analiza obiektów technicznych).
+klasycznych CNN-ów, ich wpływ na stabilność i szybkość uczenia, a także 
+które konfiguracje są najpraktyczniejsze w realnych zastosowaniach 
+(ang. Optical Character Recognition, OCR - optyczne rozpoznawanie znaków, analiza obiektów technicznych).
 W dalszej części pracy przedstawiono podstawy, dane i augmentację,
 architektury, środowisko eksperymentalne, protokoły ewaluacji oraz
 wyniki z analizą i wnioskami.
@@ -125,7 +128,7 @@ obrazów.
 
 Na podstawie tych zbiorów została przeprowadzona implementacja i
 ewaluacja wybranych architektur rotacyjnie inwariantnych z wykorzystaniem
-**PyTorch**. Obliczenia zostały wykonane przy użyciu wyżej 
+PyTorch. Obliczenia zostały wykonane przy użyciu wcześniej 
 wymienionych kart graficznych NVIDIA, co umożliwiło przyspieszenie trenowania 
 i testowania. Otrzymane wyniki zostały porównane z rezultatami 
 klasycznych sieci konwolucyjnych w celu oceny realnych korzyści z użycia
@@ -140,23 +143,26 @@ zastosowano następujące rozwiązania technologiczne:
 
 - **Język programowania Python** - podstawowe narzędzie do implementacji
   algorytmów oraz obsługi frameworków uczenia maszynowego, dzięki jego
-  wszechstronności i bogatemu ekosystemowi bibliotek [@python-docs]
-  Środowiska uruchomieniowe były izolowane dzięki użyciu `venv`.
+  wszechstronności i bogatemu ekosystemowi bibliotek [@python-docs]. 
+  Środowiska uruchomieniowe były izolowane dzięki użyciu wirtualnych 
+  środowisk Pythona (`venv`).
 
 - **Frameworki uczenia maszynowego:**  \
-  - **PyTorch** - elastyczny framework do budowy, trenowania i wdrażania modeli
-  ML/DL (w tym własnych warstw, takich jak `CyConv`) [@pytorch-docs].  \
-  - **Optuna** - biblioteka do automatycznej optymalizacji hiperparametrów
-  (*HPO*) z obsługą efektywnych strategii próbkowania (**TPE**) oraz
-  mechanizmów wczesnego przerywania treningów (**MedianPruner** itp.).
+  - **PyTorch** - PyTorch - elastyczny framework do budowy, trenowania i wdrażania
+  modeli uczenia maszynowego (ML) i głębokiego uczenia (DL) (w tym własnych warstw, 
+  takich jak konwolucja cylindryczna,`CyConv`) [@pytorch-docs].  \
+  - **Optuna** - biblioteka do automatycznej optymalizacji hiperparametrów (HPO) z 
+  obsługą strategii TPE (Tree-structured Parzen Estimator) oraz mechanizmów 
+  wczesnego przerywania treningów (np. MedianPruner).
   Umożliwia ona definiowanie przestrzeni poszukiwań, rejestrowanie metryk,
   zapisywanie wyników (np. do CSV/JSON) oraz łatwe odtwarzanie najlepszych
   konfiguracji w postaci *study*. Integracja z PyTorchem odbywa się bez
   zmian w architekturze modeli i pozwala skrócić czas eksperymentów bez
   utraty jakości [@akiba2019optuna].  \
 
-- **Modele cykliczne (CyCNN).** W pracy zostało przyjęte podejście, w
-  którym obraz został przemapowany do współrzędnych $(\rho,\varphi)$.
+- **Model CyCNN (ang. Cylindrical Convolutional Neural Network).** 
+  W mojej pracy zostało przyjęte podejście, w  którym obraz został przemapowany 
+  do współrzędnych $(\rho,\varphi)$.
   Dzięki temu obrót $R_\alpha$ staje się przesunięciem o $\alpha$ po osi
   $\varphi$. Warstwy konwolucyjne zostały zastąpione warstwami cylindrycznymi
   (CyConv) z cyklicznym paddingiem po $\varphi$. Dla każdego filtra
@@ -166,56 +172,48 @@ zastosowano następujące rozwiązania technologiczne:
   rotacji. Został ustawione takie parametry jak stały środek układu polarnych,
   stała siatka próbkowania oraz biliniarna interpolacja. Padding po
   $\varphi$ został ustawiony na cykliczny. Implementacja została wykonana
-  w **PyTorchu** (punkt odniesienia: CyCNN [@kim2020cycnn]).
+  w PyTorchu (punkt odniesienia: CyCNN [@kim2020cycnn]).
 
 - **Wykorzystanie akceleracji GPU (NVIDIA)** - obliczenia zostały
-  znacząco przyspieszone dzięki użyciu kart **RTX 3070 Ti 8 GB** oraz
-  **RTX 3060 12 GB**. Frameworki takie jak PyTorch wspierają **CUDA**, **Tensor** oraz **cuDNN**, co
-  umożliwia efektywne wykorzystanie zasobów GPU [@cuda-docs; @cudnn-docs].
+  znacząco przyspieszone dzięki użyciu kart RTX 3070 Ti 8 GB oraz
+  RTX 3060 12 GB. Frameworki takie jak PyTorch wspierają CUDA (Compute Unified Device Architecture) 
+  oraz cuDNN (CUDA Deep Neural Network library) i potrafią wykorzystywać 
+  rdzenie Tensor (Tensor Cores) co umożliwia efektywne wykorzystanie 
+  zasobów GPU [@cuda-docs; @cudnn-docs].
   Monitorowanie i diagnostyka zostały wykonane z użyciem narzędzia `nvidia-smi`.
 
-- **Rdzenie CUDA (CUDA Cores).** Podstawowe jednostki wykonawcze
-  multiprocesorów strumieniowych (SM) realizują obliczenia arytmetyczne
-  w precyzji **FP32/INT32**. Konwolucje oraz mnożenia macierzy są
-  wykonywane na rdzeniach CUDA zawsze wtedy, gdy nie są aktywowane
-  Tensor Cores (np. czysty FP32 bez **TF32**/AMP). Wydajność zależy od
-  obsadzenia SM-ów (occupancy), doboru rozmiaru bloków (wielokrotność
-  32 wątków - **warp**), koalescencji dostępu do pamięci globalnej oraz
-  wykorzystania pamięci współdzielonej. Warstwa `CyConv2d` wymusza
-  `contiguous()` i obecność tensora na CUDA przed wywołaniem jądra;
-  duży `workspace` sprzyja kafelkowaniu i ogranicza liczbę odczytów z
-  DRAM, co poprawia przepływ danych na SM-ach [@cuda-docs].
-
 - **Rdzenie CUDA (CUDA Cores).** To podstawowe jednostki obliczeniowe
-  w multiprocesorach strumieniowych (SM), odpowiedzialne za operacje
-  arytmetyczne w precyzji **FP32/INT32**. Gdy nie korzystamy z Tensor
-  Cores (np. trening w czystym FP32, bez **TF32**/**AMP**), sploty i
-  mnożenia macierzy wykonują właśnie rdzenie CUDA. Na wydajność wpływa
-  przede wszystkim **occupancy** SM-ów (obsadzenie wątkami), właściwy
-  dobór rozmiaru bloków (w praktyce wielokrotność 32 wątków jest równy **warp**),
+  w multiprocesorach strumieniowych (SM - Streaming Multiprocessors), 
+  odpowiedzialne za operacje arytmetyczne w precyzji FP32/INT32. 
+  Gdy nie korzystamy z Tensor Cores (np. trening w czystym FP32, bez 
+  TF32 (TensorFloat-32)/AMP (Automatic Mixed Precision)), 
+  sploty i mnożenia macierzy wykonują właśnie rdzenie CUDA. Na wydajność wpływa
+  przede wszystkim occupancy SM-ów (obsadzenie wątkami), właściwy
+  dobór rozmiaru bloków (w praktyce wielokrotność 32 wątków jest równy warp),
   scalony dostęp do pamięci globalnej oraz sensowne użycie
-  **pamięci współdzielonej**. Warstwa `CyConv2d` wymusza
+  pamięci współdzielonej. Warstwa `CyConv2d` wymusza
   `contiguous()` i obecność tensora na CUDA przed wywołaniem jądra,
   duży `workspace` sprzyja kafelkowaniu (podziale danych) i ogranicza 
   liczbę odczytów z DRAM, co poprawia przepływ danych na SM-ach [@cuda-docs].
 
 - **Tensor Cores (Ampere).** Zastosowane karty graficzne RTX (3070 Ti, 3060) mają
   rdzenie Tensor, które sprzętowo przyspieszają operacje macierzowe
-  (konwolucje/matmul). Biblioteki **cuDNN/cuBLAS** na architekturze
-  **Ampere** domyślnie mogą używać trybu **TF32** dla obciążeń FP32,
+  (konwolucje/matmul). Biblioteki cuDNN (CUDA Deep Neural Network) / 
+  cuBLAS (CUDA Basic Linear Algebra Subprograms) na architekturze
+  Ampere domyślnie mogą używać trybu TF32 dla obciążeń FP32,
   co daje dodatkowe przyspieszenie bez zmian w modelu.
-  Dodatkowo, w **PyTorchu** możliwe jest włączenie **mieszanej precyzji**
-  (FP16/BF16) przez **AMP** w miejscach, gdzie to bezpieczne, co przy
+  Dodatkowo, w PyTorchu możliwe jest włączenie mieszanej precyzji
+  (FP16/BF16 - bfloat16) przez AMP w miejscach, gdzie to bezpieczne, co przy
   włączeniu tego feature, zwykle przyspiesza to trening przy
   porównywalnej jakości (szczegóły znajdują się w dokumentacji).
   [@nvidia_tensorcores; @nvidia_tf32; @micikevicius2018mixed; @pytorch_amp]
 
-- **System operacyjny: Linux (Ubuntu 24.04.2 LTS).** - Główne środowisko 
-  uruchomieniowe stanowił system operacyjny **Ubuntu** (dystrybucja LTS) 
-  posiadający stabilne jądro, pakiety z APT, łatwą integrację ze 
-  sterownikami NVIDIA i CUDA. Treningi uruchamiane były **lokalnie** na 
+- **System operacyjny: Linux (Ubuntu 24.04.2 LTS - Long-Term Support).** - Główne środowisko 
+  uruchomieniowe stanowił system operacyjny Ubuntu (dystrybucja LTS) 
+  posiadający stabilne jądro, pakiety z APT (Advanced Package Tool), łatwą integrację ze 
+  sterownikami NVIDIA i CUDA. Treningi uruchamiane były lokalnie na 
   maszynach z GPU NVIDII. [@ubuntu_docs]. Dla zgodności ze środowiskami 
-  Windows używano też wariantu **WSL2** (ten sam obraz Dockera i ta sama konfiguracja)
+  Windows używano też wariantu WSL2 (Windows Subsystem for Linux 2) (ten sam obraz Dockera i ta sama konfiguracja)
   [@wsl_docs].
 
 - **Konteneryzacja za pomocą Dockera** - odizolowane środowiska
@@ -231,28 +229,28 @@ w płaszczyźnie 2d. Skupiono się na porównaniu klasycznych architektur z ich
 wersjami rotacyjnie inwariantnymi oraz na wpływie przekształceń polarnych
 na jakość predykcji. Badania zostały przeprowadzone na obrazach 2D i ich
 rotacjach planarnych. W szczególności zostały porównane warianty bazowe
-**VGG/ResNet** z wersjami cyklicznymi **CyVGG/CyResNet**, a także wpływ
-mapowania **linear-polar** i **log-polar**. Eksperymenty zostały wykonane
-na zbiorach **MNIST**, **GTSRB_gray**, **GTSRB RGB** i **LEGO** z
+VGG/ResNet z wersjami cyklicznymi CyVGG/CyResNet, a także wpływ
+mapowania linear-polar i log-polar. Eksperymenty zostały wykonane
+na zbiorach MNIST, GTSRB_gray, GTSRB RGB i LEGO z
 kontrolowanymi rotacjami.
 
 ### Ujęte w zakresie
 W pracy zostały poruszone poniższe wątki badawcze:
 
 **Architektury modeli:** zostały zaimplementowane i porównane warianty
-bazowe **VGG** oraz **ResNet** [@simonyan2014vgg; @he2016resnet], a także
-ich wersje cykliczne **CyVGG** i **CyResNet** (modele rotacyjnie
+bazowe VGG oraz ResNet [@simonyan2014vgg; @he2016resnet], a także
+ich wersje cykliczne CyVGG i CyResNet (modele rotacyjnie
 inwariantne) [@kim2020cycnn].
 
 **Przekształcenia polarne:** została oceniona użyteczność mapowania
-**linear-polar** oraz **log-polar** jako etapów wstępnego
+linear-polar oraz log-polar jako etapów wstępnego
 przetwarzania służących „prostowaniu” rotacji do przesunięć
 [@reddy1996logpolar; @kim2020cycnn].
 
 **Zbiory danych:** zostały wykorzystane następujące zbiory:
-**MNIST** (odręczne cyfry, 28x28 przeskalowane do 32x32, grayscale) [@lecun1998mnist],
-**LEGO** (syntetyczne obiekty 3D rzutowane na 2D, 96x96, grayscale),
-**GTSRB** (znaki drogowe, 32x32, grayscale) oraz **GTSRB RGB**
+MNIST (odręczne cyfry, 28x28 przeskalowane do 32x32, grayscale) [@lecun1998mnist],
+LEGO (syntetyczne obiekty 3D rzutowane na 2D, 96x96, grayscale),
+GTSRB (znaki drogowe, 32x32, grayscale) oraz GTSRB RGB
 (wersja kolorowa) [@stallkamp2011gtsrb]. Zbiory zostały rozszerzone
 o kontrolowane rotacje oraz zostały przygotowane spójne podziały zbiorów na
 train/val/test.
@@ -262,13 +260,13 @@ zostały zdefiniowane zakresy kątów do sprawdzenia,
 liczba treningów, podział na zbiory train/val/test (uczący/
 walidacyjny/testowy), z możliwością powtórzenia trenowań.
 
-**Środowisko i implementacja:** został wykorzystany **PyTorch** z
-akceleracją **CUDA/cuDNN** na kartach **NVIDIA GeForce RTX 3070 Ti 8 GB**
-oraz **NVIDIA GeForce RTX 3060 12 GB** [@pytorch-docs; @cuda-docs;
+**Środowisko i implementacja:** został wykorzystany PyTorch z
+akceleracją CUDA/cuDNN na kartach NVIDIA GeForce RTX 3070 Ti 8 GB
+oraz NVIDIA GeForce RTX 3060 12 GB [@pytorch-docs; @cuda-docs;
 @cudnn-docs]. Przygotowane zostały skrypty w
 Pythonie do trenowania, testowania i ewaluacji [@python-docs].
 Środowisko uruchomieniowe zostało ustandaryzowane z
-użyciem **Dockera** [@docker-docs].
+użyciem Dockera [@docker-docs].
 
 **Metryki i analiza:** została przeprowadzona ocena jakości (accuracy,
 macierze pomyłek), analiza stabilności (średnia/mediana/odchylenie
@@ -310,28 +308,28 @@ metodyki, dokumentację eksperymentalną oraz wnioski końcowe.
 
 Struktura pracy została zaprojektowana tak, aby w sposób spójny
 prowadzić czytelnika od zagadnień teoretycznych do analizy wyników
-eksperymentalnych. W rozdziale **Podstawy teoretyczne** przedstawiono
+eksperymentalnych. W rozdziale Podstawy teoretyczne przedstawiono
 kluczowe pojęcia i narzędzia: sieci konwolucyjne (CNN), inwariancję i
 ekwiwariancję, przekształcenia polarne oraz najważniejsze podejścia
 pokrewne, takie jak G-CNN, E(2)-Equivariant Networks i CyCNN.
-Rozdział **Opis zbiorów danych** zawiera charakterystykę wykorzystanych
-zestawów: **MNIST**, **LEGO**, **GTSRB_gray** oraz **GTSRB RGB** 
+Rozdział Opis zbiorów danych zawiera charakterystykę wykorzystanych
+zestawów: MNIST, LEGO, GTSRB_gray oraz GTSRB RGB 
 oraz sposób augmentacji, obejmujący rotacje i podział na zbiory
-treningowe, walidacyjne i testowe. W części **Architektury modeli**
-omówiono konstrukcję sieci bazowych (**VGG19**, **ResNet56**) oraz ich
-wariantów cyklicznych (**CyVGG19**, **CyResNet56**) wraz z zastosowanymi
-odwzorowaniami **linear-polar** i **log-polar**.  
-Rozdział **Implementacja i środowisko eksperymentalne** opisuje aspekty
-techniczne: biblioteki (**PyTorch**, **CUDA**, **cuDNN**), środowisko
-obliczeniowe (**RTX 3070 Ti 8 GB**, **RTX 3060 12 GB**), konteneryzację
-(**Docker**) oraz strukturę projektu i zestaw skryptów. W części
-**Eksperymenty** określono scenariusze trenowania, metryki oraz sposób
-oceny jakości modeli. Rozdział **Porównanie wyników** zestawia wyniki
+treningowe, walidacyjne i testowe. W części Architektury modeli
+omówiono konstrukcję sieci bazowych (VGG19, ResNet56) oraz ich
+wariantów cyklicznych (CyVGG19, CyResNet56) wraz z zastosowanymi
+odwzorowaniami linear-polar i log-polar.  
+Rozdział Implementacja i środowisko eksperymentalne opisuje aspekty
+techniczne: biblioteki (PyTorch, CUDA, cuDNN), środowisko
+obliczeniowe (RTX 3070 Ti 8 GB, RTX 3060 12 GB), konteneryzację
+(Docker) oraz strukturę projektu i zestaw skryptów. W części
+Eksperymenty określono scenariusze trenowania, metryki oraz sposób
+oceny jakości modeli. Rozdział Porównanie wyników zestawia wyniki
 dla poszczególnych architektur (VGG vs. CyVGG, ResNet vs. CyResNet) i
 analizuje wpływ transformacji na stabilność oraz czas obliczeń.  
-Ostatni rozdział, **Wnioski**, podsumowuje uzyskane rezultaty, wskazuje
+Ostatni rozdział, Wnioski, podsumowuje uzyskane rezultaty, wskazuje
 kierunki dalszych badań oraz ocenę efektywności modeli cyklicznych.
-Sekcja **Aneks** zawiera listingi kodów, dodatkowe wykresy oraz tabele
+Sekcja Aneks zawiera listingi kodów, dodatkowe wykresy oraz tabele
 pomocnicze.
 
 \newpage
@@ -347,13 +345,14 @@ parametry geometrii warstwy (stride, padding, dylacja), zależności rozmiarów
 wejścia i wyjścia oraz sposób, w jaki pooling buduje praktyczną inwariancję na
 przesunięcia.
 
-Następnie przedstawiona zostaje różnica między **ekwiwariancją**, a
-**inwariancją** oraz pokazane są ograniczenia klasycznych CNN w kontekście
+Następnie przedstawiona zostaje różnica między ekwiwariancją, a
+inwariancją oraz pokazane są ograniczenia klasycznych CNN w kontekście
 rotacji. Ten brak zgodności grupowej dla obrotów motywuje dwie ścieżki
 rozwijane w literaturze, pierwsza  to mapowanie do układu biegunowego i operowanie na osi
-kąta w sposób cykliczny (linia **CyCNN**), zaś druga to konstrukcje oparte o sploty
-grupowe i jądra sterowalne w grupie $\mathrm{E}(2)$ (sieci **E(2)-equivariant**)
-[@bronstein2021gdl; @kim2020cycnn; @cohen2016group]. W tej pracy wykorzystywana
+kąta w sposób cykliczny (linia CyCNN), zaś druga to konstrukcje oparte o sploty grupowe 
+i jądra sterowalne w grupie $\mathrm{E}(2)$ (ang. Euclidean group in 2D, obejmującej rotacje 
+i translacje. W literaturze używa się również $\mathrm{SE}(2)$ dla wersji bez odbić), 
+tzw. sieci E(2)-equivariant [@bronstein2021gdl; @kim2020cycnn; @cohen2016group]. W tej pracy wykorzystywana
 jest pierwsza ścieżka, ponieważ pozwala zachować standardowy pipeline i
 porównywalny budżet parametrów, a jednocześnie wprowadzić kontrolowaną
 ekwiwariancję rotacyjną, która po agregacji orientacji przechodzi w inwariancję.
@@ -362,50 +361,80 @@ Dla kompletności omówione zostaną też praktyczne aspekty przekształceń pol
 (linear-polar i log-polar), sposób liczenia pól recepcyjnych po takich
 mapowaniach oraz wpływ decyzji implementacyjnych (interpolacja, wybór środka,
 cykliczny padding po $\varphi$) na stabilność uczenia. Taki zestaw podstaw
-pozwala czytelnie oddzielić wpływ **augmentacji** od wpływu **architektury** i
+pozwala czytelnie oddzielić wpływ augmentacji od wpływu architektury i
 stanowi fundament pod analizę wyników w dalszych rozdziałach.
 
 
-## Wprowadzenie do sieci konwolucyjnych (CNN)
+## Wprowadzenie do sieci konwolucyjnych - CNN
 
-Sieci konwolucyjne (CNN) zostały zaprojektowane do pracy na danych o strukturze
-siatkowej lub macierzowej, takich jak obrazy dwuwymiarowe (2D). Ich kluczowe cechy to
-**lokalne receptywne pola**, **współdzielone wagi** oraz **operacja splotu**. Dzięki
-temu możliwe jest skalowanie modeli na duże obrazy oraz lepsze uogólnianie niż w
-przypadku sieci posiadającej pełne połączenia.
+Sieci konwolucyjne (ang. Convolutional Neural Networks, CNN) zostały zaprojektowane
+do przetwarzania danych o strukturze siatkowej, takich jak obrazy dwuwymiarowe.
+Ich kluczowymi elementami są lokalne pola recepcyjne, współdzielone wagi oraz
+operacja splotu, która umożliwia wykrywanie wzorców lokalnych przy jednoczesnym
+zachowaniu translacyjnej struktury danych. Dzięki temu sieci konwolucyjne uczą się
+detektorów prostych struktur, takich jak krawędzie lub tekstury, a w kolejnych
+warstwach, reprezentacji coraz bardziej złożonych [@lecun1998gradient; @goodfellow2016deep].
 
-Zamiast analizować cały obraz jednocześnie, CNN wykorzystują mały filtr, który
-przesuwa się po lokalnych fragmentach obrazów. W ten sposób uczą się prostych
-detektorów (np. krawędzi, tekstur, kształtów), zaś w wyższych warstwach
-bardziej złożonych cech [@lecun1998gradient; @goodfellow2016deep].
+Niech \(X:\mathbb{Z}^2\!\to\!\mathbb{R}\) oznacza obraz wejściowy, a
+\(K\in\mathbb{R}^{m\times n}\) oznacza jądro (filtr) konwolucyjne. 
+operator zapisywany jako „\(*\)” reprezentuje najczęściej korelację krzyżową,
+czyli operację zdefiniowaną następująco:
 
-Dla przesunięcia $\mathcal T_t$ oraz jądra $K$ zachodzi własność
-**ekwiwariancji translacyjnej**:
-$$
-\mathcal T_t(X) * K \;=\; \mathcal T_t\!\big(X * K\big).
-$$
+\[
+(Y = X * K)(u) \;=\; \sum_{v\in\Omega_K} X(u+v)\,K(v),
+\]
 
-Intuicyjnie oznacza to, że jeśli obraz zostanie przesunięty, to odpowiadająca
-mu mapa cech również przesunie się o ten sam wektor.
-**Inwariancja na przesunięcia** osiągana jest w praktyce poprzez pooling
-(lokalny lub globalny) bądź zwiększenie kroku (stride). Rzadsze próbkowanie
-powoduje, że wynik klasyfikacji nie jest zależny od dokładnej pozycji obiektu
-[@dumoulin2016guide; @goodfellow2016deep].
+gdzie \(Y\) stanowi mapę cech uzyskaną w wyniku zastosowania filtra \(K\)
+do obrazu \(X\). Dla przejrzystości pominięto w tym zapisie kwestie związane
+z wieloma kanałami, rozmiarem kroku (*stride*), dylacją oraz uzupełnianiem brzegów
+(*padding*).
+
+Przez \(\mathcal T_t\) oznacza się operator translacji o wektor
+\(t\in\mathbb{Z}^2\), działający zgodnie z definicją:
+
+\[
+(\mathcal T_t X)(u) \;=\; X(u-t).
+\]
+
+Dla tak zdefiniowanych operatorów zachodzi własność
+ekwiwariancji translacyjnej:
+
+\[
+\boxed{\;\mathcal T_t(X) * K \;=\; \mathcal T_t\!\big(X * K\big)\;}
+\]
+
+Oznacza to, że przesunięcie obrazu wejściowego o wektor \(t\)
+powoduje przesunięcie mapy cech o ten sam wektor. W konsekwencji sieć
+konwolucyjna reaguje w sposób zgodny z przesunięciami danych wejściowych,
+co jest pożądane w zadaniach rozpoznawania wzorców. Inwariancja względem
+translacji może być dodatkowo wzmacniana poprzez zastosowanie warstw
+agregujących, takich jak pooling lokalny lub globalny, bądź poprzez
+zwiększenie kroku (*stride*), co redukuje wpływ dokładnej pozycji obiektu
+na wynik klasyfikacji [@dumoulin2016guide; @goodfellow2016deep].
+
 
 ### Operacja splotu
 
 Operacja splotu stanowi podstawowy mechanizm działania sieci
 konwolucyjnych. Intuicyjnie można ją rozumieć jako przesuwanie niewielkiego
 filtru po obrazie i obliczanie w każdym położeniu ważonej sumy wartości
-pikseli. Umożliwia to **współdzielenie wag**, gdyż liczba parametrów modelu
+pikseli. Umożliwia to współdzielenie wag, gdyż liczba parametrów modelu
 nie zależy bezpośrednio od rozdzielczości obrazu $(H, W)$ oraz
-**lokalność obliczeń**, co istotnie ogranicza złożoność obliczeniową
+lokalność obliczeń, co istotnie ogranicza złożoność obliczeniową
 [@dumoulin2016guide; @goodfellow2016deep].
 
 **Kształty tensorów:**  
-Wejście: $X \in \mathbb{R}^{C_{\text{in}}\times H\times W}$,  
-zestaw jąder: $K \in \mathbb{R}^{C_{\text{out}}\times C_{\text{in}}\times k\times k}$,  
-wyjście: $Y \in \mathbb{R}^{C_{\text{out}}\times H'\times W'}$.
+Wejście: \(X \in \mathbb{R}^{C_{\text{in}}\times H\times W}\),  
+zestaw jąder: \(K \in \mathbb{R}^{C_{\text{out}}\times C_{\text{in}}\times k\times k}\),  
+wyjście: \(Y \in \mathbb{R}^{C_{\text{out}}\times H'\times W'}\).
+
+gdzie:
+- \(C_{\text{in}}\) - liczba kanałów wejściowych (np. 3 dla obrazu RGB),  
+- \(C_{\text{out}}\) - liczba filtrów, czyli kanałów wyjściowych,  
+- \(H, W\) - wysokość i szerokość mapy wejściowej,  
+- \(H', W'\) - wysokość i szerokość mapy wyjściowej po splotach i subsamplingu,  
+- \(k\) - rozmiar jądra (filtra), zwykle niewielki, np. \(3\times3\) lub \(5\times5\).
+
 
 **Definicja (dla pojedynczego kanału wyjściowego $c$):**
 $$
@@ -413,10 +442,18 @@ Y_c(u,v)=\sum_{i=1}^{C_{\text{in}}}\sum_{a,b}
 K_{c,i}(a,b)\,X_i(u-a,\;v-b).
 $$
 
-W praktyce większość frameworków oblicza **korelację krzyżową**, czyli
+W praktyce większość frameworków oblicza korelację krzyżową, czyli
 operację bez odwracania jądra, mimo że w interfejsach funkcje te często
 oznaczane są jako `conv`. Różnica ta nie ma wpływu na proces uczenia,
 ponieważ sieć w toku optymalizacji dobiera odpowiednie wagi.
+
+
+Powyższy zapis odpowiada klasycznej definicji splotu, w której jądro
+jest odwracane względem obu osi. W większości frameworków
+uczenia głębokiego implementowana jest korelacja krzyżowa (bez tego odwrócenia),
+mimo że w interfejsach funkcje te często oznaczane są jako `conv`,
+jednak różnica ta nie wpływa na proces uczenia, ponieważ parametry jądra są
+optymalizowane.
 
 #### Parametry geometrii warstwy  \
 
@@ -431,7 +468,7 @@ Operację splotu opisują trzy podstawowe parametry:
 
 Dokładna ekwiwariancja translacyjna zachodzi jedynie przy splocie bez
 zmiany rozmiaru mapy cech. W praktyce jednak stosowanie opcji
-**padding "same"**, kroku **stride > 1** czy operacji **poolingu** może
+padding "same", kroku stride > 1 czy operacji poolingu może
 powodować drobne odchylenia wynikające z aliasingu siatki próbkowania,
 co opisano m.in. w [@dumoulin2016guide; @azulay2019small].
 
@@ -452,21 +489,23 @@ $$
 Receptywne pole określa fragment obrazu, z którego dana aktywacja w mapie
 cech pobiera informacje. Wraz ze wzrostem głębokości sieci rośnie jego
 rozmiar, ponieważ kolejne warstwy agregują informacje z coraz większych
-obszarów wejścia. Dla jąder $k_\ell$ i kroków $s_\ell$ zachodzi zależność:
-$$
-R_1 = k_1,\qquad
-R_\ell = R_{\ell-1} + (k_\ell-1)\!\!\prod_{j<\ell}s_j.
-$$
+obszarów wejścia. Dla jąder o rozmiarach \(k_\ell\) i krokach \(s_\ell\) zachodzi zależność:
+\[
+R_1 = k_1, \qquad
+R_\ell = R_{\ell-1} + (k_\ell - 1)\!\!\prod_{j<\ell}s_j.
+\]
+gdzie \(k_\ell\) oznacza rozmiar jądra (liczbę pikseli wzdłuż jednego wymiaru),
+a \(s_\ell\) oznacza krok przesuwania filtra w warstwie \(\ell\).
 
 W praktyce nie wszystkie piksele w obrębie receptywnego pola wpływają na
 aktywację w tym samym stopniu, gdyż największe znaczenie ma część centralna,
 a wpływ maleje ku brzegom, co przypomina rozkład Gaussa. Z tego powodu w
-architekturach bazowych, takich jak **VGG** czy **ResNet**, dobiera się
+architekturach bazowych, takich jak VGG czy ResNet, dobiera się
 głębokość sieci tak, aby pole receptywne obejmowało cały obiekt bez utraty
 istotnego kontekstu [@luo2016erf].
 
-W wariantach **CyCNN**, po przejściu do współrzędnych biegunowych
-$(\rho,\varphi)$ i zastosowaniu **cyklicznego paddingu** wzdłuż osi
+W wariantach CyCNN, po przejściu do współrzędnych biegunowych
+$(\rho,\varphi)$ i zastosowaniu cyklicznego paddingu wzdłuż osi
 kątowej, sieć uzyskuje pełny zakres orientacji bez artefaktów brzegowych.
 Pozwala to na stabilne uczenie cech niezależnych od kąta rotacji
 [@kim2020cycnn].
@@ -476,25 +515,25 @@ Pozwala to na stabilne uczenie cech niezależnych od kąta rotacji
 
 Po mapowaniu $(x,y)\!\to\!(\rho,\varphi)$ receptywne pole staje się „wąskim paskiem”
 wzdłuż promienia $\rho$ i przy czym stabilnym po kącie $\varphi$. Dzięki temu obrót
-$\mathcal{R}_\alpha$ na wejściu jest równoważny **przesunięciu** o $\alpha$ po osi
-$\varphi$. Warstwy typu `CyConv` z **cyklicznym paddingiem** wzdłuż $\varphi$ nie
-„tną” informacji na brzegach, co oczywiście wzmacnia ekwiwariancję rotacyjną [@kim2020cycnn].
+$\mathcal{R}_\alpha$ na wejściu jest równoważny przesunięciu o $\alpha$ po osi
+$\varphi$. Warstwy typu `CyConv` z cyklicznym paddingiem wzdłuż $\varphi$ nie
+ucinanają informacji na brzegach, co oczywiście wzmacnia ekwiwariancję rotacyjną [@kim2020cycnn].
 
 
 ### Nieliniowości i normalizacja
 
-Blok konwolucyjny pozostaje **taki sam** we wszystkich wariantach (bazowych i
-cyklicznych). Celem porównania jest wpływ **rotacji**, a nie dobór aktywacji.
+Blok konwolucyjny pozostaje taki sam we wszystkich wariantach (bazowych i
+cyklicznych). Celem porównania jest wpływ rotacji, a nie dobór aktywacji.
 Zastosowano standardową normalizację, celem stabilizacji uczenie. W wariantach
-**CyCNN** statystyki normalizacji liczone są **wspólnie po osi orientacji**, tak aby
-**nie faworyzować żadnego kąta** i nie naruszać własności rotacyjnych
+CyCNN statystyki normalizacji liczone są wspólnie po osi orientacji, tak aby
+nie faworyzować żadnego kąta i nie naruszać własności rotacyjnych
 [@ioffe2015batchnorm; @kim2020cycnn].
 
 ### Pooling i część klasyfikacyjna
 
-W modelach **CyCNN** inwariancja względem rotacji uzyskiwana jest przez
-**agregację po orientacjach** (pooling po osi kątów). Następnie, we wszystkich
-modelach, stosowany jest **global average pooling (GAP)** oraz pojedyncza warstwa
+W modelach CyCNN inwariancja względem rotacji uzyskiwana jest przez
+agregację po orientacjach (pooling po osi kątów). Następnie, we wszystkich
+modelach, stosowany jest global average pooling (GAP) oraz pojedyncza warstwa
 liniowa w klasyfikatorze. GAP redukuje liczbę parametrów i zmniejsza zależność
 od położenia w obrębie map cech [@lin2014network]. Część klasyfikacyjna pozostaje
 taka sama w wariantach bazowych i cyklicznych, aby izolować wpływ części
@@ -502,8 +541,8 @@ taka sama w wariantach bazowych i cyklicznych, aby izolować wpływ części
 
 #### Pooling po orientacjach - szczegóły praktyczne  \
 
-Agregacja po osi *orientacja* (avg lub max) realizuje **inwariancję rotacyjną**.
-Na wynik końcowy wpływa liczba orientacji **n**, czyli większe **n** oznacza dokładniejszą
+Agregacja po osi *orientacja* (avg lub max) realizuje inwariancję rotacyjną.
+Na wynik końcowy wpływa liczba orientacji n, czyli większe n oznacza dokładniejszą
 rozdzielczość kątową (mniejszy błąd zaokrąglenia $2\pi/n$), ale też wyższy koszt
 obliczeń i pamięci. W eksperymentach utrzymano identyczny klasyfikator za
 poolingiem, aby jednoznacznie mierzyć wpływ części „rotacyjnej”
@@ -511,14 +550,14 @@ poolingiem, aby jednoznacznie mierzyć wpływ części „rotacyjnej”
 
 ### Trening
 
-Protokół trenowania został **zamrożony** między wariantami (te same: liczba epok,
+Protokół trenowania został zamrożony między wariantami (te same: liczba epok,
 rozmiar batcha, budżet obliczeniowy, warunek wczesnego zatrzymania, tak by wszystko 
 to było zgodnie z planem eksperymentu). Augmentacje ograniczono do tych 
-**niezależnych od rotacji**w testach „czysto architektonicznych”. Augmentację rotacją
+niezależnych od rotacjiw testach „czysto architektonicznych”. Augmentację rotacją
 zastosowano wyłącznie w eksperymentach kontrolnych, tak aby pokazać różnicę między 
 augmentacją, a architekturą.
 
-## Modele Cy oraz ich triki architektoniczne
+## Modele Cy oraz zmiany architektoniczne względem CNN
 
 Jako bazy zastosowano VGG-19 (bloki 3×3) i ResNet-56 w wariancie
 CIFAR (bloki 3×3). W wersjach cyklicznych każdą warstwę Conv2d zastąpiono
@@ -533,39 +572,49 @@ niezwiązane z rotacją (np. zmiana funkcji aktywacji, normalizacja, głębokoś
 rozmiar jąder, liczby kanałów czy regularizacji), aby nie mieszać
 ich wpływu z efektem komponentu rotacyjnego[@kim2020cycnn].
 
-### Ekwiwariancja translacyjna (kontrast do rotacyjnej)
+### Ekwiwariancja translacyjna
 
-Dla przesunięcia $\mathcal{T}_t$ i splotu zachodzi:
-$$
-\mathcal{T}_t(X) * K \;=\; \mathcal{T}_t\!\big(X*K\big),
-$$
-co tłumaczy, dlaczego klasyczne CNN dobrze radzą sobie z translacją
-[@dumoulin2016guide]. Brak analogicznego mechanizmu dla rotacji motywuje
-użycie przekształceń polarnych i/lub modeli cyklicznych w dalszej części.
+Niech \( \mathcal{T}_t \) oznacza operator translacji obrazu o wektor \(t\in\mathbb{Z}^2\):
+\[
+(\mathcal{T}_t X)(u) = X(u-t).
+\]
+Niech \(*\) oznacza korelację krzyżową (standard w DL). Dla splotu/korelacji zachodzi
+ekwiwariancja translacyjna:
+\[
+\mathcal{T}_t(X) * K \;=\; \mathcal{T}_t\!\big(X * K\big),
+\]
+co wyjaśnia, dlaczego klasyczne CNN dobrze radzą sobie z przesunięciami wejścia
+[@dumoulin2016guide]. Sam splot gwarantuje ekwiwariancję (odpowiedź przesuwa się o \(t\));
+inwariancja wymaga dodatkowego operatora agregującego \(P\) (np. global average pooling),
+dla którego \( P\circ\mathcal{T}_t = P \).
 
-#### Ekwiwariancja rotacyjna w dyskretnej grupie $C_n$  \
+#### Ekwiwariancja rotacyjna w dyskretnej grupie \(C_n\)  \
 
-Dla indeksu orientacji $k \in \{0, \dots, n-1\}$ oraz kąta
-$\theta_k = \tfrac{2\pi k}{n}$ warunek ekwiwariancji w przestrzeni
-rotacyjnej można zapisać w następującej postaci:
-$$
-\Phi\!\big(\mathcal{R}_{\theta_k} X\big)[\cdot,\;m]
-\;=\; \Phi(X)[\cdot,\;m\!+\!k \bmod n],
-$$
-co oznacza, że **obrót wejścia odpowiada cyklicznemu przesunięciu po osi
-orientacji**. Pooling wykonywany wzdłuż tej osi eliminuje zależność od
-kąta, prowadząc do **inwariancji rotacyjnej**
-[@kim2020cycnn].
+Niech \(C_n\) oznacza cykliczną grupę rzędu \(n\) (rotacje o kątach \(\theta_k = 2\pi k/n\), \(k=0,\dots,n-1\)).
+Przez \(\mathcal{R}_{\theta}\) oznaczamy operator obrotu obrazu: \((\mathcal{R}_{\theta}X)(x)=X(R_{-\theta}x)\) (z interpolacją biliniarną).
+Niech \(\Phi\) będzie odwzorowaniem obrazu na przestrzeń cech z jawnie wydzieloną osią orientacji:
+\[
+\Phi(X)[u,v,m]\in\mathbb{R}^{C}, \quad m\in\{0,\dots,n-1\},
+\]
+gdzie \([u,v,\cdot]\) oznacza indeksy przestrzenne (kropka w skrócie).
 
-Zjawisko ekwiwariancji można uogólnić jako **przewidywalną zmianę
-reprezentacji** w odpowiedzi na transformację wejścia:
-$$
-\Phi(\mathcal{T}_t X) = \Pi_t\,\Phi(X),\qquad
-\Phi(\mathcal{R}_\alpha X) = \Pi_\alpha\,\Phi(X),
-$$
-gdzie $\Pi$ oznacza działanie grupy na przestrzeni cech. W przypadku
-translacji odpowiada ono przesunięciu map cech, natomiast dla rotacji odpowiada ono
-**cyklicznemu przesunięciu** po osi orientacji
+W zapisie \([\cdot,m]\) kropka oznacza wszystkie indeksy przestrzenne \((u,v)\), które dla zwięzłości pomijamy, 
+zaś indeks \(m\) odnosi się wyłącznie do osi orientacji.
+
+Warunek ekwiwariancji względem \(C_n\) ma wtedy postać przesunięcia po osi orientacji:
+\[
+\Phi\!\big(\mathcal{R}_{\theta_k} X\big)[u,v,m] \;=\; \Phi(X)[u,v,\,m\!+\!k \bmod n].
+\]
+Innymi słowy, obrót wejścia o \(\theta_k\) odpowiada cyklicznemu przesunięciu indeksu orientacji o \(k\).
+Poolowanie po osi \(m\) (np. maksimum lub średnia) usuwa zależność od \(m\), co prowadzi do inwariancji rotacyjnej.
+
+Zjawisko ekwiwariancji ujmuje się formalnie przez działanie reprezentacji grupy na przestrzeni cech:
+\[
+\Phi(g\!\cdot\! X) \;=\; \rho(g)\,\Phi(X), \qquad g\in G,
+\]
+gdzie \(G\) jest grupą transformacji (np. \(G=\mathbb{Z}^2\) dla translacji lub \(G=C_n\) dla rotacji),
+a \(\rho\) - odpowiadającą jej reprezentacją na przestrzeni cech. Dla translacji \(\rho(t)\) jest przesunięciem
+w płaszczyźnie \((u,v)\), a dla rotacji \(\rho(\theta_k)\) jest cyklicznym przesunięciem wzdłuż osi orientacji \(m\).
 [@goodfellow2016deep; @bronstein2021gdl].
 
 
@@ -575,7 +624,7 @@ Niech $\mathcal{T}_t$ oznacza przesunięcie o wektor $t$, a
 $\mathcal{R}_\alpha$ - obrót o kąt $\alpha$. Niech $\Phi$ będzie
 funkcją odwzorowującą obraz wejściowy na przestrzeń cech lub wynik modelu.
 
-**Inwariancja** oznacza, że wynik działania modelu nie zależy od
+Inwariancja oznacza, że wynik działania modelu nie zależy od
 zastosowanej transformacji:
 $$
 \Phi(\mathcal{T}_t X) = \Phi(X),\qquad
@@ -584,32 +633,32 @@ $$
 
 W praktyce inwariancję translacyjną uzyskuje się przez mechanizmy
 uśredniania lub podpróbkowania (np. global average pooling, stride).
-Natomiast odporność na rotacje można osiągnąć poprzez:  \
-1. **augmentację danych** o zbiory obrotów,  \
-2. **modyfikację architektury** wprowadzającą wymiar orientacji i pooling
-   po kątach,  \
-3. **mapowanie do współrzędnych polarnych**, w których obrót odpowiada
-   przesunięciu wzdłuż osi $\varphi$
-   [@dumoulin2016guide; @reddy1996logpolar; @kim2020cycnn].  \
+Odporność na rotacje można osiągać na trzy sposoby:
+1. Augmentacją o obroty, 
+2. Modyfikacją architektury o wymiar orientacji z poolingiem po kątach,
+3. Mapowaniem do współrzędnych polarnych, w których obrót redukuje się do przesunięcia wzdłuż osi \(\varphi\) [@dumoulin2016guide; @reddy1996logpolar; @kim2020cycnn].  \
+
+Ekwiwariancja translacyjna zachodzi na poziomie splotu/korelacji (przed agregacją), natomiast inwariancję translacyjną 
+uzyskuje się dopiero przez mechanizmy uśredniania lub podpróbkowania (np. pooling globalny, stride).
 
 ### Linear-polar a log-polar
 
-Transformacja **linear-polar** zakłada równomierny przyrost współrzędnych
+Transformacja linear-polar zakłada równomierny przyrost współrzędnych
 zarówno w kierunku promienia $\rho$, jak i kąta $\varphi$. Umożliwia ona
 stabilne odwzorowanie orientacji oraz prostą implementację, dzięki czemu
 rozwiązanie to jest szczególnie użyteczne w kontekście
-**inwariancji rotacyjnej**.
+inwariancji rotacyjnej.
 
-W przypadku odwzorowania **log-polar** współrzędna promieniowa rośnie
+W przypadku odwzorowania log-polar współrzędna promieniowa rośnie
 logarytmicznie, co sprawia, że zmiany skali w obrazie stają się
-przesunięciami wzdłuż osi promienia. Takie podejście jest szczególnie
-korzystne przy jednoczesnym uwzględnianiu **rotacji i zmian skali**,
+przesunięciami wzdłuż osi adialnej (osi $\rho$). Takie podejście jest szczególnie
+korzystne przy jednoczesnym uwzględnianiu rotacji i zmian skali,
 jednak w pobliżu środka układu zwiększa się gęstość próbkowania, a tym
 samym wrażliwość na dokładność wyznaczenia środka transformacji
 [@reddy1996logpolar].
 
 W implementacjach praktycznych stosuje się interpolację biliniarną oraz
-**cykliczne dopełnienie** (padding) wzdłuż osi $\varphi$, przy zachowaniu
+cykliczne dopełnienie (padding) wzdłuż osi $\varphi$, przy zachowaniu
 stałego środka odwzorowania. W celu uniknięcia osobliwości w punkcie
 $\rho = 0$ zaleca się dodatkowe wygładzanie lub pominięcie kilku
 najbliższych próbek [@kim2020cycnn].
@@ -618,11 +667,12 @@ najbliższych próbek [@kim2020cycnn].
 
 ## Problemy z rotacyjną inwariancją w klasycznych CNN
 
-W praktyce klasyczne CNN dobrze znoszą przesunięcia, ale nie domykają
-symetrii obrotu. Wynika to z natury splotu na dyskretnej siatce, efektów
-interpolacji oraz braku jawnej reprezentacji kąta w strumieniu cech.
-Poniżej zebrane zostały najważniejsze źródła nieinwariancji, które bezpośrednio
-wpływają na wyniki i ich interpretację:
+W praktyce klasyczne CNN zachowują ekwiwariancję względem przesunięć,
+lecz nie zapewniają pełnej zgodności dla rotacji. Wynika to z dyskretnej
+natury splotu, efektów interpolacji oraz braku jawnej reprezentacji kąta
+w strumieniu cech. Poniżej zestawiono główne źródła problemów, 
+które bezpośrednio wpływają na wyniki i ich interpretację:
+
 
 - **Kierunkowość filtrów.** Małe jądra `3×3` i `5×5` reagują głównie na
   jedną orientację. Aby pokryć wiele kątów, sieć musiałaby nauczyć się
@@ -630,7 +680,7 @@ wpływają na wyniki i ich interpretację:
   na dane i parametry. Kompozycja kilku warstw częściowo pomaga, ale bez
   mechanizmów ukierunkowanych na kąt problem nie znika.
 
-- **Augmentacja nie domyka całości.** Obracanie wzbogaca dane, ale pokrywa
+- **Augmentacja nie zapewnia pełnego pokrycia.** Obracanie wzbogaca dane, ale pokrywa
   tylko zbiór dyskretnych kątów. Między tymi wartościami pozostaje
   „szczelina” generalizacji, zwłaszcza przy rzadkiej siatce kątów i
   ograniczonym budżecie. Dodatkowo augmentacja wydłuża trening i wnosi
@@ -650,7 +700,7 @@ wpływają na wyniki i ich interpretację:
 
 - **Brak osi orientacji.** W typowych CNN nie zapisuje się jawnie informacji
   o kącie wykrytej cechy. Orientacje mieszają się w kanałach, więc późniejsze
-  domknięcie do inwariancji (np. przez pooling) nie ma do czego się odnieść.
+  uśrednianie (np. przez pooling) nie ma do czego się odnieść.
   Stąd potrzeba osi orientacja i operacji cyklicznych lub mapowania do układu
   polarnego.
 
@@ -671,44 +721,46 @@ wpływają na wyniki i ich interpretację:
 
 \newpage
 
-# Przegląd literatury (E(2) equivariant, CyCNN)
+# Przegląd literatury: sieci ekwiwariantne E(2) oraz CyCNN
 
 Literatura o sieciach ekwiwariantnych rozwija się zasadniczo w dwóch
 kierunkach. Pierwszy nurt to podejścia o charakterze geometrycznym,
 które mapują obraz do współrzędnych biegunowych i traktują oś kąta jako
 wymiar cykliczny. Drugi nurt to modele o ściśle zdefiniowanej
-ekwiwariancji względem grupy przekształceń E(2), budowane są one poprzez sploty
-grupowe oraz jądra sterowalne projektowane zgodnie z reprezentacjami
-grupy. Oba podejścia dążą do reprezentacji odpornej na obrót. Różnią
-się jednak stopniem formalizacji, kosztem obliczeniowym i wysiłkiem
-inżynierskim potrzebnym do integracji z typowymi pipelinami.
+ekwiwariancji względem grupy przekształceń w 2D, najczęściej \(SE(2)\)
+(rotacje + translacje, w części prac naukowych używa się również \(E(2)\), uwzględniającej
+odbicia). Budowane są one poprzez sploty grupowe oraz jądra sterowalne
+projektowane zgodnie z reprezentacjami grupy. Oba podejścia dążą do
+reprezentacji odpornej na obrót, a inwariancję uzyskuje się zwykle przez
+agregację po orbicie (np. pooling po orientacjach). Różnią się jednak
+stopniem formalizacji, kosztem obliczeniowym i wysiłkiem inżynierskim
+potrzebnym do integracji z typowymi ciągami przetwarzania (pipeline).
 
 
 ## CyCNN
-W rodzinie CYCNN obraz przemapowywany jest do układu
-$(\rho,\varphi)$ tak, aby obrót w płaszczyźnie stał się przesunięciem po
-osi $\varphi$. Przetwarzanie odbywa się warstwami cylindrycznymi
-z dopełnieniem cyklicznym wzdłuż osi danego kąta. Dla każdego filtra przyjmuje
-się dyskretny zbiór orientacji opisany grupą $C_n$. Obrót wejścia z
-tego zbioru przekłada się na cykliczne przesunięcie po wymiarze
-orientacji w mapach cech. Agregacja po orientacjach domyka inwariancję.
-Wybór liczby orientacji równoważy rozdzielczość kątową i koszt obliczeń.
-Istotne są także decyzje implementacyjne takie jak wybór środka,
-interpolacja przy odwzorowaniu oraz właściwe domknięcie brzegu dla
-$\varphi=0$ i $\varphi=2\pi$, tak aby uniknąć artefaktów. Zaletą CyCNN jest
-zgodność z klasyczną praktyką tworzenia modeli. Zamiana klasycznej konwolucji na
+
+W rodzinie CyCNN obraz po przemapowaniu do układu \((\rho,\varphi)\) jest
+przetwarzany warstwami konwolucji cylindrycznej z dopełnieniem cyklicznym w osi
+kątowej \(\varphi\). Przyjmuje się dyskretny zbiór orientacji opisany grupą
+cykliczną \(C_n=\{\theta_k=2\pi k/n\}\). Obrót wejścia o \(\theta_k\) odpowiada
+cyklicznemu przesunięciu indeksu orientacji o \(k\) w mapach cech, co zapewnia
+ekwiwariancję względem \(C_n\). Zastosowanie agregacji po orientacjach (np. maksimum
+lub średnia w osi \(\varphi\)) prowadzi do inwariancji rotacyjnej. Istotne są
+też decyzje implementacyjne takie jak: wybór środka, interpolacja przy odwzorowaniu oraz
+właściwe dopełnienie brzegów dla \(\varphi=0\) i \(\varphi=2\pi\), tak aby uniknąć artefaktów.
+Zaletą CyCNN jest zgodność z klasyczną praktyką tworzenia modeli. Zamiana klasycznej konwolucji na
 odpowiednik cylindryczny odbywa się bez zmiany interfejsu warstwy, co
 ułatwia kontrolowane porównania z wersjami bazowymi przy podobnym
 budżecie parametrów i zapotrzebowaniu na moc obliczeniową (FLOPs) [@kim2020cycnn].
 
-## E(2) equivariant i sieci sterowalne
-Druga linia prac zaś nie zmienia
-układu współrzędnych, lecz definiuje splot bezpośrednio na grupie E(2)
-albo na przestrzeniach jednorodnych tej grupy. Filtry konstruowane są
-w zgodzie z reprezentacjami, co pozwala dzielić wagi pomiędzy
-orientacje oraz zapewniać ekwiwariancję także dla kątów traktowanych
-jako wielkości ciągłe. W literaturze opisano zarówno wersje dyskretne
-w stylu G-CNN, jak i konstrukcje sterowalne, w których filtry rozwija się
+## SE(2)-ekwiwariantne sieci i jądra sterowalne
+
+Drugi nurt nie zmienia układu współrzędnych; definiuje splot bezpośrednio na
+grupie \(SE(2)\) lub na przestrzeniach z jej działaniem. Filtry konstruowane są
+zgodnie z reprezentacjami grupy (tzw. jądra sterowalne), co zapewnia
+ekwiwariancję względem rotacji i translacji w 2D.
+W literaturze opisano zarówno wersje dyskretne w stylu G-CNN, jak i 
+konstrukcje sterowalne, w których filtry rozwija się
 w bazach harmonicznych i ogranicza regułami reprezentacji
 [@cohen2016group; @weiler2019general; @cohen2019homogeneous]. Rozszerzenia
 obejmują również grupy dihedralne $D_n$, które pozwalają modelować
@@ -717,12 +769,17 @@ ułatwia precyzyjne wskazanie, gdzie ma zajść ekwiwariancja, a gdzie
 inwariancja.
 
 ## Aspekty implementacyjne i koszt
-Modele oparte na formalizmie E(2)zapewniają ścisłe gwarancje 
-wynikające z algebry grupy oraz konstrukcji jąder. 
-Osiąga się to kosztem większych wymagań obliczeniowych i
-pamięciowych oraz bardziej złożonej implementacji. Pojawia się konieczność
-definiowania typów pól cech, respektowania ograniczeń na kształt filtrów
-i pracy w bazach harmonicznych. Linia CyCNN jest lżejsza wdrożeniowo, ponieważ
+Modele oparte na formalizmie \(SE(2)\) (lub szerzej \(E(2)\)) zapewniają ścisłe gwarancje
+wynikające z własności algebry grupy oraz konstrukcji jąder opartych na jej
+reprezentacjach. Grupa \(SE(2)\) opisuje wszystkie rotacje i translacje w płaszczyźnie,
+natomiast \(E(2)\) stanowi jej rozszerzenie o odbicia (symetrie lustrzane).
+Dzięki temu modele tego typu zachowują poprawne przekształcenia cech
+dla dowolnych obrotów i przesunięć obrazu.
+Osiąga się to jednak kosztem większych wymagań obliczeniowych i pamięciowych
+oraz bardziej złożonej implementacji. Wymaga to definiowania typów pól cech
+(*feature fields*), respektowania ograniczeń na kształt filtrów oraz pracy
+w bazach harmonicznych (np. przy rozwinięciach Fouriera).  
+Linia CyCNN jest lżejsza wdrożeniowo, ponieważ
 wystarcza zastąpić standardowy operator splotu jego wariantem cylindrycznym
 i traktować wymiar kąta jako cykliczny. Dokładność ekwiwariancji zależy tu
 od liczby rozpatrywanych orientacji, jakości interpolacji oraz stabilnego
@@ -747,121 +804,126 @@ przy tym samym klasyfikatorze i zbliżonym budżecie parametrów modeli
 W pracy wykorzystano cztery zbiory: MNIST, GTSRB (w dwóch wariantach: Gray i
 RGB) oraz LEGO. Wszystkie dane zostały ujednolicone pod
 kątem rozdzielczości i kanałów oraz znormalizowane per kanał. MNIST
-przeskalowano do obrazów **32×32** w skali szarości o 10 klasach [@lecun1998gradient], zaś
-GTSRB Gray do obrazów **32×32** w skali szarości mający 43 klasy, 
-a GTSRB RGB również przeskalowano do rozdzielczości **32×32** z trzema kanałami 
+przeskalowano do obrazów 32×32 w skali szarości o 10 klasach [@lecun1998gradient], zaś
+GTSRB Gray do obrazów 32×32 w skali szarości mający 43 klasy, 
+a GTSRB RGB również przeskalowano do rozdzielczości 32×32 z trzema kanałami 
 (też 43 klasy jak w przypadku GTSRB Gray), z zachowaniem oficjalnego podziału na trening i
-test (IJCNN 2011) [@stallkamp2011gtsrb; @gtsrb_site]. Zbiór LEGO przygotowano jako
-obrazy **96×96** w skali szarości posiadający 50 klas [@hazelzet_lego_kaggle].
+test zgodny z konkursem IJCNN 2011 [@stallkamp2011gtsrb; @gtsrb_site]. Zbiór LEGO przygotowano jako
+obrazy 96×96 w skali szarości posiadający 50 klas [@hazelzet_lego_kaggle].
 Część walidacyjną zbiorów wydzielono z części treningowej we wszystkich zbiorach,
 pozostawiając test jak w oryginale. Ujednolicenie rozmiaru wejścia i części klasyfikacyjnej
 pozwala porównywać modele bazowe i cykliczne przy tym samym budżecie obliczeń. Szczegóły
 formatów (IDX/NPY), normalizacji oraz scenariuszy rotacyjnych zostaly opisane
 rozdziałach poświęconych augmentacji i implementacji.
 
-## MNIST (cyfry odręczne)
+## MNIST - cyfry odręczne
 
 Zbiór MNIST to klasyczny benchmark rozpoznawania cyfr 0-9
-[@lecun1998gradient]. Obejmuje **60 000** próbek uczących i **10 000**
-testowych. Obrazy mają rozdzielczość **28×28**, są w skali szarości, a
+[@lecun1998gradient]. Obejmuje 60 000 próbek uczących i 10 000
+testowych. Obrazy mają rozdzielczość 28×28, są w skali szarości, a
 wartości pikseli mieszczą się w zakresie [0, 255]. W eksperymentach
 wartości te są najpierw skalowane do [0, 1], a następnie standaryzowane
 per kanał. Szczegóły formatu i struktury plików są dostępne na stronie
 projektu [@mnist_web].
 
-Na potrzeby porównań obrazy zostały **przeskalowane do 32×32**, aby
-dopasować je do ustawień „cifarowych” stosowanych w VGG i ResNet. Wejście
-ma **1 kanał**, a liczba klas wynosi **10**. Normalizacja jest liczona na
-zbiorze uczącym, przy czym w praktyce często przyjmuje się wartości z przykładów
-referencyjnych PyTorcha: średnia ≈ 0.1307 i odchylenie standardowe ≈
-0.3081 [@pytorch]. Podział na zbiory utrzymuje spójność z resztą
-eksperymentów: z części treningowej wydzielany jest zbiór walidacyjny
-(5 000 próbek), a test pozostaje jak w oryginale.
+Na potrzeby porównań obrazy zostały przeskalowane do 32×32,
+aby dopasować je do ustawień stosowanych w modelach VGG i ResNet.
+Operacja ta polegała na interpolacji, a nie dopełnianiu marginesami
+(*padding*), dzięki czemu obraz wypełniał całą nową siatkę pikseli.
+Wejście ma 1 kanał, a liczba klas wynosi 10.
+Normalizacja została obliczona na zbiorze uczącym, a dla zachowania
+spójności zastosowano wartości używane w oficjalnych przykładach PyTorcha [@pytorch]:
+średnia μ = 0.1307, odchylenie standardowe σ = 0.3081 (dla danych
+w zakresie [0, 1]). Standaryzacja ma na celu stabilizację procesu
+uczenia przez ujednolicenie skali wartości wejściowych. Podział 
+na zbiory utrzymuje spójność z resztą eksperymentów: z części 
+treningowej wydzielany jest zbiór walidacyjny (5 000 próbek), 
+a test pozostaje jak w oryginale.
 
-Wybór MNIST wynika z jego prostoty i „czystości”, co pozwala szybko
-iterować i w kontrolowany sposób badać wpływ **rotacji cyfr**. Zbiór
+Wybór MNIST wynika z jego prostoty i rozmiaru co pozwala szybko
+iterować i w kontrolowany sposób badać wpływ rotacji cyfr. Zbiór
 dobrze nadaje się do uczciwego porównania modeli bazowych (VGG/ResNet) z
-**wersjami cyklicznymi** (CyVGG/CyResNet) przy tym samym budżecie
-obliczeń. Rotacje ujawniają też naturalne przypadki brzegowe, np. pary
-**6/9** czy **2/5**, które przy większych kątach bywają mylone,
-pozwala to wyraźniej odróżnić wpływ **augmentacji** od wpływu **architektury**.
+wersjami cyklicznymi (CyVGG/CyResNet) przy tej samej złożoności
+obliczeniowej. Rotacje ujawniają też naturalne przypadki brzegowe, np. pary cyfr takie jak
+6/9 czy 2/5, które przy większych kątach bywają mylone,
+pozwala to wyraźniej odróżnić wpływ augmentacji od wpływu architektury.
 
 W części poświęconej augmentacji wprowadzane są kontrolowane scenariusze
-kątowe: wariant **bez rotacji** jako punkt odniesienia, warianty z
-**małymi i średnimi obrotami**, a także **pełny zakres 0-360°**. Celem
-jest wykazanie, kiedy **architektura cykliczna** zapewnia przewagę nad
+kątowe: wariant bez rotacji jako punkt odniesienia, warianty z
+małymi i średnimi obrotami, a także pełny zakres 0-360°. Celem
+jest wykazanie, kiedy architektura cykliczna zapewnia przewagę nad
 samą augmentacją rotacją.  
 
 \newpage 
 
-*[Rys. 1: Próbki z MNIST (zbiór nieobrócony)]*  \
-![Rys. 1: Próbki z MNIST (zbiór nieobrócony)](media%2Fdatasets%2FMNIST%2Fmnist_random_contact_sheet_2x5.png)  \
+*[Rys. 1: Próbki z MNIST (zbiór oryginalny)]*  \
+![Rys. 1: Próbki z MNIST (zbiór oryginalny)](media%2Fdatasets%2FMNIST%2Fmnist_random_contact_sheet_2x5.png)  \
 Rys. 1: Losowy zestaw dziesięciu przykładów z MNIST (28×28, skala szarości).  
 Widoczne są różnice stylu pisma i grubości linii między próbkami.  \
 
-*[Rys. 2: Próbki z MNIST po obrocie (kąty 0–360°)]*  \
-![Rys. 2: Próbki z MNIST po obrocie (kąty 0–360°)](media%2Fdatasets%2FMNIST%2Fmnist_rotated_0_360_nonrotated_sheet_2x5.png)  \
-Rys. 2: Te same klasy po losowych rotacjach w pełnym zakresie 0–360°.  
+*[Rys. 2: Próbki z MNIST po obrocie (kąty 0-360°)]*  \
+![Rys. 2: Próbki z MNIST po obrocie (kąty 0-360°)](media%2Fdatasets%2FMNIST%2Fmnist_rotated_0_360_nonrotated_sheet_2x5.png)  \
+Rys. 2: Te same klasy po losowych rotacjach w pełnym zakresie 0-360°.  
 Pojawiają się warianty 6↔9, 2↔5 itp., co ilustruje wrażliwość klasyfikacji  
 na zmianę orientacji bez wsparcia architektury rotacyjnej.
 
 \newpage 
 
-## GTSRB Gray (znaki drogowe w odcieniach szarości)
+## GTSRB Gray - znaki drogowe w odcieniach szarości
 
-**German Traffic Sign Recognition Benchmark (GTSRB)** to zestaw znaków drogowych
-z rzeczywistych nagrań, obejmujący **43 klasy**, z oficjalnym podziałem na część
-uczącą i testową (IJCNN 2011) [@stallkamp2011gtsrb; @gtsrb_site]. W literaturze
+German Traffic Sign Recognition Benchmark (GTSRB) to zestaw znaków drogowych
+z rzeczywistych nagrań, obejmujący 43 klasy, z oficjalnym podziałem na część
+uczącą i testową zgodny z konkursem IJCNN 2011 [@stallkamp2011gtsrb; @gtsrb_site]. W literaturze
 często przytaczana jest również analiza „man vs. computer” z metrykami
 porównawczymi [@stallkamp2012manvscomputer].
 
-W wariancie **Gray** zastosowanym w tej pracy wszystkie obrazy zostały
-**przeskalowane do 32×32** i **skonwertowane do skali szarości** (1 kanał), tak
-aby dopasować je do ustawień „cifarowych” oraz wyizolować wpływ **rotacji** od
-informacji barwnej. Zachowano **43 klasy**; walidację wydzielono z **oficjalnej**
-części treningowej (spójnie z pozostałymi zbiorami). Zastosowano **normalizację
-per-kanał** wyliczaną na zbiorze uczącym.
+W wariancie Gray zastosowanym w tej pracy wszystkie obrazy zostały
+przeskalowane do 32×32 i skonwertowane do skali szarości (1 kanał), tak
+aby dopasować je do ustawień wejścia modelu oraz wyizolować wpływ rotacji od
+informacji barwnej. Zachowano 43 klasy; walidację wydzielono z oficjalnej
+części treningowej (spójnie z pozostałymi zbiorami). Zastosowano normalizację
+per-kanał wyliczaną na zbiorze uczącym.
 
 Wybór wersji w odcieniach szarości motywowany jest tym, że kolor bywa silną
 wskazówką (np. czerwone obramowania, niebieskie tła), podczas gdy celem jest
-tu głównie **geometria** i ocena, co daje **architektura rotacyjnie inwariantna**
+tu głównie geometria i ocena, co daje architektura rotacyjnie inwariantna
 na tle bazowej, bez „pomocy” informacji barwnej. Taki wariant ułatwia też
-czyste porównania z **GTSRB RGB** (sekcja poniżej), w których różnice można
+czyste porównania z GTSRB RGB (sekcja poniżej), w których różnice można
 przypisać właśnie dostępności koloru.
 
 Zbiór GTSRB stawia kilka typowych wyzwań: nierównomierny rozkład klas, duża
 zmienność skali i oświetlenia, efekty perspektywy oraz rozmycie w ruchu. Te
-czynniki utrudniają proste uogólnianie i dobrze testują **stabilność względem
-rotacji** [@stallkamp2011gtsrb; @stallkamp2012manvscomputer].
+czynniki utrudniają proste uogólnianie i dobrze testują stabilność względem
+rotacji [@stallkamp2011gtsrb; @stallkamp2012manvscomputer].
 
 W eksperymentach wykorzystano scenariusze kątowe opisane w rozdziale
-*Augmentacja i protokół*: wariant **bez rotacji** (baseline), zestawy
-**małych/średnich obrotów**, połączenia **różnych** kombinacji kątów oraz
-**pełen zakres 0-360°**. Pozwala to porównać **VGG/ResNet** z
+*Augmentacja i protokół*: wariant bez rotacji (baseline), zestawy
+**małych/średnich obrotów**, połączenia różnych kombinacji kątów oraz
+**pełen zakres 0-360°**. Pozwala to porównać VGG/ResNet z
 **CyVGG/CyResNet** przy identycznym budżecie obliczeń.
 
 \newpage 
-*[Rys. 3: Próbki z GTSRB (zbiór nieobrócony, skala szarości)]*  \
-![Rys. 3: Próbki z GTSRB (zbiór nieobrócony, skala szarości)](media%2Fdatasets%2FGTSRB_gray%2Fgtsrb43_sheet_TRAIN_4x11.png)  \
-Rys. 3: Losowy zestaw znaków drogowych z oryginalnego zbioru **GTSRB_gray**  
+*[Rys. 3: Próbki z GTSRB (zbiór oryginalny, skala szarości)]*  \
+![Rys. 3: Próbki z GTSRB (zbiór oryginalny, skala szarości)](media%2Fdatasets%2FGTSRB_gray%2Fgtsrb43_sheet_TRAIN_4x11.png)  \
+Rys. 3: Losowy zestaw znaków drogowych z oryginalnego zbioru GTSRB_gray  
 (43 klasy, skala szarości). Widoczne różnice w jasności, tle oraz kącie kamery,  
 charakterystyczne dla warunków rzeczywistych.  \
 
-*[Rys. 4: Próbki z GTSRB po obrocie (kąty 0–360°)]*  \
-![Rys. 4: Próbki z GTSRB po obrocie (kąty 0–360°)](media%2Fdatasets%2FGTSRB_gray%2Fgtsrb43_rotated_random_0-360_sheet_4x11.png)  \
-Rys. 4: Te same klasy po losowych rotacjach w pełnym zakresie **0–360°**.
+*[Rys. 4: Próbki z GTSRB po obrocie (kąty 0-360°)]*  \
+![Rys. 4: Próbki z GTSRB po obrocie (kąty 0-360°)](media%2Fdatasets%2FGTSRB_gray%2Fgtsrb43_rotated_random_0-360_sheet_4x11.png)  \
+Rys. 4: Te same klasy po losowych rotacjach w pełnym zakresie 0-360°.
 Część znaków traci czytelność lub symetrię, co ilustruje wpływ rotacji  
 na klasyfikację bez zastosowania architektur rotacyjnie ekwiwariantnych.  \
 
 
 \newpage
 
-## GTSRB RGB (znaki drogowe w kolorze)
+## GTSRB RGB - znaki drogowe w kolorze
 
 German Traffic Sign Recognition Benchmark (GTSRB) w wersji kolorowej to ten sam
 zestaw 43 klas z oficjalnym podziałem na trening i test
 [@stallkamp2011gtsrb; @gtsrb_site]. Na potrzeby eksperymentów obrazy są
-przeskalowane do 32×32 (ustawienia „cifarowe”) z zachowaniem trzech kanałów
+przeskalowane do 32×32 z zachowaniem trzech kanałów
 (RGB). Normalizacja wykonywana jest per kanał na zbiorze uczącym, a walidację
 wydzielono z części treningowej analogicznie jak dla wariantu Gray
 [@stallkamp2012manvscomputer].
@@ -885,40 +947,40 @@ temu zachowana jest porównywalność między VGG/ResNet a CyVGG/CyResNet przy
 jednakowym budżecie obliczeń.
 \newpage 
 
-*[Rys. 5: Próbki z GTSRB_RGB (zbiór nieobrócony)]*  \
-![Rys. 5: Próbki z GTSRB_RGB (zbiór nieobrócony)](media%2Fdatasets%2FGTSRB_RGB%2Fgtsrb43_sheet_TRAIN_4x11_rgb.png)  \
-Rys. 5: Przykładowe obrazy znaków drogowych z kolorowego zbioru **GTSRB_RGB**  
+*[Rys. 5: Próbki z GTSRB_RGB (zbiór oryginalny)]*  \
+![Rys. 5: Próbki z GTSRB_RGB (zbiór oryginalny)](media%2Fdatasets%2FGTSRB_RGB%2Fgtsrb43_sheet_TRAIN_4x11_rgb.png)  \
+Rys. 5: Przykładowe obrazy znaków drogowych z kolorowego zbioru GTSRB_RGB  
 (43 klasy). Widoczna duża różnorodność oświetlenia, kontrastu i tła,  
 co odzwierciedla rzeczywiste warunki rejestracji danych.  \
 
-*[Rys. 6: Próbki z GTSRB_RGB po obrocie (kąty 0–360°)]*  \
-![Rys. 6: Próbki z GTSRB_RGB po obrocie (kąty 0–360°)](media%2Fdatasets%2FGTSRB_RGB%2Fgtsrb43_rotated_0-360_4x11_rgb.png)  \
-Rys. 6: Te same klasy po losowych rotacjach w zakresie **0–360°**.  
+*[Rys. 6: Próbki z GTSRB_RGB po obrocie (kąty 0-360°)]*  \
+![Rys. 6: Próbki z GTSRB_RGB po obrocie (kąty 0-360°)](media%2Fdatasets%2FGTSRB_RGB%2Fgtsrb43_rotated_0-360_4x11_rgb.png)  \
+Rys. 6: Te same klasy po losowych rotacjach w zakresie 0-360°.  
 Zmiana orientacji wprowadza znaczne zniekształcenia geometryczne i  
 zaburzenia kolorystyczne, co utrudnia klasyfikację bez wsparcia  
 rotacyjnie ekwiwariantnych architektur.  \
 
 \newpage 
 
-## LEGO (obiekty 3D rzutowane na 2D)
+## LEGO - obiekty 3D rzutowane na 2D
 
-Zbiór **Images of LEGO Bricks** (Kaggle) [@hazelzet_lego_kaggle] obejmuje obrazy
+Zbiór Images of LEGO Bricks [@hazelzet_lego_kaggle] obejmuje obrazy
 elementów LEGO renderowanych jako rzuty 2D. W tej pracy obrazy zostały
-skonwertowane do skali szarości i przeskalowane do **96×96**, aby zachować
-detale klocków. Ustalono **50 klas** (wejście 1-kanałowe), walidację
+skonwertowane do skali szarości i przeskalowane do 96×96, aby zachować
+detale klocków. Ustalono 50 klas (wejście 1-kanałowe), walidację
 wydzielono z części treningowej analogicznie jak w pozostałych zbiorach, a
 normalizacja jest liczona per kanał na zbiorze uczącym.
 
 Wybór zbioru LEGO motywowany jest tym, że obiekty mają złożone kształty i
 drobne szczegóły, co stanowi naturalny test wrażliwości na orientację. W
 odróżnieniu od MNIST (proste cyfry) i GTSRB (silny sygnał koloru), LEGO lepiej
-izoluje **geometrię** obiektu, czyli układ wypustek i światłocień, dzięki czemu
+izoluje geometrię obiektu, czyli układ wypustek i światłocień, dzięki czemu
 różnice między podejściem augmentacyjnym a architektonicznym
-(**CyVGG/CyResNet** vs **VGG/ResNet**) są czytelniejsze.
+(CyVGG/CyResNet vs VGG/ResNet) są czytelniejsze.
 
 W eksperymentach zastosowano te same scenariusze kątowe co w innych zbiorach:
 wariant bez rotacji jako punkt odniesienia, warianty z małymi i średnimi
-obrotami, połączenia różnych kombinacji kątów oraz pełny zakres **0-360°**.
+obrotami, połączenia różnych kombinacji kątów oraz pełny zakres 0-360°.
 Porównania są prowadzone przy tej samej części klasyfikacyjnej i tym samym
 budżecie obliczeń, aby izolować wpływ komponentu rotacyjnego.
 
@@ -929,16 +991,16 @@ utrzymuje porównywalność między wariantami.
 
 
 
-*[Rys. 7: Próbki z LEGO (zbiór nieobrócony)]*  \
-![Rys. 7: Próbki z LEGO (zbiór nieobrócony)](media%2Fdatasets%2FLEGO%2Flego_nonrotated_sheet_5x10.png)  \
+*[Rys. 7: Próbki z LEGO (zbiór oryginalny)]*  \
+![Rys. 7: Próbki z LEGO (zbiór oryginalny)](media%2Fdatasets%2FLEGO%2Flego_nonrotated_sheet_5x10.png)  \
 Rys. 7: Przykładowe renderowane elementy LEGO z klasyfikacyjnego zbioru danych.  
 Obiekty prezentowane są w ustandaryzowanym ujęciu, z zachowaniem jednolitego oświetlenia  
 i orientacji, co pozwala skupić się na różnicach kształtu i geometrii między klasami.  \
 
 
-*[Rys. 8: Próbki z LEGO po obrocie (kąty 0–360°)]*  \
-![Rys. 8: Próbki z LEGO po obrocie (kąty 0–360°)](media%2Fdatasets%2FLEGO%2Flego_rotated_0-360_sheet_5x10.png)  \
-Rys. 8: Te same elementy po losowych rotacjach w zakresie **0–360°**.  
+*[Rys. 8: Próbki z LEGO po obrocie (kąty 0-360°)]*  \
+![Rys. 8: Próbki z LEGO po obrocie (kąty 0-360°)](media%2Fdatasets%2FLEGO%2Flego_rotated_0-360_sheet_5x10.png)  \
+Rys. 8: Te same elementy po losowych rotacjach w zakresie 0-360°.  
 Zmiana orientacji wpływa na widoczność otworów, wypustek i cieni, co stanowi  
 wyzwanie dla klasyfikacji opartej na klasycznych konwolucjach bez rotacyjnej ekwiwariancji.  \
 
@@ -947,14 +1009,14 @@ wyzwanie dla klasyfikacji opartej na klasycznych konwolucjach bez rotacyjnej ekw
 
 ## Sposób augmentacji danych: zakresy rotacji, łączenie zbiorów
 
-Pipeline obsługuje dwa formaty wejścia. Pierwszy to klasyczny format IDX
-(ubyte), stosowany m.in. w zbiorze MNIST. Drugi to tryb NPY, w którym dane
-zapisywane są jako `train_images.npy` i `train_labels.npy`, zaś dla części
-testowej jako `test_images.npy` i `test_labels.npy`. Niezależnie od formatu
-zastosowana jest ta sama logika budowania zbiorów danych oraz ich podziału na
-`train` i `test`. Dodatkowo, w ścieżce IDX dla MNIST nazwa pliku `t10k` jest
-zamieniana na `test` przed uruchomieniem rotacji.
-
+Kod w języku Python służący przetwarzania danych obsługuje dwa formaty wejścia. 
+Pierwszy to klasyczny format IDX(ubyte), stosowany m.in. w zbiorze MNIST.
+Drugi to tryb NPY, w którym dane zapisywane są jako `train_images.npy` i
+`train_labels.npy`, zaś dla części testowej jako `test_images.npy` i `test_labels.npy`. 
+Niezależnie od formatu zastosowana jest ta sama logika budowania zbiorów danych oraz 
+ich podziału na`train` i `test`. W przypadku MNIST nazwa oryginalnego pliku
+`t10k` (przeznaczynego dla zbioru test) jest automatycznie zamieniana na `test`, aby
+ułatwić jednolite odwoływanie się do zbiorów w kodzie.
 
 ### Rotacje
 
@@ -1028,21 +1090,21 @@ dodatkowe zbiory rotowane dobrane zgodnie z ustalonym limitem.
 
 \newpage
 
-# Architektury modeli (VGG-E, ResNet-56, CyCNN)
+# Architektury modeli VGG-19, ResNet-56, CyCNN
 
-W pracy wykorzystano bazowe architektury **VGG** (wariant **E**) i
-**ResNet** (wariant **56**) w ustawieniu dla **CIFAR** (obrazy 32×32). Warstwy
+W pracy wykorzystano bazowe architektury VGG (wariant E) i
+ResNet (wariant 56) w ustawieniu dla obrazów `32×32`. Warstwy
 splotowe to głównie `3×3` z `padding=1`. W VGG po każdym bloku stosowany jest
 `MaxPool2d(2)`, a w ResNecie rozdzielczość zmniejszana jest przez `stride=2`.
-Po części splotowej występuje **global average pooling (GAP)** oraz prosty
-**klasyfikator**. W VGG używana jest wersja z normalizacją (VGG\_bn) oraz
+Po części splotowej występuje global average pooling (GAP) oraz prosty
+klasyfikator. W VGG używana jest wersja z normalizacją (VGG\_bn) oraz
 dwustopniowy klasyfikator `512→512→C` z dropoutem (w implementacji`AdaptiveAvgPool2d((1,1))` + `nn.Sequential`
 z dwiema warstwami liniowymi i wyjściem `C`).
 
-## VGG - wariant E (VGG-19, „3×3 everywhere”)
+## VGG-19
 
-Wzorzec jak w [@simonyan2014vgg], zaadaptowany do wejścia **32×32** (CIFAR).
-W implementacjach **VGG**/**CyVGG** konfiguracja **E** ma postać:
+Wzorzec jak w [@simonyan2014vgg], zaadaptowany do wejścia 32×32 (CIFAR).
+W implementacjach VGG/CyVGG wybrana konfiguracja ma postać:
 
 ```python
 # cfg['E']
@@ -1053,10 +1115,17 @@ W implementacjach **VGG**/**CyVGG** konfiguracja **E** ma postać:
  512, 512, 512, 512, 'M']
 ```
 
-Warstwy są składane przez `make_layers(cfg['E'], ...)`, z opcjonalnym
-**BatchNorm** (warianty `*_bn`). Symbol `'M'` oznacza `MaxPool2d`. Za częścią
-splotową stosowane jest `AdaptiveAvgPool2d((1, 1))`, potem **flatten** i dwie
-warstwy liniowe `512 → 512 → C` z **dropoutem**.
+Każdy element liczbowy odpowiada liczbie filtrów w warstwie `Conv2d`
+z jądrem 3×3 i paddingiem 1.
+Warstwy są łączone przez funkcję `make_layers(cfg['E'], ...)`,
+tworząc sekwencję:
+*Conv2d → (BatchNorm2d) → ReLU → MaxPool2d.*
+Symbol `'M'` oznacza pooling (`kernel=2, stride=2`).
+
+Za częścią splotową stosowany jest `AdaptiveAvgPool2d((1, 1))`, po czym
+następuje spłaszczenie ang. flatten i dwie warstwy w pełni połączone:
+*512 → 512 → C*, z dropoutem między nimi.
+Wariant `_bn` dodatkowo zawiera normalizację BatchNorm po każdej warstwie splotowej.
 
 * **Blok 1:** `64, 64` → **MaxPool** *(32 → 16)*
 * **Blok 2:** `128, 128` → **MaxPool** *(16 → 8)*
@@ -1064,75 +1133,54 @@ warstwy liniowe `512 → 512 → C` z **dropoutem**.
 * **Blok 4:** `512 × 4` → **MaxPool** *(4 → 2)*
 * **Blok 5:** `512 × 4` → **MaxPool** *(2 → 1)*
 
-### Wariant cylindryczny (CyVGG)
+### Wariant cylindryczny - CyVGG
 
-W **CyVGG** każdą `nn.Conv2d` zastąpiono **`CyConv2d`** (API zgodne z
+W CyVGG każdą `nn.Conv2d` zastąpiono `CyConv2d` (API zgodne z
 `Conv2d`: jądra `3×3`, `padding=1`, wsparcie `stride`/dylacji). Układ bloków,
-**GAP** (`AdaptiveAvgPool2d`), **dropout** i **klasyfikator** pozostają bez zmian , bo
+GAP (`AdaptiveAvgPool2d`), dropout i klasyfikator pozostają bez zmian , bo
 różnica dotyczy wyłącznie operatora splotu (implementacja cylindryczna).
 
+## ResNet-56
 
-## ResNet-56 (CIFAR, 6n+2 z n=9)
+Wykorzystano wariant opisany w [@he2016resnet] dostosowany do wejścia 32×32.
+Głębokość 56 wynika ze wzoru 6n+2 dla n=9 bloków na każdą z trzech grup.
 
-Schemat jak w [@he2016resnet] dla datasetu CIFAR. Na wejściu `Conv 3×3`, a dalej **3
-grupy** po **n=9** bloków `BasicBlock`. Grupa 1 (16 kanałów, `stride 1`),
-Grupa 2 (32 kanały, pierwszy blok `stride 2`), Grupa 3 (64 kanały, pierwszy
-blok `stride 2`). `BasicBlock` ma postać: `Conv3×3 → BN → ReLU → Conv3×3 → BN`
-+ skrót.
+### Bloki, skróty oraz definicje
+- **BasicBlock**: sekwencja `Conv 3×3 → BatchNorm → ReLU → Conv 3×3 → BatchNorm`,
+  z dodaną ścieżką skrótową (*shortcut*, połączenie rezydualne) i końcowym `ReLU`.
+- **BatchNorm (BN)**: normalizacja wsadowa po każdej konwolucji bloku.
+- **Shortcut**: połączenie rezydualne dodawane (sumowane) do wyjścia drugiej konwolucji.
+- **GAP**: *Global Average Pooling* (uśrednianie globalne w przestrzeni).
 
-Downsample - **opcja A** (CIFAR): podpróbkowanie przestrzenne `x[:, :, ::2, ::2]`
-i dopełnienie kanałów przez `F.pad(...)`. Zakończenie: **GAP** z warstwą liniowa `64→C`.
+### Architektura
+- **conv1**: `Conv 3×3, 16 kanałów, stride 1, padding 1` → BN → ReLU  
+- **Grupa 1**: 9× `BasicBlock(16)`; pierwszy blok `stride 1`  
+- **Grupa 2**: 9× `BasicBlock(32)`; pierwszy blok `stride 2` (redukcja H×W o 2)  
+- **Grupa 3**: 9× `BasicBlock(64)`; pierwszy blok `stride 2`
 
-W **CyResNet** wszystkie `nn.Conv2d` zastąpiono **`CyConv2d`** (w tym `conv1`
-i konwolucje w `BasicBlock`). Pozostałe elementy (BN, ReLU, shortcut, GAP,
-`Linear`) pozostajone zostały bez zmian względem wersji bazowej.
+Po zakończeniu trzeciej grupy stosowany jest Global Average Pooling (GAP),
+po którym następuje pojedyncza warstwa liniowa `64 → C`, gdzie `C` oznacza liczbę klas.
 
-## ResNet-56 (CIFAR, 6n+2 z n=9)
+### Cechy modelu
+Sieć charakteryzuje się umiarkowaną głębokością i niewielką liczbą parametrów
+(≈0,85 M). ResNet-56 stanowi dobry kompromis między złożonością a zdolnością
+do reprezentacji — pozwala testować wpływ modyfikacji operatora splotu przy
+zachowaniu rozsądnego budżetu obliczeniowego.
 
-Wariant zgodny z [@he2016resnet] w konfiguracji **CIFAR**. Głębokość
-**56** wynika ze wzoru **6n+2** przy **n=9** blokach na grupę.
-
-**Wejście i grupy:**
-
-* **conv1:** `Conv 3×3, 16 kanałów, stride 1, padding 1` → `BN` → `ReLU`.
-* **Grupa 1:** 9× `BasicBlock(16)`; pierwszy blok ze `stride 1`.
-* **Grupa 2:** 9× `BasicBlock(32)`; **pierwszy blok `stride 2`** (redukcja H×W).
-* **Grupa 3:** 9× `BasicBlock(64)`; **pierwszy blok `stride 2`**.
-
-**Schemat bloku (BasicBlock CIFAR-ResNet)**
-
-```
-Conv 3×3, stride s → BatchNorm → ReLU → Conv 3×3, stride 1  → BatchNorm + skrót (shortcut) → ReLU
-```
+**Kształty (dla wejścia 3×32×32).**
+- po conv1: `16 × 32 × 32`
+- po Grupie 1: `16 × 32 × 32`
+- po Grupie 2: `32 × 16 × 16`
+- po Grupie 3: `64 × 8 × 8`
+- po GAP: `64 × 1 × 1` → Linear `64 → C`
 
 
-Shortcut jest dodawany do wyjścia drugiej konwolucji, po czym stosowany jest
-**ReLU** (w klasycznym wariancie, za sumowaniem).
-W blokach ze zmianą rozdzielczości stosowana jest **opcja A** (CIFAR), czyli
-gdy zmienia się rozdzielczość i/lub liczba kanałów (pierwszy blok grupy 2 i 3),
-shortcut realizowany jest **bez dodatkowej konwolucji**: podpróbkowanie przestrzenne: `x[:, :, ::2, ::2]`, oraz
-dopełnienie kanałów do wymaganego wymiaru przez `F.pad(...)`.
-Jest to prosta i w miarę lekka ścieżka skrótowa dedykowana dla CIFAR-ów.
+### Wariant cylindryczny modelu CyResNet-56
 
-**Zakończenie sieci**
-
-Po grupach bloków stosowany jest **Global Average Pooling (GAP)** i pojedyncza
-warstwa liniowa `64 → C`, gdzie `C` to liczba klas (np. 10 dla CIFAR-10).
-
-### Kształty (CIFAR-10/100, wejście 3×32×32)
-
-* Po **conv1**: `16 × 32 × 32`
-* Po **Grupa 1**: `16 × 32 × 32`
-* Po **Grupa 2**: `32 × 16 × 16` *(pierwszy blok stride 2)*
-* Po **Grupa 3**: `64 × 8 × 8`  *(pierwszy blok stride 2)*
-* Po **GAP**: `64 × 1 × 1` → **Linear** `64 → C`
-
-### Wariant cylindryczny (CyResNet-56)
-
-W **CyResNet-56** wszystkie `nn.Conv2d` zastąpiono **`CyConv2d`** (również
+W CyResNet-56 wszystkie `nn.Conv2d` zastąpiono `CyConv2d` (również
 `conv1` oraz obie konwolucje w każdym `BasicBlock`). Interfejs posiadający następujące 
 parametry `kernel_size=3`,`padding=1` oraz `stride` zawierający się w przedziale {1,2}
-pozostaje kompatybilny, więc **topologia, BN/ReLU, shortcut, GAP i klasyfikator** 
+pozostaje kompatybilny, więc topologia, BN/ReLU, shortcut, GAP i klasyfikator 
 są niezmienione. Zmiana dotyczy wyłącznie operatora splotu 
 (implementacja cylindryczna), co pozwala izolować wpływ komponentu rotacyjnego
 przy zachowaniu budżetu parametrów i porównywalnych FLOPs.
@@ -1206,8 +1254,8 @@ zostaje ekwiwariancja rotacyjna.
 
 ### Procedura uruchomienia eksperymentu
 
-Poniżej przedstawiono przykład komendy służącej do uruchomienia treningu modelu **CyResNet56**
-na zbiorze **LEGO** z wykorzystaniem transformacji `linear-polar`
+Poniżej przedstawiono przykład komendy służącej do uruchomienia treningu modelu CyResNet56
+na zbiorze LEGO z wykorzystaniem transformacji `linear-polar`
 w wariancie `non_rotated`.  
 Model ten jest zapisywany po zakończeniu procesu uczenia wraz z wynikami
 walidacji i macierzami pomyłek w podanym katalogu wynikowym.
@@ -1286,22 +1334,22 @@ Jeśli potrzebny był zapis logu do pliku, dodane było standardowe przekierowan
 
 ## Standardowe CNN
 
-Jako bazy zastosowano modele **VGG** (wariant **E / VGG-19**) i **ResNet-56**. Wykorzystane konwolucje to
+Jako bazy zastosowano modele VGG (wariant E / VGG-19) i ResNet-56. Wykorzystane konwolucje to
 `3×3` z `padding=1`, w VGG z okresowym `MaxPool2d(2)`, w ResNecie zaś jest zmniejszanie
-rozdzielczości przez `stride=2`. Po części splotowej są **GAP** i **klasyfikator**
+rozdzielczości przez `stride=2`. Po części splotowej są GAP i klasyfikator
 (w VGG są to dwie warstwy w pełni połączone `512→512→C` z dropoutem, aż w ResNecie jest to
 `Linear 64→C`). Warianty VGG w kodzie występują także w wersjach `*_bn`
-(z BatchNorm). Modele te są z natury **ekwiwariantne translacyjnie** (dobrze
+(z BatchNorm). Modele te są z natury ekwiwariantne translacyjnie (dobrze
 znoszą przesunięcia), ale nie posiadają wbudowanego mechanizmu inwariancji
 względem rotacji, stąd stanowią więc punkt odniesienia dla wersji cyklicznych
 [@simonyan2014vgg; @he2016resnet].
 
-## Rotacyjnie inwariantne sieci (CyResNet, CyVGG)
+## Rotacyjnie inwariantne sieci - CyResNet, CyVGG
 
-Wersje cykliczne (**CyVGG-E**, **CyResNet-56**) powstały przez **podmianę każdej warstwy
-`Conv2d` na `CyConv2d`**. Architektura bloków, liczby kanałów, GAP i układ
+Wersje cykliczne (CyVGG-E, CyResNet-56) powstały przez podmianę każdej warstwy
+`Conv2d` na `CyConv2d`. Architektura bloków, liczby kanałów, GAP i układ
 klasyfikatora pozostawione zostały bez zmian, co pozwala ma porównanie wpływu samej warstwy
-splotowej. W kodzie modeli **nie ma jawnego wymiaru orientacji** ani
+splotowej. W kodzie modeli nie ma jawnego wymiaru orientacji ani
 dedykowanego „poolingu po orientacjach”. Funkcjonalność związaną z rotacją
 zrealizowana została w jądrze CUDA z użyciem `CyConv2d_cuda`, wywoływanym z poziomu `CyConv2d`
 [@kim2020cycnn].
@@ -1336,21 +1384,21 @@ logarytmiczny kosztem większej troski o okolice środka.
 
 # Implementacja i środowisko eksperymentalne
 
-Wszystkie eksperymenty realizowane zostały w środowisku **PyTorch** z
+Wszystkie eksperymenty realizowane zostały w środowisku PyTorch z
 rozszerzeniem CUDA dla warstwy cylindrycznej, dodatkowo zrobiona została automatyczna
-optymalizacja hiperparametrów w **Optunie** dla wybranych modeli (w tym referencyjnego)
+optymalizacja hiperparametrów w Optunie dla wybranych modeli (w tym referencyjnego)
 [@pytorch-docs; @akiba2019optuna]. Pipeline danych obejmuje warianty
 IDX i NPY oraz generator zbiorów rotowanych i zbiorów połączonych ze sobą(merged).
 Wyniki treningu oraz testów dla każdego modelu są zapisywana w formacie txt wraz z
 macierzami pomyłek w fomratach png oraz npy. Następne dane są sprawdzane i automatyczne 
 generowane są heatmapy train-test oraz ranking modeli.
-Zapisy metryk i konfiguracji z optuny trafiają do plików **CSV** i **JSON**, co
+Zapisy metryk i konfiguracji z optuny trafiają do plików CSV i JSON, co
 ułatwia powtarzalność oraz porównywanie konfiguracji. Dodakowo najlepsze checkpointy 
 dla danego przypadku są zapisane jako modele już przetrenowane .pt. 
-Wykorzystywany był otymalizator **SGD** wraz  z *momentum* i *weight decay*. 
+Wykorzystywany był otymalizator SGD wraz  z *momentum* i *weight decay*. 
 Zakresy i sposób doboru wartości hiperparametrów opisanostały w części poświęconej HPO.
 
-## Warstwa `CyConv2d` (CUDA) oraz jej implementacja
+## Warstwa `CyConv2d` oraz jej implementacja
 
 Warstwa `CyConv2d` korzysta z rozszerzenia C++/CUDA kompilowanego jako `CyConv2d_cuda`.
 Pliki źródłowe wykorzystywane do kompilacji to `cycnn.cpp` i `cycnn_cuda.cu`, ich budowanie
@@ -1376,7 +1424,7 @@ pojawić się błędy OOM.
 
 Integracja z modelami zrobiona w sposób bezpośredni. We wszystkich miejscach, gdzie w
 bazowych architekturach użyto `nn.Conv2d`, zarówno w `conv1`, jak i w
-konwolucjach wewnątrz bloków, w wersjach **CyVGG** i **CyResNet** wstawiono
+konwolucjach wewnątrz bloków, w wersjach CyVGG i CyResNet wstawiono
 `CyConv2d`. Pozostałe elementy pozostają bez zmian: BatchNorm, ReLU, GAP i
 klasyfikator działają tak samo jak w wersjach referencyjnych.
 W samych definicjach modeli nie ma jawnej osi orientacji ani osobnego poolingu
@@ -1387,13 +1435,13 @@ bindingi z `cycnn.cpp`.
 
 ## Python, PyTorch
 
-Środowisko jest oparte na **Pythonie** i **PyTorchu** z akceleracją CUDA.
+Środowisko jest oparte na Pythonie i PyTorchu z akceleracją CUDA.
 Modele definiowane są w stylu modułów `nn.Module`, zaś pętle uczące
 korzystają z klasycznego układu: forward, obliczenie straty, backward,
 aktualizacja optymalizatora. Zastosowane zostały usprawnienia backendowe
 (`torch.backends.cudnn.benchmark = True`, czyli ustanienie F32 tam, gdzie jest to możliwe),
 co pozwaliło skrócić czas uczenia na użytych GPU. W modelach jest używany optymalizator
-**SGD** z *momentum* i *weight decay*, a harmonogram uczenia opiera się
+SGD z *momentum* i *weight decay*, a harmonogram uczenia opiera się
 na `ReduceLROnPlateau`. Kod modeli jest kompatybilny z ekosystemem i API
 PyTorcha, przez co warstwy bazowe można bez problemowo wymieniać na odpowiedniki
 cylindryczne bez zmian w pozostałych fragmentach sieci neuronowej.
@@ -1401,16 +1449,16 @@ cylindryczne bez zmian w pozostałych fragmentach sieci neuronowej.
 ## Struktura projektu
 
 Projekt podzielony jest na dwie wzajemnie uzupełniające się części. Repozytorium
-treningowe zawiera modele (**VGG, ResNet** oraz **CyVGG, CyResNet**),
-warstwę `CyConv2d` z rozszerzeniem **C++/CUDA**, loader danych dla
-formatów **IDX** i **NPY**, transformacje i mapowania polarne oraz
+treningowe zawiera modele (VGG, ResNet oraz CyVGG, CyResNet),
+warstwę `CyConv2d` z rozszerzeniem C++/CUDA, loader danych dla
+formatów IDX i NPY, transformacje i mapowania polarne oraz
 główny skrypt `main.py` oraz launchery dla poszczególnych datasetów. 
 Znajdują się tam także pliki uruchamiające Optunę i konfiguracje eksperymentów.
 
 Repozytorium zarządzające skupia narzędzia do przygotowania danych,
 rotacji i łączenia zbiorów, a także do analizy wyników. Wykorzystywany jest
 interfejs CLI (Typer), który buduje zbiory, wczytuje logi i artefakty,
-zapisuje metryki do **SQLite** oraz generuje mapy ciepła train-test i
+zapisuje metryki do SQLite oraz generuje mapy ciepła train-test i
 zestawienia rankingowe. Artefakty w repozytorium tresingowym są porządkowane
 w powtarzalnej strukturze katalogów: `logs/` dla przebiegów, `saves/` dla wag `.pt`,
 foldery z macierzami pomyłek w wariancie `.npy` i `.png`, a wyniki
@@ -1426,13 +1474,13 @@ ewaluacji zapisywana jest macierz pomyłek oraz podstawowe metryki
 dokładności. Repozytorium orkiestrujące dostarcza komendy CLI do pełnego
 przebiegu. Najpierw `preprocess` przygotowuje zbiory rotowane i zestawy
 połączone. Następnie uruchamiany jest trening i test, po czym `ingest`
-zbiera logi oraz wyniki i zapisuje je do bazy **SQLite**. Komenda
+zbiera logi oraz wyniki i zapisuje je do bazy SQLite. Komenda
 `check-logs` weryfikuje kompletność przebiegów. Moduły `analyze` i
 `matrix-analyzer` tworzą mapy ciepła train-test, agregują macierze
 pomyłek, liczą statystyki i budują rankingi modeli. Dodatkowo jest 
-dostępna jest możliwość użycia frameworka **Optuna**, który automatycznie 
+dostępna jest możliwość użycia frameworka Optuna, który automatycznie 
 stroi hiperparametry i zapisuje najlepsze konfiguracje wraz z wynikami do
-plików **CSV/JSON**.
+plików CSV/JSON.
 
 \newpage
 
@@ -1443,19 +1491,19 @@ optymalizacja hiperparametrów. Ręczne dobieranie wartości takich jak *learnin
 rate*, *momentum* czy *weight decay* jest czasochłonne, podatne na błędy i bardzo
 często prowadzi do ustawień dalekich od optimum. Optymalne parametry zależą od
 architektury sieci, charakteru zbioru danych oraz użytych przekształceń
-polarnych. Z tego powodu wykorzystana została biblioteka **Optuna**
+polarnych. Z tego powodu wykorzystana została biblioteka Optuna
 [@akiba2019optuna], nowoczesne narzędzie do strojenia hiperparametrów
 (*Hyperparameter Optimization, HPO*).
 
-W eksperymentach użyty został algorytm próbkowania **TPE (Tree structured
-Parzen Estimator)** oraz mechanizm **pruning Median**, który umożliwia
+W eksperymentach użyty został algorytm próbkowania TPE (Tree structured
+Parzen Estimator) oraz mechanizm pruning Median, który umożliwia
 wcześniejsze przerywanie prób o niskiej jakości. Dzięki temu czas potrzebnych obliczeń
 został skrócony o około  trzydzieści procent. Wyniki każdej próby są zapisywane
-do plików **CSV** i **JSON**, co ułatwia późniejszą analizę oraz wierne
+do plików CSV i JSON, co ułatwia późniejszą analizę oraz wierne
 odtworzenie najlepszych konfiguracji.
 
 Proces optymalizacji uruchomiony został dla czterech modeli
-(**ResNet56**, **VGG19**, **CyResNet56**, **CyVGG19**) oraz dla dwóch wariantów
+(ResNet56, VGG19, CyResNet56, CyVGG19) oraz dla dwóch wariantów
 transformacji (*linear polar*, *log polar*). Optymalizacja prowadzona była na
 zestawach oznaczonych jako *non_rotated*. W każdej konfiguracji wykonano
 25 prób z limitem 10 epok na próbę, aby ograniczyć czas trwania
@@ -1477,11 +1525,11 @@ zgodnym z aktualnym stanem wiedzy, a nie ślepych na pojedynczych ręcznych pró
 
 ## Obsługa GPU, Docker, WSL
 Środowisko uruchomieniowe zostało zorganizowane tak, aby połączyć
-**wydajność GPU**, **powtarzalność kontenerów** oraz **spójność pracy w 
-przypadku pracy na Windows przez WSL2**. 
+wydajność GPU, powtarzalność kontenerów oraz spójność pracy w 
+przypadku pracy na Windows przez WSL2. 
 Treningi i testy uruchamiane są w obrazie Dockera
-z przypiętymi wersjami **CUDA** i **cuDNN**, a ten sam obraz jest
-wykorzystywany w **WSL2**, co eliminuje różnice między stacjami roboczymi.
+z przypiętymi wersjami CUDA i cuDNN, a ten sam obraz jest
+wykorzystywany w WSL2, co eliminuje różnice między stacjami roboczymi.
 Dane i artefakty (logi, checkpointy, macierze pomyłek) są montowane jako
 woluminy, więc katalogi z wynikami pozostają niezmienne między sesjami i
 hostami. Dobór urządzeń kontrolowany jest przez `CUDA_VISIBLE_DEVICES`,
@@ -1491,22 +1539,22 @@ odbywa się narzędziem `nvidia-smi`, natomiast szczegóły konfiguracji
 przepływu danych i precyzji obliczeń opisane zostały poniżej.
 
 ### Obsługa GPU
-Środowisko uruchomieniowe wykorzystuje akcelerację **CUDA** na kartach
-**RTX 3070 Ti 8 GB** oraz **RTX 3060 12 GB**. Włączone są optymalizacje
-backendowe: `torch.backends.cudnn.benchmark = True` oraz tryb **TF32**
+Środowisko uruchomieniowe wykorzystuje akcelerację CUDA na kartach
+RTX 3070 Ti 8 GB oraz RTX 3060 12 GB. Włączone są optymalizacje
+backendowe: `torch.backends.cudnn.benchmark = True` oraz tryb TF32
 na architekturze Ampere. Transfery między CPU i GPU realizowane są z
 `pin_memory=True` w `DataLoader` oraz `non_blocking=True` przy
 kopiowaniu tensora na urządzenie, co zmniejsza narzut I/O. W miejscach,
-gdzie to bezpieczne do użycia, wykorzystywana jest **mieszana precyzja** z
+gdzie to bezpieczne do użycia, wykorzystywana jest mieszana precyzja z
 `torch.cuda.amp` i `GradScaler`. Monitorowanie obciążenia i pamięci
 odbywa się przez `nvidia-smi`. Należy uwzględnić wymóg pamięci VRAM dla
 warstwy `CyConv2d` (bufor roboczy ~4 GiB na GPU), co sprawia, że 
 minimalna wymagana ilośc VRAMu wynosi ~6GB.
 
 ### Docker
-**Docker** zapewnia powtarzalne środowisko z obsługą GPU. Obraz zawiera
-**PyTorch**, **CUDA**, **cuDNN** oraz zależności projektu. Uruchomienie
-odbywa się z wykorzystaniem **nvidia-container-toolkit**. Woluminy mapują katalogi z
+Docker zapewnia powtarzalne środowisko z obsługą GPU. Obraz zawiera
+PyTorch, CUDA, cuDNN oraz zależności projektu. Uruchomienie
+odbywa się z wykorzystaniem nvidia-container-toolkit. Woluminy mapują katalogi z
 danymi i wynikami:
 
 ```bash
@@ -1519,15 +1567,15 @@ docker run \
 
 ```
 ### WSL2
-**WSL2** umożliwia pracę z subsystemem Linux w środowisku **Windows** 
-z dostępem do tego samego obrazu **Dockera** oraz tej samej konfiguracji. 
+WSL2 umożliwia pracę z subsystemem Linux w środowisku Windows 
+z dostępem do tego samego obrazu Dockera oraz tej samej konfiguracji. 
 Wyniki i pliki pomocnicze (artefakty) mogą być kopiowane poprzez ścieżkę `\wsl$` 
 do lokalnych katalogów w celem dalszej analizy. 
 Zachowana zostaje spójność nazw katalogów i plików, co ułatwia późniejszy 
-**import danych** do bazy **SQLite** oraz generowanie raportów.  
+import danych do bazy SQLite oraz generowanie raportów.  
 W przypadku różnic w separatorach wykorzystywanych do tworzenia ścieżek, logika 
 zastosowanych narzędzi unika operacji zależnych od systemu operacyjnego, 
-a ścieżki są przekazywane jawnie w interfejsie wiersza poleceń (**CLI**).
+a ścieżki są przekazywane jawnie w interfejsie wiersza poleceń (CLI).
 
 
 ## Organizacja logów, modeli, macierzy pomyłek
@@ -1608,7 +1656,7 @@ Jeśli podano `--model-save-path`, checkpoint zostaje zapisany dokładnie w tej
 
 ### Macierze pomyłek
 
-Podczas testowania modelu zapisywane są **macierze pomyłek** w kilku wariantach oraz zestaw podstawowych metryk.  
+Podczas testowania modelu zapisywane są macierze pomyłek w kilku wariantach oraz zestaw podstawowych metryk.  
 Pliki generowane są zarówno w formacie graficznym (`.png`), jak i numerycznym (`.npy` / `.csv`).
 
 Domyślnie, jeśli nie podano parametru `--output-dir`, wyniki trafiają do katalogu zależnego od pary train-test:
@@ -1646,7 +1694,7 @@ class, recall
 ```
 Takie uporządkowanie pozwala łatwo analizować wyniki eksperymentów, niezależnie od liczby wariantów zbiorów i modeli.
 
-### Scenariusze train-test (JSON)
+### Scenariusze train-test z użyciem JSONów
 **Scenariusze train-test (JSON)** zawierają gotowe listy par zbiorów, których
 nazwy odpowiadają rzeczywistym ścieżkom na dysku. W repozytorium znajdują się następujące scenariusze:
 ```
@@ -1668,23 +1716,23 @@ dopełniania po $\varphi$ wpływa na jakość i stabilność względem obrotów,
 a także czy zyski utrzymują się przy zmianie rozkładu kątów między
 treningiem a testem.
 
-Zakres obejmuje cztery zbiory: **MNIST**, **GTSRB Gray**, **GTSRB RGB**
-i **LEGO**. Dla wszystkich zastosowano spójny preprocessing, ustaloną
+Zakres obejmuje cztery zbiory: MNIST, GTSRB Gray, GTSRB RGB
+i LEGO. Dla wszystkich zastosowano spójny preprocessing, ustaloną
 rozdzielczość wejścia oraz normalizację. Dane przygotowano w dwóch
 formatach wejściowych (IDX i NPY), a następnie wygenerowano warianty
-obrotowe w dwóch trybach: **kąty stałe** oraz **przedziały kątowe**.
+obrotowe w dwóch trybach: kąty stałe oraz przedziały kątowe.
 Na tej podstawie zbudowano również presety złączone (np.
 `merged_fixed_30`, `merged_range_full_0_360` oraz wersje z dopiskiem
 `+ non_rotated`) tak, aby systematycznie zbadać uogólnianie „trenuj na
 X, testuj na Y”.
 
 Aby wyeliminować wpływ przypadkowego doboru hiperparametrów, kolejnym kroku
-kroku wykonano **automatyczną optymalizację** (Optuna, TPE + pruning) na
+kroku wykonano automatyczną optymalizację (Optuna, TPE + pruning) na
 przypadkach *non_rotated*, przy czym też został przeprowadzony na zbiorze GTSRB dodatkowy
 trening tak aby sprawdzić czy da się uzyskać większą odporność na obrót
 samą zmianą sposobu wybierania nalepszego checkpointu. W drugim przypadku trening
 pozostaje *non_rotated* (bez obrotów w danych), ale walidacja i kryterium
-wyboru modelu patrzą już na **zachowanie względem kątów**.
+wyboru modelu patrzą już na zachowanie względem kątów.
 Wyniki pokazały, że początkowe parametry zostały ustawione właściwie, 
 przez co są one wykorzystywane w kolejnych eksperymentach.
 Protokół trenowania jest stały w całej serii (liczba epok, rozmiar batcha, scheduler, 
@@ -1692,15 +1740,15 @@ optymalizator`SGD` z `momentum` i `weight_decay`), a różnice dotyczą
 wyłącznie architektury splotu (`Conv2d` → `CyConv2d`) i przygotowania 
 danych poprzez dodanie rotacji.
 
-Uruchomienia są orkiestrane na podstawie plików **JSON** opisujących scenariusze:
+Uruchomienia są orkiestrane na podstawie plików JSON opisujących scenariusze:
 każdy zestaw treningowy ma przypisaną listę zestawów testowych
 (ścieżki 1:1 z drzewem katalogów). Rozwiązanie to upraszcza replikację,
 pozwala pozwala łatwo utworzyć macierze porównań oraz utworzyć
 wizualizacje w postaci map ciepła „train-test”.
 
-Obliczenia realizowane były na GPU **NVIDIA RTX 3070 Ti** i **RTX 3060**.
-Akceleracja opiera się na wykorzystaniu **CUDA**, **cuDNN** i **cuBLAS**, 
-dodatkowo włączony jest tryb **TF32** (Ampere), a tam gdzie to bezpieczne 
+Obliczenia realizowane były na GPU NVIDIA RTX 3070 Ti i RTX 3060.
+Akceleracja opiera się na wykorzystaniu CUDA, cuDNN i cuBLAS, 
+dodatkowo włączony jest tryb TF32 (Ampere), a tam gdzie to bezpieczne 
 używana jest mieszana precyzja przez `torch.cuda.amp`. 
 Należy uwzględnić bufor roboczy`CyConv2d` (~4 GiB VRAM). 
 Ziarna generatorów pseudolosowych zostały z góry ustawiane dla Pythona, NumPy i PyTorcha/ 
@@ -1709,17 +1757,17 @@ celem redukcji czasu trenowania, co nie zaburza porównywalności wyników.
 
 Wyniki zapisywane zostały w spójnej strukturze zawierającej: logi z przebiegów, najlepsze
 checkpointy `.pt`, macierze pomyłek w formatach `.npy` i `.png`,
-zestawienia CSV oraz wpisy w bazie **SQLite**. Na tej podstawie
+zestawienia CSV oraz wpisy w bazie SQLite. Na tej podstawie
 budowane zostały rankingi oraz statystyki zbiorcze (średnia, mediana,
 odchylenie standardowe). Poniżej opisany został sposób definiowania scenariuszy,
 procedurę pomiaru skuteczności oraz metodę agregacji metryk.
 
 \newpage
 
-## Scenariusze trenowania/testowania (opis JSON)
+## Scenariusze trenowania/testowania - struktura plików JSON
 
-Scenariusze zdefiniowane są przez pliki JSON, które mapują **zestawy
-treningowe** na listy**zestawów testowych**. Klucze i wartości są
+Scenariusze zdefiniowane są przez pliki JSON, które mapują zestawy
+treningowe na listyzestawów testowych. Klucze i wartości są
 po prostu ścieżkami katalogów w strukturze danych. Dzięki temu w łatwy sposób
 powiązane zostały nazwy w  pliku JSON z realnymi ścieżkami na dysku 
 i możliwe było przeprowadzenie serii eksperymentów bez ręcznej konfiguracji czy uruchamiania.
@@ -1753,8 +1801,8 @@ z konwencjami katalogów, które powstają podczas preprocessingu.
 
 Podczas procedury treningu-testowania pętla uruchomieniowa 
 odczytuje scenariusz, a następnie wykonuje następujaca sekwencję:
-trening na danym **train_set**, a następnie testy na wszystkich
-**test_set** z listy. Poniżej znajduje się uproszczony szkic logiki, którą realizują skrypty:
+trening na danym train_set, a następnie testy na wszystkich
+test_set z listy. Poniżej znajduje się uproszczony szkic logiki, którą realizują skrypty:
 
 ```text
 for train_set in scenarios:
@@ -1769,12 +1817,12 @@ Takie podejście porządkuje eksperymenty. Pozwala też tworzyć mapy
 „trenuj na X, testuj na Y” oraz automatycznie budować rankingi modeli
 wspólne dla całego zbioru scenariuszy.
 
-## Pomiar skuteczności (accuracy, mapy ciepła)
+## Pomiar skuteczności - accuracy, mapy ciepła
 
-Skuteczność modeli oceniana jest na podstawie **dokładności top-1** dla
-każdej pary zbiorów treningowego i testowego. Wynikami są **macierze
-accuracji** (train-test), w których każda komórka zawiera **wartość
-procentową** (w praktyce zapis 0-1) uzyskaną przez dany model w układzie
+Skuteczność modeli oceniana jest na podstawie dokładności top-1 dla
+każdej pary zbiorów treningowego i testowego. Wynikami są macierze
+accuracji (train-test), w których każda komórka zawiera wartość
+procentową (w praktyce zapis 0-1) uzyskaną przez dany model w układzie
 „trenuj na X, testuj na Y”. Dane zapisywane są w dwóch plikach:
 `accuracy_matrix_<model>.csv` (wartości liczbowe) oraz
 `heatmap_<model>.png` (wizualizacja mapy ciepła).
@@ -1798,7 +1846,7 @@ $$
 $$
 
 Mapy ciepła służą do wzrokowej oceny stabilności względem zmian rozkładu
-kątów: **jaśniejsze pola** oznaczają wyższe accuracy, **ciemniejsze** oznaczają
+kątów: jaśniejsze pola oznaczają wyższe accuracy, ciemniejsze oznaczają
 spadki jakości dla danego testu. Oś pozioma odpowiada wariantom testowym,
 oś pionowa zaś wariantom treningowym. Na ich podstawie budowane są
 porównania modeli i transformacji (np. profile Acc(Δθ) oraz AUC\(_\theta\)).
@@ -1807,14 +1855,14 @@ porównania modeli i transformacji (np. profile Acc(Δθ) oraz AUC\(_\theta\)).
 ## Metryki: średnia, mediana, odchylenie standardowe
 
 Dla każdego modelu agregowane są wyniki z przypisanych scenariuszy
-kątowych, raportowane są: **mean**, **median**, **min**, **max**,
-**std**. Dodatkowo liczone są wskaźniki stabilności: **robust mean**
-(średnia ucięta 10%) oraz **IQR**. Wyznaczany jest także
-**gap train-test** - różnica między przypadkami „train-like”
+kątowych, raportowane są: mean, median, min, max,
+std. Dodatkowo liczone są wskaźniki stabilności: robust mean
+(średnia ucięta 10%) oraz IQR. Wyznaczany jest także
+gap train-test - różnica między przypadkami „train-like”
 (np. zawierającymi `non_rotated` albo `plus_non_rotated`), a resztą.
 
-Wyniki i metadane trafiają do **SQLite** (przykładowo do tabel `evaluations`,
-`training_runs`) oraz do **CSV** zapisywanego pod następującą ścieżką 
+Wyniki i metadane trafiają do SQLite (przykładowo do tabel `evaluations`,
+`training_runs`) oraz do CSV zapisywanego pod następującą ścieżką 
 `results/exports/<DATASET>/<micro|macro>/...`, co ułatwia późniejsze
 filtrowanie po: modelu, transformacji i zbiorze, a także łatwiejszą 
 budowę rankingów i wykresów.
@@ -1885,11 +1933,11 @@ eksport wyników. Zastosowana separacja odpowiedzialności zapewnia
 powtarzalność, transparentność oraz możliwość niezależnej rozbudowy
 poszczególnych warstw.
 
-### Interfejs uruchomieniowy (CLI)
+### Interfejs uruchomieniowy - CLI
 
 Centralnym wejściem do systemu jest interfejs wiersza poleceń
 (`cli.py`), który spina operacje ingestii artefaktów, analizy macierzy
-pomyłek oraz budowy macierzy „train–test”. Program przyjmuje ścieżki do
+pomyłek oraz budowy macierzy „train-test”. Program przyjmuje ścieżki do
 logów treningowych i testowych, lokalizacje plików z macierzami pomyłek
 oraz parametry sterujące (wybór zbioru, wariantu metryki, katalogu
 eksportów, a także połączenia z bazą). Dzięki temu możliwe jest
@@ -1903,28 +1951,28 @@ Za wczytanie i ujednolicenie materiału empirycznego odpowiada moduł
 konfigurację eksperymentów (architektura, transformacja, para
 train→test, znacznik czasu), następnie parsuje przebiegi uczenia i testu
 oraz rejestruje macierze pomyłek w ustalonym formacie. Wszystkie dane
-są porządkowane w relacyjnej bazie **SQLite** (schemat utrzymuje
+są porządkowane w relacyjnej bazie SQLite (schemat utrzymuje
 `utils/db_handler.py`), co ułatwia ich ponowne użycie, kontrolę spójności
 i odtworzenie pełnej historii eksperymentów.
 
 ### Moduł analityczny i raportujący
 
 Właściwa analiza ilościowa realizowana jest w
-`analysis/matrix_analyzer.py`. Moduł ten wyznacza dokładność **micro** i
-**macro** bezpośrednio z macierzy pomyłek, agreguje wyniki w ujęciu par
+`analysis/matrix_analyzer.py`. Moduł ten wyznacza dokładność micro i
+macro bezpośrednio z macierzy pomyłek, agreguje wyniki w ujęciu par
 train→test oraz w ujęciu rodzin modeli, a także oblicza miary
-stabilności względem rotacji: krzywe **Acc(Δθ)**, pole pod krzywą
-**AUC\_θ** oraz wartość „worst-case”. Uzupełniają je miary
+stabilności względem rotacji: krzywe Acc(Δθ), pole pod krzywą
+AUC\_θ oraz wartość „worst-case”. Uzupełniają je miary
 rozkładowe (średnia, mediana, odchylenie standardowe, rozstęp
 międzykwartylowy, średnia ucięta) oraz metryki „per-time”, w których
 jakość odnoszona jest do czasu uczenia. Wyniki są eksportowane do
-uporządkowanej struktury plików **CSV** (z katalogiem nadrzędnym
+uporządkowanej struktury plików CSV (z katalogiem nadrzędnym
 `results/exports/<DATASET>/<micro|macro>/`) oraz rejestrowane w logu
 przebiegu. Moduł generuje także rankingi (jakościowe oraz
 „time-aware”) oraz zestawienia na poziomie rodzin, w tym różnice
-„**Cy − baza**”.
+„Cy − baza”.
 
-### Macierze „train–test” (heatmapy)
+### Macierze „train-test” - heatmapy
 
 Uzupełnieniem warstwy metrycznej jest `analysis/learning_matrix.py`,
 który zestawia dokładności top-1 w siatkę *zbiór treningowy × zbiór
@@ -1936,7 +1984,7 @@ poza rozkład treningowy oraz identyfikację obszarów wrażliwych na rotację.
 
 ### Dostęp do bazy i narzędzia pomocnicze
 
-Moduł `utils/db_handler.py` utrzymuje schemat bazy **SQLite**
+Moduł `utils/db_handler.py` utrzymuje schemat bazy SQLite
 (`training_logs`, `training_runs`, `confusion_matrices`) oraz zapewnia
 bezpieczny zapis i odczyt rekordów. Warstwa pomocnicza (`utils/handler.py`,
 `utils/wsl_handler.py`) odpowiada za normalizację ścieżek między
@@ -1946,21 +1994,21 @@ ingestii i analizy. Z kolei `dataset_tools/` zawiera elementy
 przygotowania scenariuszy eksperymentalnych (m.in. odczyt list par
 train-test z plików JSON) oraz walidacji kompletności danych wejściowych.
 
-### Przepływ danych (od eksperymentu do raportu)
+### Przepływ danych - od eksperymentu do raportu
 
 Skrypty treningu i testu zapisują przebiegi oraz macierze pomyłek w
 uzgodnionej konwencji ścieżek. Następnie polecenie CLI *ingest* 
 uruchamia moduł odczytu i serializacji,
 który buduje spójny rekord w bazie i weryfikuje integralność artefaktów. 
 W następnym kroku polecenie *matrix* inicjuje analizę metryk jakości i stabilności,
-agregację statystyk oraz eksport tabel i rankingów do **CSV**.  
+agregację statystyk oraz eksport tabel i rankingów do CSV.  
 W razie potrzeby na podstawie tych samych źródeł tworzone są
-macierze train–test (heatmapy), co domyka obraz generalizacji kątowej.
+macierze train-test (heatmapy), co domyka obraz generalizacji kątowej.
 
 ### Konwencje zapisu i odtwarzalność
 
 Wszystkie produkty pracy narzędzi są lokowane w stabilnej, płaskiej
-strukturze katalogów: baza **SQLite** w `db/experiment_logs.db`; dzienniki
+strukturze katalogów: baza SQLite w `db/experiment_logs.db`; dzienniki
 przebiegu analiz w `results/logs/`, tabele wyników i rankingi w
 `results/exports/<DATASET>/<micro|macro>/…`, macierze pomyłek (format
 NPY i jeśli wygenerowane PNG) w podkatalogach per para
@@ -1973,7 +2021,7 @@ modelami, transformacjami i scenariuszami rotacyjnymi.
 Rozdzielenie warstw (CLI → ingestia → baza → analiza → eksport)
 ogranicza sprzężenia i pozwala wprowadzać nowe metryki bądź kolejne
 zbiory danych bez zmian w warstwie uruchomieniowej. Jednocześnie
-utrzymywanie „źródła prawdy” w postaci bazy **SQLite** upraszcza kontrolę
+utrzymywanie „źródła prawdy” w postaci bazy SQLite upraszcza kontrolę
 wersji i sprzyja dobrej praktyce *data provenance*, bo każdy wynik jest
 odtwarzalny z zapisanych artefaktów i metadanych. W konsekwencji
 otrzymujemy pipeline nie tylko zautomatyzowany, ale również
@@ -2045,7 +2093,7 @@ zakresami kątów treningu i testu,
 - **krzywych Acc(Δθ)**, które agregują dokładność względem różnicy
 rozkładów kątów pomiędzy treningiem i testem.  
 
-Metryka **AUC_θ** odpowiada znormalizowanemu polu pod krzywą Acc(Δθ),
+Metryka AUC_θ odpowiada znormalizowanemu polu pod krzywą Acc(Δθ),
 obliczanemu metodą trapezów po ujednoliconych przedziałach Δθ i
 skalowanemu do zakresu 0-1.  
 Wariant *per-time* uzyskiwano przez odniesienie średniej dokładności
@@ -2157,17 +2205,17 @@ Rys. 16: Porównanie per-time (avg_perf) LEGO  \
 Rys. 17: Porównanie per-time (avg_perf) MNIST  \
 Wniosek: Efektywność per-time w przypadku modelu CyResNet56-linear jest zazwyczaj najlepsza.
 
-## Wpływ transformacji (linear-polar vs log-polar)
+## Wpływ transformacji - porównanie linear-polar oraz log-polar
 
 W pracy stosowane są dwa warianty odwzorowania biegunowego. W trybie
-**linear** promień rośnie liniowo, co daje równy krok po $\rho$ oraz
-stabilną siatkę kątową. W trybie **log** promień rośnie logarytmicznie,
+linear promień rośnie liniowo, co daje równy krok po $\rho$ oraz
+stabilną siatkę kątową. W trybie log promień rośnie logarytmicznie,
 co zagęszcza próbki w pobliżu środka i ułatwia „składanie” dużych obrotów
 wzdłuż osi $\rho$. Metryki liczone są tak samo dla obu wariantów:
-**micro-accuracy** z macierzy pomyłek \texttt{confusion\_matrix.npy},
-$\mathrm{AUC}_\theta$ i **worst-case** z krzywych
+micro-accuracy z macierzy pomyłek \texttt{confusion\_matrix.npy},
+$\mathrm{AUC}_\theta$ i worst-case z krzywych
 $\mathrm{Acc}(\Delta\theta)$ po zbinowaniu różnic kątów z wrap-around oraz
-**avg\_perf** rozumiane jako $\mathrm{mean}(\mathrm{Acc})/\mathrm{train\_time}$.
+avg\_perf rozumiane jako $\mathrm{mean}(\mathrm{Acc})/\mathrm{train\_time}$.
 
 *[Rys. 18 - Δ (log − linear) - słupki dla MNIST (np. CyResNet)]*  \
 ![Rys. 18 - Δ (log − linear) - słupki dla MNIST (np. CyResNet)](media%2Fassets%2Fplots%2Fdelta_log_minus_linear_MNIST_CyResNet56.png)  \
@@ -2184,7 +2232,7 @@ Rys. 19: W przypadku zbioru GTSRB model linear-polar częściej wygrywa w avg i 
 ### Legenda i interpretacja
 
 Każda tabela przedstawia wyniki średniej dokładności (`avg`), pola pod krzywą (`AUC`) oraz najgorszego przypadku (`worst`) w scenariuszach rotacyjnych.  
-Porównywane są zarówno modele bazowe, jak i ich warianty cykliczne, w dwóch odwzorowaniach przestrzeni: **linear-polar** i **log-polar**.
+Porównywane są zarówno modele bazowe, jak i ich warianty cykliczne, w dwóch odwzorowaniach przestrzeni: linear-polar i log-polar.
 
 **Kolumny główne:**
 - `arch` - architektura modelu (`vgg19`, `resnet56`, `cyvgg19`, `cyresnet56`),  
@@ -2205,17 +2253,17 @@ Porównywane są zarówno modele bazowe, jak i ich warianty cykliczne, w dwóch 
 - wyższe `avg`, `AUC`, `worst` oraz niższe `sd_theta_mean` są pożądane.
 
 **Interpretacja ogólna:**
-Modele **cykliczne** (z prefiksem `cy-`) konsekwentnie osiągają najwyższe wyniki jakościowe w każdej metryce,  
+Modele cykliczne (z prefiksem `cy-`) konsekwentnie osiągają najwyższe wyniki jakościowe w każdej metryce,  
 co potwierdza skuteczność architektur ekwiwariantnych w stabilizacji względem rotacji.  
-Transformacje **log-polar** w wybranych przypadkach poprawiają stabilność (`AUC`) oraz redukują `sd_theta_mean`,  
+Transformacje log-polar w wybranych przypadkach poprawiają stabilność (`AUC`) oraz redukują `sd_theta_mean`,  
 choć efekt dominujący pochodzi z samej konstrukcji cyklicznej warstw konwolucyjnych.  
-Dla zbiorów **kolorowych (RGB)** zauważalny jest dodatkowy wzrost metryk zwłaszcza w modelach bazowych   
+Dla zbiorów kolorowych (RGB) zauważalny jest dodatkowy wzrost metryk zwłaszcza w modelach bazowych   
 wynikający z wykorzystania informacji barwnej przy zachowaniu inwariancji rotacyjnej.  
 W sumie tabele pozwalają obserwować jednoczesny wpływ architektury, odwzorowania i reprezentacji danych na odporność modeli.
 
 \newpage
 
-## GTSRB - ranking metryk (micro)
+## GTSRB - ranking metryk 
 
 ### Wyniki
 | arch | act | avg | AUC | worst |
@@ -2253,15 +2301,15 @@ W sumie tabele pozwalają obserwować jednoczesny wpływ architektury, odwzorowa
 | VGG19 | linear | -0.00536 | 2237.78 | 0.00522 |
 | VGG19 | log | -0.00512 | 2128.99 | 0.00567 |
 
-W zbiorze **GTSRB** najwyższe wyniki osiąga **CyResNet56(linear)**, który prowadzi
+W zbiorze GTSRB najwyższe wyniki osiąga CyResNet56(linear), który prowadzi
 we wszystkich głównych metrykach (`avg`, `AUC`, `worst`).  
-Wariant **log-polar** uzyskuje porównywalne wyniki, ale nieco mniej stabilny z nieco wyższym `sd_theta_mean`.    
+Wariant log-polar uzyskuje porównywalne wyniki, ale nieco mniej stabilny z nieco wyższym `sd_theta_mean`.    
 Architektury bazowe (bez cykliczności) notują wyraźny spadek skuteczności
-- różnica między CyResNet56 a ResNet56 przekracza **30 p.p.** w `avg`.  
+- różnica między CyResNet56 a ResNet56 przekracza 30 p.p. w `avg`.  
 Dodatkowo modele cykliczne wykazują mniejsze `sd_theta_mean`, co potwierdza
 ich stabilność w całym zakresie kątów testowych.
 
-## GTSRB RGB - ranking metryk (micro)
+## GTSRB RGB - ranking metryk 
 
 ### Wyniki 
 | arch | act | avg | AUC | worst |
@@ -2299,8 +2347,8 @@ ich stabilność w całym zakresie kątów testowych.
 | VGG19 | linear | -0.00563 | 1313.80 | 0.00589 |
 | VGG19 | log | -0.00591 | 1372.62 | 0.00599 |
 
-W zbiorze **GTSRB RGB** przewagę utrzymuje **CyResNet56(linear)**, który uzyskuje najwyższe
-wartości `avg`, `AUC` i `worst`. Wersja **RGB** przynosi wzrost dokładności o ok. +2 p.p. względem wersji szarościowej.
+W zbiorze GTSRB RGB przewagę utrzymuje CyResNet56(linear), który uzyskuje najwyższe
+wartości `avg`, `AUC` i `worst`. Wersja RGB przynosi wzrost dokładności o ok. +2 p.p. względem wersji szarościowej.
 Wyniki modeli cyklicznych są bardzo zbliżone, co potwierdza
 ich stabilność przy pełnym zakresie rotacji. Wersje kolorowe wnoszą umiarkowany, lecz
 stały wzrost skuteczności względem wariantów szarościowych (ok. +2 p.p. w `avg`).
@@ -2308,7 +2356,7 @@ Modele bazowe ponownie tracą kilkadziesiąt punktów procentowych dokładności
 `sd_theta_mean` jest ponad ×5 większe, co potwierdza podatność na rotacje.
 
 
-## LEGO - ranking metryk (micro)
+## LEGO - ranking metryk 
 
 ### Wyniki
 | arch | act | avg | AUC | worst |
@@ -2346,15 +2394,15 @@ Modele bazowe ponownie tracą kilkadziesiąt punktów procentowych dokładności
 | VGG19 | linear | 0.00155 | 2667.83 | 0.00057 |
 | VGG19 | log | 0.00138 | 2837.22 | 0.00046 |
 
-W zbiorze **LEGO** najlepsze wyniki uzyskuje **CyVGG19(linear)**, prowadząc we wszystkich głównych metrykach.
+W zbiorze LEGO najlepsze wyniki uzyskuje CyVGG19(linear), prowadząc we wszystkich głównych metrykach.
 Wersja log-polar jest niemal równorzędna, różnice mieszczą się w granicach błędu statystycznego.  
 Modele cykliczne znacząco przewyższają klasyczne wersje, szczególnie pod względem `AUC` i `worst`,
 co wskazuje na lepszą odporność na rotacje i mniejsze zróżnicowanie między kątami.  
-Czas trenowania (`time_s_mean`) jest najkrótszy dla architektur **VGG**, co czyni je korzystnym kompromisem
+Czas trenowania (`time_s_mean`) jest najkrótszy dla architektur VGG, co czyni je korzystnym kompromisem
 między skutecznością a efektywnością obliczeniową.
 
 
-## MNIST - ranking metryk (micro)
+## MNIST - ranking metryk 
 
 ### Wyniki
 | arch | act | avg | AUC | worst |
@@ -2392,9 +2440,9 @@ między skutecznością a efektywnością obliczeniową.
 | VGG19 | linear | 0.00175 | 1006.02 | 0.00042 |
 | VGG19 | log | 0.00169 | 1093.64 | 0.00045 |
 
-W zbiorze **MNIST** wszystkie modele osiągają bardzo wysokie wyniki (powyżej 96%), jednak
-najlepszy balans dokładności i stabilności osiąga **CyResNet56(linear)**.
-Wariant **log-polar** jest minimalnie szybszy i ma mniejsze odchylenie `sd_theta_mean`,
+W zbiorze MNIST wszystkie modele osiągają bardzo wysokie wyniki (powyżej 96%), jednak
+najlepszy balans dokładności i stabilności osiąga CyResNet56(linear).
+Wariant log-polar jest minimalnie szybszy i ma mniejsze odchylenie `sd_theta_mean`,
 co wskazuje na jego równomierną odporność na rotacje.  
 Modele cykliczne utrzymują przewagę nad bazowymi o 1-2 punkty procentowe, co przy tak prostym
 zbiorze danych stanowi zauważalny, stabilny efekt architektury ekwiwariantnej.
@@ -2405,37 +2453,37 @@ nawet w prostych, mało zróżnicowanych danych jak MNIST.
 
 ## GTSRB - heatmapy train-test
 
-Poniżej zestawiam mapy train-test dla zbioru **GTSRB**. Oś pozioma to
+Poniżej zestawiam mapy train-test dla zbioru GTSRB. Oś pozioma to
 wariant testowy (różne zakresy rotacji), oś pionowa - wariant treningowy.
-Kolor odpowiada **dokładności micro**; ciemniejsze pola oznaczają lepszy
+Kolor odpowiada dokładności micro; ciemniejsze pola oznaczają lepszy
 wynik. Diagonala reprezentuje zgodność rozkładów kątów (trening≈test),
-natomiast kolumny odległe od diagonali pokazują, jak model **generalizuje
-na rotacje, których nie widział podczas treningu**.
+natomiast kolumny odległe od diagonali pokazują, jak model generalizuje
+na rotacje, których nie widział podczas treningu.
 
-### VGG19 (bazowy) - linear vs log
+### Bazowy model VGG19 - linear vs log
 *Rys. 20: VGG19 - linear-polar*  
 ![VGG19 - linear-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_vgg19_linearpolar.png)
 \newpage
 *Rys. 21: VGG19 - log-polar*  
 ![VGG19 - log-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_vgg19_logpolar.png)
 
-Wariant bazowy **VGG19** koncentruje wysokie wartości w pobliżu diagonali.
+Wariant bazowy VGG19 koncentruje wysokie wartości w pobliżu diagonali.
 Po wyjściu poza zakres kątów widocznych w treningu pojawia się stopniowe
 rozjaśnienie kolumn, czyli spadek accuracy przy większych odchyleniach
-kątowych. Transformacja **log-polar** łagodzi ten spadek nieco mocniej niż
-**linear-polar** (bardziej równy pas w kolumnach dalszych od diagonali), ale
+kątowych. Transformacja log-polar łagodzi ten spadek nieco mocniej niż
+linear-polar (bardziej równy pas w kolumnach dalszych od diagonali), ale
 nie eliminuje problemu całkowicie.
 
-### ResNet56 (bazowy) - linear vs log
+### Bazowy model ResNet56 - linear vs log
 *Rys. 22: ResNet56 - linear-polar*  
 ![ResNet56 - linear-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_resnet56_linearpolar.png)  
 \newpage
 *Rys. 23: ResNet56 - log-polar*  
 ![ResNet56 - log-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_resnet56_logpolar.png)  
 
-**ResNet56** zachowuje się podobnie do VGG19: ciemna diagonala i jaśniejsze
-kolumny wraz ze wzrostem różnicy kątów. Wersja **log-polar** ponownie daje
-nieco stabilniejszy obraz niż **linear-polar**, szczególnie dla testów
+ResNet56 zachowuje się podobnie do VGG19: ciemna diagonala i jaśniejsze
+kolumny wraz ze wzrostem różnicy kątów. Wersja log-polar ponownie daje
+nieco stabilniejszy obraz niż linear-polar, szczególnie dla testów
 odległych kątowo od treningu, ale nadal widać wyraźny dryf jakości.
 
 ### Modele cykliczne - CyVGG19 i CyResNet56
@@ -2451,56 +2499,56 @@ odległych kątowo od treningu, ale nadal widać wyraźny dryf jakości.
 *Rys. 27: CyResNet56 - log-polar*  
 ![CyResNet56 - log-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_cyresnet56_logpolar.png)  
 
-Warianty **cykliczne** utrzymują wysokie wartości nie tylko na diagonali,
-ale także w **kolumnach** odpowiadających testom odległym kątowo od
+Warianty cykliczne utrzymują wysokie wartości nie tylko na diagonali,
+ale także w kolumnach odpowiadających testom odległym kątowo od
 treningu. Mapa ma przez to bardziej wyrównany, „ciemny” profil w całym
-zakresie kątów, co wskazuje na **stabilność rotacyjną**. Między
-przekształceniami widać delikatną przewagę **log-polar** nad **linear-polar**
+zakresie kątów, co wskazuje na stabilność rotacyjną. Między
+przekształceniami widać delikatną przewagę log-polar nad linear-polar
 przy skrajniejszych odchyleniach, ale kluczowy efekt przynosi sama
 architektura cykliczna.
 
 ### Wniosek odnośnie heatmap dla zbioru GTSRB w odcienaich szarości
-Na GTSRB transformacje **log-polar** pomagają modelom bazowym,
-jednak to **architektury cykliczne** (CyVGG19, CyResNet56) zapewniają
+Na GTSRB transformacje log-polar pomagają modelom bazowym,
+jednak to architektury cykliczne (CyVGG19, CyResNet56) zapewniają
 rzeczywistą odporność na zmianę orientacji. Jest to widoczne jako
 utrzymanie „ciemnych” kolumn daleko od diagonali, a więc wysoka jakość
 także wtedy, gdy rozkład kątów w teście znacząco różni się od treningu.
-W ujęciu metryk przekłada się to na wyższe **AUC\_θ** (większe pole pod
+W ujęciu metryk przekłada się to na wyższe AUC\_θ (większe pole pod
 krzywą Acc(Δθ)) i lepszy *worst-case* niż w wariantach bazowych.
 
 ## GTSRB RGB - heatmapy train-test
 
-Poniżej zestawiono mapy train-test dla zbioru **GTSRB RGB**, czyli
+Poniżej zestawiono mapy train-test dla zbioru GTSRB RGB, czyli
 wersji kolorowej znaków drogowych. Oś pozioma odpowiada wariantom
 testowym (różne zakresy rotacji), oś pionowa - wariantom treningowym.
 Ciemniejsze pola oznaczają wyższą dokładność micro-accuracy, jaśniejsze
 spadek skuteczności przy większej różnicy kątów Δθ.
 
-### VGG19 (bazowy) - linear vs log
+### Bazowy model VGG19 - linear vs log
 *Rys. 28 (RGB): VGG19 - linear-polar*  
 ![VGG19 - linear-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_vgg19_linearpolar.png)  
 \newpage
 *Rys. 29 (RGB): VGG19 - log-polar*  
 ![VGG19 - log-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_vgg19_logpolar.png)  
 
-Model **VGG19** w wersji RGB zachowuje podobny wzorzec jak dla zbioru
+Model VGG19 w wersji RGB zachowuje podobny wzorzec jak dla zbioru
 monochromatycznego - wyraźna diagonala oznacza dobre dopasowanie
-rozkładów rotacji w treningu i teście. Wariant **log-polar** łagodzi spadek
+rozkładów rotacji w treningu i teście. Wariant log-polar łagodzi spadek
 dokładności poza tym zakresem, tworząc bardziej płynne przejście w
 kolumnach testowych. Kolor poprawia stabilność przy umiarkowanych
 odchyleniach (Δθ ≈ 30-60°), co wskazuje, że barwa stanowi dodatkowy
 sygnał wspierający rozpoznanie kształtu.
 
-### ResNet56 (bazowy) - linear vs log
+### Bazowy model ResNet56 - linear vs log
 *Rys. 30 (RGB): ResNet56 - linear-polar*  
 ![ResNet56 - linear-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_resnet56_linearpolar.png)  
 \newpage
 *Rys. 31 (RGB): ResNet56 - log-polar*  
 ![ResNet56 - log-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_resnet56_logpolar.png)  
 
-**ResNet56** w wersji RGB wykazuje wyraźniejszą poprawę stabilności niż
+ResNet56 w wersji RGB wykazuje wyraźniejszą poprawę stabilności niż
 wariant z obrazami monochromatycznymi. Dla obu transformacji, a
-szczególnie **log-polar**, kolumny testowe utrzymują ciemniejszy profil w
+szczególnie log-polar, kolumny testowe utrzymują ciemniejszy profil w
 szerszym zakresie kątów. Sieć wykorzystuje barwne cechy (np. czerwone
 obramowania, żółte tła) jako odniesienia mniej zależne od rotacji.
 Spadek jakości poza diagonalą jest łagodniejszy, lecz architektura nadal
@@ -2519,44 +2567,44 @@ nie jest w pełni inwariantna rotacyjnie.
 *Rys. 35 (RGB): CyResNet56 - log-polar*  
 ![CyResNet56 - log-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_cyresnet56_logpolar.png)  
 
-Wersje **cykliczne** w konfiguracji RGB wykazują najwyższą odporność na
+Wersje cykliczne w konfiguracji RGB wykazują najwyższą odporność na
 rotację. Mapa ma równomiernie ciemny profil w całym zakresie kolumn
 testowych, co oznacza utrzymanie wysokiej dokładności nawet przy dużych
-różnicach Δθ. Warianty **log-polar** są minimalnie bardziej wygładzone,
+różnicach Δθ. Warianty log-polar są minimalnie bardziej wygładzone,
 jednak kluczowy efekt wynika z samej architektury cyklicznej.
 
 ### Wniosek odnośnie heatmap dla zbioru GTSRB RGB
 Wersja RGB zwiększa spójność między wariantami kątowymi, poprawiając
-stabilność nawet w modelach klasycznych. Jednak dopiero **architektury
-cykliczne** (CyVGG19, CyResNet56) zapewniają rzeczywistą inwariancję
+stabilność nawet w modelach klasycznych. Jednak dopiero architektury
+cykliczne (CyVGG19, CyResNet56) zapewniają rzeczywistą inwariancję
 rotacyjną, gdyż ich heatmapy są niemal jednolite, bez widocznych pasów
 degradacji. Kolor wzmacnia cechy semantyczne, a cykliczność zapewnia
-spójność geometryczną, co przekłada się na wyższe **AUC_θ**, mniejszy
+spójność geometryczną, co przekłada się na wyższe AUC_θ, mniejszy
 spadek *Acc(Δθ)* oraz stabilność predykcji dla dużych rotacji.
 
 ## Wpływ koloru
 
-Wprowadzenie informacji barwnej w zbiorze **GTSRB_RGB** poprawiło
+Wprowadzenie informacji barwnej w zbiorze GTSRB_RGB poprawiło
 ogólną stabilność modeli względem rotacji. Kolor dostarcza dodatkowych
 wskazówek semantycznych np. czerwone ramki, żółte tła czy niebieskie
 symbole, które są rozpoznawalne niezależnie od orientacji znaku.  
 Efekt ten jest szczególnie widoczny w modelach klasycznych, gdzie spadek
 dokładności przy zmianie kąta jest łagodniejszy niż w wersjach
-monochromatycznych. W modelach **cyklicznych** (CyVGG19, CyResNet56)
+monochromatycznych. W modelach cyklicznych (CyVGG19, CyResNet56)
 kolor działa komplementarnie, wzmacniając reprezentacje i prowadząc do
 niemal pełnej inwariancji rotacyjnej.
 
 ## Podsumowanie ogólne
 
-W przypadku zbiorów **GTSRB** i **GTSRB RGB** w obrębie tej samej rodziny 
-**linear** daje zwykle wyższą **średnią** i $\mathrm{AUC}_\theta$, zaś **log** 
-sporadycznie wygrywa „per-time” (np. CyVGG na GTSRB). Dataset **LEGO** pokazuje, że:
-dla **CyResNet** **log** ma delikatny plus jakości i stabilności, natomiast
-w **VGG/ResNet** lepszy jakościowo pozostaje **linear**, choć **VGG-log**
-bywa szybszy. W **MNIST** **log-polar** wyraźnie pomaga (najmocniej w
-**CyResNet**). W praktyce, gdy priorytetem jest **odporność na duże
-obroty** ($\mathrm{AUC}_\theta$, worst), warto wybierać **log**, gdy
-liczy się **przepustowość i koszt** (avg\_perf), ale częściej lepiej użyć **linear**.
+W przypadku zbiorów GTSRB i GTSRB RGB w obrębie tej samej rodziny 
+linear daje zwykle wyższą średnią i $\mathrm{AUC}_\theta$, zaś log 
+sporadycznie wygrywa „per-time” (np. CyVGG na GTSRB). Dataset LEGO pokazuje, że:
+dla CyResNet log ma delikatny plus jakości i stabilności, natomiast
+w VGG/ResNet lepszy jakościowo pozostaje linear, choć VGG-log
+bywa szybszy. W MNIST log-polar wyraźnie pomaga (najmocniej w
+CyResNet). W praktyce, gdy priorytetem jest odporność na duże
+obroty ($\mathrm{AUC}_\theta$, worst), warto wybierać log, gdy
+liczy się przepustowość i koszt (avg\_perf), ale częściej lepiej użyć linear**.
 
 
 ## Wnioski per zbiór
@@ -2565,7 +2613,7 @@ liczy się **przepustowość i koszt** (avg\_perf), ale częściej lepiej użyć
 dla CyVGG-log. Różnice worst-case wśród topowych konfiguracji są niewielkie,
 co pozwala dobrać wariant pod budżet czasu lub wymagania stabilności.
 
-**GTSRB RGB.** Przejście do CyCNN przynosi wyraźny skok jakości i AUC_theta.
+**GTSRB RGB. Przejście do CyCNN przynosi wyraźny skok jakości i AUC_theta.
 CyResNet-log zwykle prowadzi w stabilności, a szybkie klasyki (np.
 VGG-log) przegrywają jakościowo z wersjami cyklicznymi.
 
@@ -2603,7 +2651,7 @@ Idealny klasyfikator ma jasną przekątną (duże wartości na elementach
 
 Macierze pomyłek stanowią jedno z kluczowych narzędzi interpretacji modeli
 klasyfikacyjnych, które umożliwia analizę rozkładu błędów pomiędzy poszczególnymi
-klasami. W niniejszej pracy zastosowano **normalizację wierszową**, co oznacza, że
+klasami. W niniejszej pracy zastosowano normalizację wierszową, co oznacza, że
 suma każdego wiersza równa się jedności. Takie podejście pozwala na porównywanie
 proporcji błędnych predykcji w obrębie danej klasy, niezależnie od jej liczebności.
 Wartość na przekątnej macierzy odpowiada wówczas trafności danej klasy
@@ -2611,8 +2659,8 @@ Wartość na przekątnej macierzy odpowiada wówczas trafności danej klasy
 błędnych klasyfikacji.
 
 Wzorce występujące poza przekątną dostarczają cennych informacji o naturze błędów modelu.
-Występowanie **symetrycznych par** (tj. podwyższonych wartości w pozycjach (i, j)
-oraz (j, i)) oznacza wzajemne mylenie się dwóch klas, natomiast **pasy lub skupiska**
+Występowanie symetrycznych par (tj. podwyższonych wartości w pozycjach (i, j)
+oraz (j, i)) oznacza wzajemne mylenie się dwóch klas, natomiast pasy lub skupiska
 wartości poza przekątną świadczą o istnieniu podobieństw wizualnych, często
 wynikających z rotacji lub wspólnych cech morfologicznych obiektów. Często
 obserwuje się również zjawisko tzw. *near-miss*, czyli błędnych klasyfikacji do klasy
@@ -2622,13 +2670,13 @@ znaków drogowych (50 oraz 90 albo 10 oraz 70) lub cyfr o zbliżonych kształtac
 (1 oraz 7 albo 6 i 9).
 
 Z macierzy pomyłek można także obliczyć klasyczne miary jakości dla poszczególnych
-klas, takie jak **precision**, **recall** czy **F1-score**. Są one szczególnie istotne
+klas, takie jak precision, recall czy F1-score. Są one szczególnie istotne
 w przypadku zbiorów niezbalansowanych, gdzie średnia dokładność top-1 może maskować
 problemy w rzadziej reprezentowanych etykietach. Dzięki temu analiza macierzy
 pozwala nie tylko ocenić ogólną skuteczność modelu, lecz także wskazać jego jakość
 per klasa.
 
-Najbardziej wiarygodne wnioski uzyskane zostały przy **porównaniach równoległych**, tj.
+Najbardziej wiarygodne wnioski uzyskane zostały przy porównaniach równoległych, tj.
 dla tego samego zbioru testowego gdzie zostawione zostały wyniki dwóch modeli (np. bazowego i
 cyklicznego) lub dwa warianty odwzorowania przestrzeni (linear-polar vs
 log-polar). Cennym uzupełnieniem jest także analiza sekwencji macierzy wzdłuż
@@ -2638,19 +2686,19 @@ Jednak z racji objętości pracy nie została ona zastosowana.
 
 ### Obserwacje dla poszczególnych zbiorów
 
-W przypadku zbioru **GTSRB** oraz jego wariantu **GTSRB RGB** dominują tzw.
+W przypadku zbioru GTSRB oraz jego wariantu GTSRB RGB dominują tzw.
 *near-missy* między znakami o zbliżonej ikonografii (np. „50” i „60”). W modelach
 bazowych testowanych na rotacjach widoczne są charakterystyczne pasma błędów
 odsunięte od przekątnej, będące efektem wrażliwości na orientację. Wersje cykliczne
 znacząco redukują ten efekt, przekątna staje się bardziej wyraźna, a rozproszenia
 symetryczne słabną, co świadczy o poprawie stabilności względem kąta.
 
-Dla zbioru **LEGO** błędy klasyfikacji wynikają głównie z podobieństwa brył
+Dla zbioru LEGO błędy klasyfikacji wynikają głównie z podobieństwa brył
 poszczególnych elementów. Modele cykliczne ograniczają rozlania pomiędzy klasami o
 zbliżonym obrysie, a efekt ten jest szczególnie wyraźny w przypadku odwzorowania
 log-polar, które lepiej radzi sobie z dużymi zmianami kąta.
 
-W zbiorze **MNIST** najtrudniejsze do rozróżnienia pozostają pary cyfr o podobnych
+W zbiorze MNIST najtrudniejsze do rozróżnienia pozostają pary cyfr o podobnych
 kształtach, takie jak (3, 5), (4, 9) czy (7, 1). Cykliczność nie eliminuje całkowicie
 tych pomyłek, jednak redukuje błędy o charakterze rotacyjnym, zwłaszcza przypadków pokroju
 6 oraz 9 przy dużych obrotach, jednak nawet osoba, która je narysował mogłby mieć problemy 
@@ -2660,12 +2708,12 @@ macierzy staje się czystsza, a liczba „wysp” poza nią zauważalnie maleje.
 
 ### Wnioski i znaczenie dla interpretacji
 
-Macierze pomyłek potwierdzają **stabilność modeli cyklicznych**, obserwowaną również
+Macierze pomyłek potwierdzają stabilność modeli cyklicznych, obserwowaną również
 na krzywych dokładności *Acc(Δθ)* i w wartościach *AUC*. Wersje cykliczne
 charakteryzują się wyraźniejszą dominantą na przekątnej, słabszymi pasmami błędów
 oraz bardziej jednorodnym rozkładem pomyłek między klasami. Różnice między
-odwzorowaniami wskazują, że transformacja **log-polar** lepiej wspiera przypadki
-dużych różnic kątowych, natomiast **linear-polar** zapewnia porównywalną jakość przy
+odwzorowaniami wskazują, że transformacja log-polar lepiej wspiera przypadki
+dużych różnic kątowych, natomiast linear-polar zapewnia porównywalną jakość przy
 mniejszym koszcie obliczeniowym.
 
 Dodatkowa analiza per-klasa (recall, precision, F1) pozwala uzupełnić ogólne
@@ -2675,15 +2723,15 @@ jak wzbogacenie zbioru treningowego lub wprowadzenie dodatkowych mechanizmów
 regularizacji.
 
 
-## Analiza macierzy pomyłek (GTSRB RGB, rotated-270-300)
+## Analiza macierzy pomyłek dla zbioru GTSRB RGB, rotated-270-300
 
-Poniżej omawione są **wierszowo znormalizowane** macierze
-pomyłek dla **N=43** klas w scenariuszu testowym *rotated-270-300*. Każdy
+Poniżej omawione są wierszowo znormalizowane macierze
+pomyłek dla N=43 klas w scenariuszu testowym *rotated-270-300*. Każdy
 wiersz sumuje się do 1.0, więc odcień na przekątnej jest równy
-**czułości (recall)** danej klasy, a wartości poza przekątną opisują
-**strukturę błędów** (do jakich klas model „odpływa”). Porównywane są dwa
-warianty tej samej konfiguracji danych: **ResNet56-linear** (bazowy) oraz
-**CyResNet56-linear** (cykliczny).
+czułości (recall) danej klasy, a wartości poza przekątną opisują
+strukturę błędów (do jakich klas model „odpływa”). Porównywane są dwa
+warianty tej samej konfiguracji danych: ResNet56-linear oryginalny oraz
+CyResNet56-linear (cykliczny).
 
 \newpage
 
@@ -2702,18 +2750,18 @@ Row-norm CM pozwala porównać czułość per-klasa; średnia z diagonali jest w
 ## Najważniejsze obserwacje
 
 Analiza macierzy pomyłek ujawnia wyraźne różnice w zachowaniu modeli
-bazowych i cyklicznych. W przypadku **CyResNet56** obserwuje się silniejszą
+bazowych i cyklicznych. W przypadku CyResNet56 obserwuje się silniejszą
 dominantę na przekątnej, ponieważ wartości diagonalne są istotnie wyższe w
-większości wierszy niż w klasycznym **ResNet56**, co wskazuje na lepszy
+większości wierszy niż w klasycznym ResNet56, co wskazuje na lepszy
 *recall per-klasa* w warunkach rotacji rzędu 270-300°. Różnica ta jest
 szczególnie zauważalna w dolnej części macierzy, odpowiadającej klasom
 36-42, gdzie model cykliczny zachowuje wysoką trafność mimo znaczącej
 zmiany orientacji obrazów.
 
 Drugim istotnym efektem jest redukcja liczby rozproszonych pomyłek poza
-przekątną. W modelu **ResNet56** występują liczne „wyspy” błędów, gdyż
+przekątną. W modelu ResNet56 występują liczne „wyspy” błędów, gdyż
 pojedyncze wiersze zawierają podwyższone wartości w wielu kolumnach,
-co świadczy o niejednoznaczności reprezentacji. W **CyResNet56**
+co świadczy o niejednoznaczności reprezentacji. W CyResNet56
 rozproszenia te ulegają wyraźnemu wygaszeniu: zwykle pozostaje jeden lub
 dwóch niewielkich „sąsiadów” błędu, a reszta zanika. Wskazuje to, że 
 reprezentacja kąta w modelu cyklicznym cechuje się większą
@@ -2721,19 +2769,19 @@ spójnością i precyzją, co przekłada się na bardziej stabilne zachowanie
 modelu przy rotacjach.
 
 Kolejnym obserwowanym zjawiskiem jest ograniczenie liczby pomyłek między
-klasami o podobnej geometrii. W modelu **ResNet56** częściej występują
+klasami o podobnej geometrii. W modelu ResNet56 częściej występują
 skupiska błędów w obrębie „rodzin kształtów”, np. między znakami
 trójkątnymi (ostrzegawczymi) lub okrągłymi (zakazu). Wersja cykliczna
 wykazuje mniejszą tendencję do takich pomyłek, co sugeruje, że połączenie
-**cyklicznej konwolucji** z odwzorowaniem **linear-polar** skuteczniej
+cyklicznej konwolucji z odwzorowaniem linear-polar skuteczniej
 separuje klasy wizualnie podobne nawet przy dużych rotacjach.
 
 Zaobserwowana została również mniejsza liczbę przerzutów do klas symetrycznych.
 W przypadku rotacji 270-300° model bazowy częściej myli klasy z ich
 kątowymi odpowiednikami, natomiast w modelu cyklicznym intensywność tych
 pomyłek znacząco maleje. Zjawisko to jest spójne z uzyskanymi wynikami
-metryk **AUC\(_\theta\)** oraz łagodniejszym przebiegiem krzywej
-**Acc(Δθ)**, które potwierdzają większą stabilność i równomierność
+metryk AUC\(_\theta\) oraz łagodniejszym przebiegiem krzywej
+Acc(Δθ), które potwierdzają większą stabilność i równomierność
 wyników modelu.
 
 Kolejnym zauważalnym zjawiskiem jest skrócenie tzw. „długiego ogona błędów”.
@@ -2790,16 +2838,16 @@ Wskazówka: Trade-off jakość per czas: punkty w prawym górnym rogu to konfigu
 ## Rekomendacje praktyczne na podstawie wyników
 
 W środowiskach o ograniczonym czasie trenowania oraz ścisłych limitach SLA (Service Level Agreement)
-[@gawlikowski2021survey] dobrym punktem wyjścia pozostaje model **CyResNet56-linear**. 
+[@gawlikowski2021survey] dobrym punktem wyjścia pozostaje model CyResNet56-linear. 
 Zapewnia on korzystny kompromis pomiędzy jakością, stabilnością a efektywnością
 obliczeniową. W przypadku, gdy zadanie wymaga wyższej odporności na rotacje 
 lub istotnie odbiega od rozkładu treningowego, zalecane jest zastosowanie 
-wariantu **log-polar**. W takich scenariuszach szczególnie dobrze sprawdzają się
-modele **CyVGG19-log** oraz **CyResNet56-log**, które utrzymują wysoką
+wariantu log-polar. W takich scenariuszach szczególnie dobrze sprawdzają się
+modele CyVGG19-log oraz CyResNet56-log, które utrzymują wysoką
 jakość predykcji również w obszarze „worst-case”.  
 
 W kontekstach cechujących się dużą zmiennością skali lub perspektywy
-transformacja **log-polar** dodatkowo stabilizuje wyniki, zachowując
+transformacja log-polar dodatkowo stabilizuje wyniki, zachowując
 porównywalną precyzję przy rotacjach dalekich od zakresu treningowego.
 
 \newpage
@@ -2808,13 +2856,13 @@ porównywalną precyzję przy rotacjach dalekich od zakresu treningowego.
 
 ## Założenie i konfiguracja
 
-Celem było sprawdzenie, czy **strojenie hiperparametrów** (learning rate,
-momentum, weight decay) dla **konfiguracji `non_rotated`** potrafi
-podnieść **bazową jakość** przy kątach bliskich \(0^\circ\),
-oraz **przenieść się** na **stabilność rotacyjną** (AUC\(_\theta\),
-worst-case) **bez** zmiany architektury i bez augmentacji rotacjami.
+Celem było sprawdzenie, czy strojenie hiperparametrów (learning rate,
+momentum, weight decay) dla konfiguracji `non_rotated` potrafi
+podnieść bazową jakość przy kątach bliskich \(0^\circ\),
+oraz przenieść się na stabilność rotacyjną (AUC\(_\theta\),
+worst-case) bez zmiany architektury i bez augmentacji rotacjami.
 
-Do walidacji w **Optunie** wykorzystane zostały **`non_rotated`** wersje zbiorów danych. 
+Do walidacji w Optunie wykorzystane zostały `non_rotated` wersje zbiorów danych. 
 Wykorzystana została funkcja celu - klasyczne `val_acc` w pobliżu \(0^\circ\). 
 Trening przebiegał bez rotacji, a użyta transformacja (linear-polar / log-polar) była identyczna
 jak w bazowym zbiorze. Taki układ celowo „patrzy” tylko na zachowanie modelu wokół
@@ -2832,7 +2880,7 @@ W dalszej cześci tego rozdziału zostały zastosowane następujące skróty:  \
 ## Metryki i zapis wyników
 
 W porównaniu porównywane są dwie wersje dla danej pary (architektura, transformacja):
-**Baseline (`non_rotated`)** i **Optuna (`non_rotated`)**. 
+Baseline (`non_rotated`) i Optuna (`non_rotated`). 
 Do porównania zostały wykorzystane następujące miary:  \
 - **avg** - średnia dokładność (micro) po scenariuszach testowych;  \
 - **AUC$_\theta$** - pole pod krzywą $\mathrm{Acc}(\Delta\theta)$,
@@ -2842,20 +2890,16 @@ Do porównania zostały wykorzystane następujące miary:  \
 - **avg\_perf** - $\mathrm{mean}(\mathrm{Acc})/T_{\mathrm{train}}$,
   gdzie $T_{\mathrm{train}}$ to czas trenowania.  \ 
 
-**Przykładowa notacja użyta tekście:**  \
-avg \(0.926 \rightarrow 0.954\) (**\(\Delta\)avg +0.029**),  \
-AUC\(_\theta\) \(0.921 \rightarrow 0.952\) (**\(\Delta\)AUC +0.031**),  \
-worst \(0.916 \rightarrow 0.950\) (**\(\Delta\)worst +0.034**).  \
 
 ### Obraz globalny
 
-Wynik jest spójny między zbiorami: zmiany **avg** są na ogół niewielkie,
-zwykle \(|\Delta| \le 0.01\). Wskaźniki **AUC\(_\theta\)** i **worst**
+Wynik jest spójny między zbiorami: zmiany avg są na ogół niewielkie,
+zwykle \(|\Delta| \le 0.01\). Wskaźniki AUC\(_\theta\) i worst
 przeważnie nie rosną, ponieważ przy walidacji ustawionej na \(0^\circ\)
 brakuje presji selekcyjnej na stabilność dla dużych \(\Delta\theta\).
 Zdarzają się lokalne plusy (pojedyncze pary model-transformacja), jednak
 w ujęciu przekrojowym dominują wyniki neutralne lub lekko ujemne zarówno
-w **AUC\(_\theta\)**, jak i w **worst**.
+w AUC\(_\theta\), jak i w worst.
 
 ## Wyniki: Optuna kontra bazowy modeel
 
@@ -2883,20 +2927,20 @@ w **AUC\(_\theta\)**, jak i w **worst**.
 | vgg19 | linearpolar | -0.523 | -0.517 | -0.684 |
 | vgg19 | logpolar | -0.547 | -0.542 | -0.722 |
 
-Dla modelu **CyResNet56-logpolar** po zastosowaniu automatycznego strojenia
+Dla modelu CyResNet56-logpolar po zastosowaniu automatycznego strojenia
 z pomocą Optuny odnotowano spadek średniej dokładności z *0.930* do *0.868* 
-(**Δavg = -0.061**). Wartość *AUC* zmniejszyła się z *0.928* do *0.857* 
-(**ΔAUC = -0.071**), natomiast wynik w najtrudniejszym scenariuszu 
-(*worst-case*) spadł z *0.923* do *0.822* (**Δworst = -0.101**).  
-Podobną tendencję można zobserwować dla wariantu **linearpolar**, 
-gdzie spadki wynoszą odpowiednio **-0.052**, **-0.062** i **-0.088** 
+(Δavg = -0.061). Wartość *AUC* zmniejszyła się z *0.928* do *0.857* 
+(ΔAUC = -0.071), natomiast wynik w najtrudniejszym scenariuszu 
+(*worst-case*) spadł z *0.923* do *0.822* (Δworst = -0.101).  
+Podobną tendencję można zobserwować dla wariantu linearpolar, 
+gdzie spadki wynoszą odpowiednio -0.052, -0.062 i -0.088 
 dla parametrów `avg`, `AUC` oraz `worst`.
 
 W porównaniu z pozostałymi modelami, degradacja jakości po użyciu Optuny dla modelu CyResNet56 
-pozostaje umiarkowana, podczas, gdy dla **CyVGG19** różnice są wyraźniejsze 
+pozostaje umiarkowana, podczas, gdy dla CyVGG19 różnice są wyraźniejsze 
 (Δavg = -0.100 dla linearpolar i -0.148 dla logpolar).  
-Największe spadki zanotowano w architekturach bazowych **VGG19** 
-i **ResNet56**, co wskazuje, że modele cykliczne - mimo pogorszenia 
+Największe spadki zanotowano w architekturach bazowych VGG19 
+i ResNet56, co wskazuje, że modele cykliczne - mimo pogorszenia 
 po walidacji - nadal utrzymują wyższy poziom odporności rotacyjnej.
 
 \newpage
@@ -2925,20 +2969,20 @@ po walidacji - nadal utrzymują wyższy poziom odporności rotacyjnej.
 | vgg19 | linearpolar | -0.570 | -0.563 | -0.703 |
 | vgg19 | logpolar | -0.572 | -0.565 | -0.703 |
 
-Dla modelu **CyResNet56-logpolar** po zastosowaniu automatycznego strojenia
+Dla modelu CyResNet56-logpolar po zastosowaniu automatycznego strojenia
 z pomocą Optuny również odnotowano spadek średniej dokładności z *0.927* do *0.790*
-(**Δavg = -0.137**). Wartość *AUC* zmniejszyła się z *0.924* do *0.770*
-(**ΔAUC = -0.155**), natomiast wynik w najtrudniejszym scenariuszu
-(*worst-case*) spadł z *0.911* do *0.680* (**Δworst = -0.231**).  
-Podobną tendencję można zaobserwować dla wariantu **linearpolar**,
-gdzie spadki wynoszą odpowiednio **-0.093**, **-0.096** i **-0.135**
+(Δavg = -0.137). Wartość *AUC* zmniejszyła się z *0.924* do *0.770*
+(ΔAUC = -0.155), natomiast wynik w najtrudniejszym scenariuszu
+(*worst-case*) spadł z *0.911* do *0.680* (Δworst = -0.231).  
+Podobną tendencję można zaobserwować dla wariantu linearpolar,
+gdzie spadki wynoszą odpowiednio -0.093, -0.096 i -0.135
 dla parametrów `avg`, `AUC` oraz `worst`.
 
 W porównaniu z pozostałymi modelami, degradacja jakości po użyciu Optuny
-dla **CyResNet56** pozostaje umiarkowana, podczas gdy dla **CyVGG19**
+dla CyResNet56 pozostaje umiarkowana, podczas gdy dla CyVGG19
 różnice są wyraźniejsze (Δavg = -0.233 dla linearpolar i -0.276 dla
 logpolar), jednak największe spadki zanotowano w architekturach bazowych
-**VGG19** i **ResNet56**. Wnioski są **podobne jak w przypadku GTSRB-RGB**:
+VGG19 i ResNet56. Wnioski są podobne jak w przypadku GTSRB-RGB:
 mimo pogorszenia po strojeniu, modele cykliczne utrzymują relatywnie
 wyższą odporność rotacyjną niż ich odpowiedniki bazowe.
 
@@ -2967,28 +3011,28 @@ wyższą odporność rotacyjną niż ich odpowiedniki bazowe.
 | vgg19 | logpolar | -0.317 | -0.322 | -0.335 |
 
 
-Dla modelu **CyResNet56-logpolar** po zastosowaniu automatycznego strojenia
+Dla modelu CyResNet56-logpolar po zastosowaniu automatycznego strojenia
 z pomocą Optuny odnotowano spadek średniej dokładności z *0.878* do *0.728*
-(**Δavg = -0.150**). Wartość *AUC* zmniejszyła się z *0.876* do *0.718*
-(**ΔAUC = -0.158**), natomiast wynik w najtrudniejszym scenariuszu
-(*worst-case*) spadł z *0.868* do *0.671* (**Δworst = -0.197**).  
-Podobną tendencję można zaobserwować dla wariantu **linearpolar**, gdzie
-spadki wynoszą odpowiednio **-0.212**, **-0.229** i **-0.291** dla
+(Δavg = -0.150). Wartość *AUC* zmniejszyła się z *0.876* do *0.718*
+(ΔAUC = -0.158), natomiast wynik w najtrudniejszym scenariuszu
+(*worst-case*) spadł z *0.868* do *0.671* (Δworst = -0.197).  
+Podobną tendencję można zaobserwować dla wariantu linearpolar, gdzie
+spadki wynoszą odpowiednio -0.212, -0.229 i -0.291 dla
 parametrów `avg`, `AUC` oraz `worst`.
 
 W porównaniu z pozostałymi modelami, degradacja jakości po użyciu Optuny
-dla **CyResNet56** pozostaje wyraźna, lecz wciąż mniejsza niż w przypadku
-bazowych architektur. Modele **CyVGG19** utrzymują stosunkowo wysoki
-poziom dokładności, spadki wynoszą **-0.116** (linearpolar) oraz
-**-0.133** (logpolar) dla metryki `avg`, co stanowi najmniejszą degradację
+dla CyResNet56 pozostaje wyraźna, lecz wciąż mniejsza niż w przypadku
+bazowych architektur. Modele CyVGG19 utrzymują stosunkowo wysoki
+poziom dokładności, spadki wynoszą -0.116 (linearpolar) oraz
+-0.133 (logpolar) dla metryki `avg`, co stanowi najmniejszą degradację
 spośród wszystkich konfiguracji.  
-Dla porównania, architektury klasyczne **ResNet56** i **VGG19** wykazują
-znacznie większe spadki, bo do **-0.365** dla ResNet56-linear i **-0.317**
+Dla porównania, architektury klasyczne ResNet56 i VGG19 wykazują
+znacznie większe spadki, bo do -0.365 dla ResNet56-linear i -0.317
 dla VGG19-log.  
 
-Podobnie jak w przypadku zbioru **GTSRB**, modele cykliczne zachowują
+Podobnie jak w przypadku zbioru GTSRB, modele cykliczne zachowują
 lepszą odporność na rotacje po strojeniu hiperparametrów, a wariant
-**CyVGG19-logpolar** okazuje się najbardziej stabilny jakościowo w tym
+CyVGG19-logpolar okazuje się najbardziej stabilny jakościowo w tym
 zestawie.
 
 #### Optuna vs bazowy model dla zbioru MNIST (micro)
@@ -3016,32 +3060,32 @@ zestawie.
 | vgg19 | logpolar | -0.426 | -0.425 | -0.636 |
 
 
-Dla modelu **CyResNet56-logpolar** po zastosowaniu automatycznego
+Dla modelu CyResNet56-logpolar po zastosowaniu automatycznego
 strojenia z pomocą Optuny odnotowano spadek średniej dokładności z
-*0.975* do *0.921* (**Δavg = -0.055**). Wartość *AUC* zmniejszyła się z
-*0.975* do *0.919* (**ΔAUC = -0.056**), natomiast wynik w najtrudniejszym
+*0.975* do *0.921* (Δavg = -0.055). Wartość *AUC* zmniejszyła się z
+*0.975* do *0.919* (ΔAUC = -0.056), natomiast wynik w najtrudniejszym
 scenariuszu (*worst-case*) spadł z *0.965* do *0.851*
-(**Δworst = -0.114**).  
-Podobną tendencję zaobserwowano dla wariantu **linearpolar**, gdzie
-spadki wynoszą odpowiednio **-0.092**, **-0.091** i **-0.230** dla
+(Δworst = -0.114).  
+Podobną tendencję zaobserwowano dla wariantu linearpolar, gdzie
+spadki wynoszą odpowiednio -0.092, -0.091 i -0.230 dla
 parametrów `avg`, `AUC` oraz `worst`.
 
-Wyniki dla **CyResNet56** potwierdzają, że mimo wyraźnych spadków po
+Wyniki dla CyResNet56 potwierdzają, że mimo wyraźnych spadków po
 strojeniu, modele cykliczne utrzymują wysoką jakość klasyfikacji oraz
 najlepszą odporność rotacyjną w porównaniu z pozostałymi architekturami.  
-W przypadku **CyVGG19** różnice są bardziej zauważalne, gdyż spadek średniej
-dokładności wynosi **-0.198** dla linearpolar i **-0.171** dla logpolar,
-przy większej utracie w metryce *worst-case* (odpowiednio **-0.313** i
-**-0.297**).
+W przypadku CyVGG19 różnice są bardziej zauważalne, gdyż spadek średniej
+dokładności wynosi -0.198 dla linearpolar i -0.171 dla logpolar,
+przy większej utracie w metryce *worst-case* (odpowiednio -0.313 i
+-0.297).
 
 Największe spadki jakości ponownie odnotowano dla modeli bazowych:
-**ResNet56** (Δavg = -0.329 do -0.334) oraz **VGG19**
+ResNet56 (Δavg = -0.329 do -0.334) oraz VGG19
 (Δavg = -0.408 do -0.426), co wskazuje na znaczną utratę odporności
 rotacyjnej po procesie strojenia.  
 
-Podobnie jak w zbiorach **GTSRB** i **LEGO**, modele cykliczne zachowują
+Podobnie jak w zbiorach GTSRB i LEGO, modele cykliczne zachowują
 najlepszy kompromis między jakością a stabilnością, a szczególnie
-**CyResNet56-logpolar**, który pozostaje liderem pod względem
+CyResNet56-logpolar, który pozostaje liderem pod względem
 odporności rotacyjnej po walidacji Optuną.
 
 
@@ -3050,9 +3094,9 @@ odporności rotacyjnej po walidacji Optuną.
 Otrzymane wyniki potwierdzają, że samo strojenie hiperparametrów w
 ramach konfiguracji `non_rotated` nie prowadzi do poprawy odporności
 rotacyjnej. Warianty modeli uzyskane z wykorzystaniem Optuny wykazują wartości
-**AUC\(_\theta\)** i **worst-case accuracy** zbliżone, a często
+AUC\(_\theta\) i worst-case accuracy zbliżone, a często
 niższe od modeli bazowych, natomiast różnice w średniej dokładności
-(**avg**) mają charakter kosmetyczny.  
+(avg) mają charakter kosmetyczny.  
 
 Zasadniczą przyczyną takiego zachowania jest sposób definiowania celu
 walidacji. Ponieważ w procesie Optuny wykorzystywana była metryka
@@ -3070,14 +3114,14 @@ początku uczenia, co dodatkowo wzmacnia efekt lokalnej optymalizacji
 w okolicach \(\theta=0^\circ\).  
 
 Warto podkreślić, że odporność na rotacje wynika przede wszystkim z
-**architektury modelu i zastosowanej transformacji wejścia**, a nie
+architektury modelu i zastosowanej transformacji wejścia, a nie
 z doboru parametrów optymalizacyjnych. Hiperparametry, takie jak
 learning rate, weight decay czy momentum, wpływają na tempo i stabilność
 konwergencji, lecz nie wprowadzają ekwiwariancji rotacyjnej.  
 
-Brak wyraźnego przyrostu w metrykach **AUC\(_\theta\)** i **worst**
+Brak wyraźnego przyrostu w metrykach AUC\(_\theta\) i worst
 należy więc interpretować nie jako ograniczenie skuteczności Optuny,
-lecz jako efekt **niespójności celu walidacji** z badaną własnością
+lecz jako efekt niespójności celu walidacji z badaną własnością
 modelu. W kontekście odporności rotacyjnej oznacza to, że proces
 strojenia powinien być prowadzony z użyciem walidacji uwzględniającej
 pełen zakres kątów, tak aby selekcja hiperparametrów korelowała z
@@ -3089,144 +3133,144 @@ rzeczywistym zachowaniem modelu w przestrzeni rotacji.
 ## Motywacja dodatkowego testu
 
 Chciałem sprawdzić, czy da się „wyciągnąć” większą odporność na obrót
-samą zmianą **tego, jak wybieramy najlepszy checkpoint**. Trening
+samą zmianą tego, jak wybieramy najlepszy checkpoint. Trening
 pozostaje *non_rotated* (bez obrotów w danych), ale walidacja i kryterium
-wyboru modelu patrzą już na **zachowanie względem kątów**. Innymi słowy:
-czy mądrzejsza walidacja wystarczy, żeby poprawić stabilność, **bez**
+wyboru modelu patrzą już na zachowanie względem kątów. Innymi słowy:
+czy mądrzejsza walidacja wystarczy, żeby poprawić stabilność, bez
 modyfikacji architektury i bez dokładania rotacyjnego augmentu.
 
 ## Zmienione ustawienia względem standardowej optuny
 
 Rozdzieliłem ścieżki danych: `train_dir` to czyste *non_rotated*, a
-`val_dir` zawiera **miks kątów** (np. `non_rotated`, `rotated-XX`,
+`val_dir` zawiera miks kątów (np. `non_rotated`, `rotated-XX`,
 `range_*`, `full_0_360`). Na tej walidacji liczę krzywą
 $\mathrm{Acc}(\Delta\theta)$ (koszyki co $15^\circ$, wrap-around) i
-z niej biorę **$\mathrm{AUC}_\theta$**, **worst** oraz **avg**. W Optunie
-ustawiam **cel walidacji na $\mathrm{AUC}_\theta$**, żeby selekcjonować
+z niej biorę $\mathrm{AUC}_\theta$, worst oraz avg. W Optunie
+ustawiam cel walidacji na $\mathrm{AUC}_\theta$, żeby selekcjonować
 checkpointy, które lepiej trzymają poziom w całym zakresie kątów. Sam
-**trening** pozostaje **taki jak był**.
+trening pozostaje taki jak był.
 
 
 ### Porównanie Optuna z walidacją rotacyjną kontra model bazowy dla zbioru GTSRB
 
-Oba modele zostały wytrenowane na zbiorze **non_rotated** z identyczną
+Oba modele zostały wytrenowane na zbiorze non_rotated z identyczną
 architekturą i transformacją wejścia. W analizowanej serii eksperymentów
 zastosowanie walidacji uwzględniającej rotacje (*rotation-aware validation*)
 nie przełożyło się na wzrost jakości. Dla wszystkich ośmiu konfiguracji
-odnotowany został spadek średniej dokładności (**avg**), pól pod krzywą
-**AUC\(_\theta\)** oraz wyniku w najtrudniejszym scenariuszu (**worst**).
+odnotowany został spadek średniej dokładności (avg), pól pod krzywą
+AUC\(_\theta\) oraz wyniku w najtrudniejszym scenariuszu (worst).
 Wskazuje to, że dla zbioru GTSRB mechanizm walidacji rotacyjnej nie
 dostarcza trafniejszych ocen generalizacji modelu i może prowadzić do
 niedopasowania hiperparametrów.
 
-**Szybki bilans ($\Delta$):**
+Szybki bilans ($\Delta$):
 
 * **CyResNet56 linear**  
-  avg $0.9371 \to 0.8252$ (**$\Delta$avg $-0.1118$**),  
-  $\mathrm{AUC}_\theta$ $0.9345 \to 0.8163$ (**$\Delta$AUC $-0.1183$**),  
-  worst $0.9273 \to 0.7543$ (**$\Delta$worst $-0.1731$**)
+  avg $0.9371 \to 0.8252$ ($\Delta$avg $-0.1118$),  
+  $\mathrm{AUC}_\theta$ $0.9345 \to 0.8163$ ($\Delta$AUC $-0.1183$),  
+  worst $0.9273 \to 0.7543$ ($\Delta$worst $-0.1731$)
 
 * **CyResNet56 log**  
-  avg $0.9268 \to 0.6842$ (**$\Delta$avg $-0.2425$**),  
-  $\mathrm{AUC}_\theta$ $0.9243 \to 0.6527$ (**$\Delta$AUC $-0.2715$**),  
-  worst $0.9113 \to 0.5044$ (**$\Delta$worst $-0.4070$**)
+  avg $0.9268 \to 0.6842$ ($\Delta$avg $-0.2425$),  
+  $\mathrm{AUC}_\theta$ $0.9243 \to 0.6527$ ($\Delta$AUC $-0.2715$),  
+  worst $0.9113 \to 0.5044$ ($\Delta$worst $-0.4070$)
 
 * **CyVGG19 linear**  
-  avg $0.9229 \to 0.6749$ (**$\Delta$avg $-0.2480$**),  
-  $\mathrm{AUC}_\theta$ $0.9209 \to 0.6757$ (**$\Delta$AUC $-0.2452$**),  
-  worst $0.9039 \to 0.5402$ (**$\Delta$worst $-0.3637$**)
+  avg $0.9229 \to 0.6749$ ($\Delta$avg $-0.2480$),  
+  $\mathrm{AUC}_\theta$ $0.9209 \to 0.6757$ ($\Delta$AUC $-0.2452$),  
+  worst $0.9039 \to 0.5402$ ($\Delta$worst $-0.3637$)
 
 * **CyVGG19 log**  
-  avg $0.9156 \to 0.6533$ (**$\Delta$avg $-0.2623$**),  
-  $\mathrm{AUC}_\theta$ $0.9145 \to 0.6530$ (**$\Delta$AUC $-0.2615$**),  
-  worst $0.8977 \to 0.5007$ (**$\Delta$worst $-0.3970$**)
+  avg $0.9156 \to 0.6533$ ($\Delta$avg $-0.2623$),  
+  $\mathrm{AUC}_\theta$ $0.9145 \to 0.6530$ ($\Delta$AUC $-0.2615$),  
+  worst $0.8977 \to 0.5007$ ($\Delta$worst $-0.3970$)
 
 * **ResNet56 linear**  
-  avg $0.8901 \to 0.4279$ (**$\Delta$avg $-0.4622$**),  
-  $\mathrm{AUC}_\theta$ $0.8868 \to 0.4266$ (**$\Delta$AUC $-0.4602$**),  
-  worst $0.8696 \to 0.2416$ (**$\Delta$worst $-0.6280$**)
+  avg $0.8901 \to 0.4279$ ($\Delta$avg $-0.4622$),  
+  $\mathrm{AUC}_\theta$ $0.8868 \to 0.4266$ ($\Delta$AUC $-0.4602$),  
+  worst $0.8696 \to 0.2416$ ($\Delta$worst $-0.6280$)
 
 * **ResNet56 log**  
-  avg $0.8777 \to 0.4200$ (**$\Delta$avg $-0.4577$**),  
-  $\mathrm{AUC}_\theta$ $0.8748 \to 0.4101$ (**$\Delta$AUC $-0.4646$**),  
-  worst $0.8548 \to 0.2645$ (**$\Delta$worst $-0.5904$**)
+  avg $0.8777 \to 0.4200$ ($\Delta$avg $-0.4577$),  
+  $\mathrm{AUC}_\theta$ $0.8748 \to 0.4101$ ($\Delta$AUC $-0.4646$),  
+  worst $0.8548 \to 0.2645$ ($\Delta$worst $-0.5904$)
 
 * **VGG19 linear**  
-  avg $0.8686 \to 0.2932$ (**$\Delta$avg $-0.5755$**),  
-  $\mathrm{AUC}_\theta$ $0.8669 \to 0.2988$ (**$\Delta$AUC $-0.5681$**),  
-  worst $0.8458 \to 0.1339$ (**$\Delta$worst $-0.7119$**)
+  avg $0.8686 \to 0.2932$ ($\Delta$avg $-0.5755$),  
+  $\mathrm{AUC}_\theta$ $0.8669 \to 0.2988$ ($\Delta$AUC $-0.5681$),  
+  worst $0.8458 \to 0.1339$ ($\Delta$worst $-0.7119$)
 
 * **VGG19 log**  
-  avg $0.8623 \to 0.2892$ (**$\Delta$avg $-0.5731$**),  
-  $\mathrm{AUC}_\theta$ $0.8614 \to 0.2956$ (**$\Delta$AUC $-0.5659$**),  
-  worst $0.8403 \to 0.1303$ (**$\Delta$worst $-0.7100$**)
+  avg $0.8623 \to 0.2892$ ($\Delta$avg $-0.5731$),  
+  $\mathrm{AUC}_\theta$ $0.8614 \to 0.2956$ ($\Delta$AUC $-0.5659$),  
+  worst $0.8403 \to 0.1303$ ($\Delta$worst $-0.7100$)
 
 
-## Wyniki praktyczne dla zbioru (GTSRB)
+## Wyniki praktyczne dla zbioru GTSRB
 
-Krótko i uczciwie tuning z użyciem optuny i zmienionego kryterium walidacji **nie zadziałało**. 
+Krótko i uczciwie tuning z użyciem optuny i zmienionego kryterium walidacji nie zadziałało. 
 Dla wszystkich ośmiu konfiguracji (VGG/ResNet i ich warianty cykliczne, linear/log)
-**spadły** trzy kluczowe miary: średnia dokładność, ($\mathrm{AUC}_\theta$)
-i „worst-case”. Przykładowo, **CyResNet56·linear** z
+spadły trzy kluczowe miary: średnia dokładność, ($\mathrm{AUC}_\theta$)
+i „worst-case”. Przykładowo, CyResNet56·linear z
 ($\mathrm{avg}\approx0{.}94$) zjechał do ok. (0{.}83), a „worst”
 spadł wyraźnie poniżej poprzedniego minimum. Analogiczny obraz pojawił
 się dla pozostałych par, łącznie z modelami bazowymi.
 
 ## Dlaczego tak się stało
 
-Najprostsze wyjaśnienie to **parytet budżetu** i **materiał do selekcji**.
+Najprostsze wyjaśnienie to parytet budżetu i materiał do selekcji.
 Baseline’y, z którymi się porównuję, to agregaty z dłuższych i bogatszych
 treningów (wiele scenariuszy, więcej epok). Wariant z Optuną miał
-**krótsze przebiegi**, więc mimo „sprytnego” celu walidacji selekcjonował
-spośród **słabiej wygrzanych** checkpointów. Druga sprawa: **zmieniłem
-tylko walidację, a nie ekspozycję** na kąty w samym uczeniu. To pomaga
+krótsze przebiegi, więc mimo „sprytnego” celu walidacji selekcjonował
+spośród słabiej wygrzanych checkpointów. Druga sprawa: zmieniłem
+tylko walidację, a nie ekspozycję na kąty w samym uczeniu. To pomaga
 wybrać lepszy punkt *spośród tego, co powstało*, ale nie stworzy
 od zera cech, które normalnie budujemy architekturą (CyCNN, oś
 orientacji) albo augmentacją rotacją. Dochodzi jeszcze ryzyko
-**niedopasowania rozkładu walidacji do testów**: jeśli miks kątów na
+niedopasowania rozkładu walidacji do testów: jeśli miks kątów na
 walidacji różni się od tego w docelowych scenariuszach, to
 ($\mathrm{AUC}*\theta$) z walidacji słabiej koreluje z
-($\mathrm{AUC}*\theta$) w testach. Na koniec: **worst-case** jest
+($\mathrm{AUC}*\theta$) w testach. Na koniec: worst-case jest
 najbardziej wrażliwy na „niedogrzanie”. Krótkie treningi po prostu nie
 dowożą dojrzałych reprezentacji, które trzymają poziom także dla
 najtrudniejszych ($\Delta\theta$).
 
 ## Skutki zmiany kryterium walidacji
 
-Zmiana kryterium walidacji **porządkuje selekcję checkpointu**, ale **nie
-zastąpi** dłuższego, bogatszego uczenia i **nie skompensuje** różnic
-architektonicznych. **Odporność na rotację** w tej pracy wynika przede
-wszystkim z **CyCNN** (oś orientacji, cykliczny padding) oraz z
-**przekształceń polarnych**. Samo strojenie **LR/momentum/WD pod
-($\mathrm{AUC}_\theta$)**, przy krótkim budżecie i bez rotacji w treningu,
-**nie tworzy ekwiwariancji** - co najwyżej wybiera trochę lepszy punkt
+Zmiana kryterium walidacji porządkuje selekcję checkpointu, ale nie
+zastąpi dłuższego, bogatszego uczenia i nie skompensuje różnic
+architektonicznych. Odporność na rotację w tej pracy wynika przede
+wszystkim z CyCNN (oś orientacji, cykliczny padding) oraz z
+przekształceń polarnych. Samo strojenie LR/momentum/WD pod
+($\mathrm{AUC}_\theta$), przy krótkim budżecie i bez rotacji w treningu,
+nie tworzy ekwiwariancji - co najwyżej wybiera trochę lepszy punkt
 na istniejącej, dość płaskiej krzywej.
 
 ## Dalszy rozwój
 
-Żeby taki wariant miał sens, trzeba **wyrównać budżet** z baseline’ami
-(epoki, batch, scheduler), dopasować **walidację kątową** do tego, co
+Żeby taki wariant miał sens, trzeba wyrównać budżet z baseline’ami
+(epoki, batch, scheduler), dopasować walidację kątową do tego, co
 sprawdzamy w testach (te same koszyki $\Delta\theta$), a cel Optuny
-ustawić na **$\mathrm{AUC}_\theta$** albo **mieszankę**
-$0.7 \cdot \mathrm{avg} + 0.3 \cdot \mathrm{AUC}_\theta$ z **worst** jako
-tie-breaker. Delikatne **regularizacje** (np. label smoothing, dropout)
+ustawić na $\mathrm{AUC}_\theta$ albo mieszankę
+$0.7 \cdot \mathrm{avg} + 0.3 \cdot \mathrm{AUC}_\theta$ z worst jako
+tie-breaker. Delikatne regularizacje (np. label smoothing, dropout)
 i łagodniejsza dynamika uczenia (dłuższy warm-up, cosine LR, ewentualnie
 zamrożone BN) często poprawiają dół krzywej, czyli to, co najbardziej
 nas boli w kontekście rotacji.
 
-Rotation-aware validation to dobry pomysł na **lepszy wybór checkpointu**,
-ale to **nie magiczna różdżka** - bez czasu i bez wsparcia architektury nie
-podniesie stabilności tak, jak robią to **CyCNN** i **log/linear-polar**.
+Rotation-aware validation to dobry pomysł na lepszy wybór checkpointu,
+ale to nie magiczna różdżka - bez czasu i bez wsparcia architektury nie
+podniesie stabilności tak, jak robią to CyCNN i log/linear-polar.
 Szczególnie, gdy wykorzystamy do treningu dane w których obrazy były obrócone o jakiś kąt.
 
 ## Wniosek syntetyczny
 
-Przy **walidacji `non_rotated`** strojenie Optuną **nie** przekłada się
-na lepszą **stabilność rotacyjną**. Hiperparametry potrafią skorygować
-bazę w okolicach \(0^\circ\), lecz **AUC\(_\theta\)** i **worst**
+Przy walidacji `non_rotated` strojenie Optuną nie przekłada się
+na lepszą stabilność rotacyjną. Hiperparametry potrafią skorygować
+bazę w okolicach \(0^\circ\), lecz AUC\(_\theta\) i worst
 pozostają praktycznie bez zmian. Jeśli celem jest odporność na obrót,
-**architektura cykliczna** i **transformacje polarne** są kluczowe, a
-proces strojenia musi tę własność **jawnie** mierzyć już na etapie
+architektura cykliczna i transformacje polarne są kluczowe, a
+proces strojenia musi tę własność jawnie mierzyć już na etapie
 walidacji.
 
 # Podsumowanie oraz wnioski
@@ -3235,9 +3279,9 @@ Architektury cykliczne są prostym, a skutecznym sposobenm podniesieniem
 dokładnosci klasycznych CNN pod kątem rotacji. W średniej jakości zyskują na
 wszystkich zbiorach, w stabilności wyraźnie wygrywają na danych
 bogatszych wizualnie, a dzięki dwóm wariantom odwzorowania pozwalają
-zbalansować **odporność** na rotacje i **efektywność**. Wybór między linear-polar, a
-log-polar to wybór akcentów, a różnice między **CyVGG** i **CyResNet**
-sprowadzają się do kompromisu między **stabilnością**, a **kosztem**.
+zbalansować odporność na rotacje i efektywność. Wybór między linear-polar, a
+log-polar to wybór akcentów, a różnice między CyVGG i CyResNet
+sprowadzają się do kompromisu między stabilnością, a kosztem.
 W praktyce łatwo dopasować konfigurację do priorytetu wdrożeniowego bez
 przebudowy głębszej części modeli, dzięki wykorzystaniu wartstw Cy w istniejących modelach CNN.
 Skuteczność i generalizacje modeli CyCNN można oczywiście zwiększyć wykorzystując
@@ -3276,18 +3320,18 @@ Interpretacja: kolumny wskazują najlepszą rodzinę/transformację dla średnie
 ## Skuteczność architektur rotacyjnych
 
 Przeprowadzone eksperymenty potwierdzają przewagę modeli cyklicznych
-(**CyCNN**) nad klasycznymi architekturami konwolucyjnymi (**VGG**,
-**ResNet**) w zadaniach wrażliwych na obrót. Dla wszystkich zbiorów
-(**MNIST**, **LEGO**, **GTSRB**, **GTSRB RGB**) warianty **CyResNet** i
-**CyVGG** uzyskują wyższe wartości *AUC_θ*, lepsze wyniki w
+(CyCNN) nad klasycznymi architekturami konwolucyjnymi (VGG,
+ResNet) w zadaniach wrażliwych na obrót. Dla wszystkich zbiorów
+(MNIST, LEGO, GTSRB, GTSRB RGB) warianty CyResNet i
+CyVGG uzyskują wyższe wartości *AUC_θ*, lepsze wyniki w
 najtrudniejszych scenariuszach (*worst-case*) oraz mniejsze wahania
 jakości między koszykami kątowymi. Zastosowane odwzorowania
-**linear-polar** i **log-polar** skutecznie zamieniają rotację w
-przesunięcie w przestrzeni cech; wariant **log-polar** dodatkowo poprawia
+linear-polar i log-polar skutecznie zamieniają rotację w
+przesunięcie w przestrzeni cech; wariant log-polar dodatkowo poprawia
 odporność na zmiany wynikające z różnej odległości elementów od środka
 kadru.
 
-Najlepsze rezultaty uzyskano dla **CyResNet56-logpolar**, który
+Najlepsze rezultaty uzyskano dla CyResNet56-logpolar, który
 utrzymywał najwyższą jakość niezależnie od rozkładu kątów. Modele
 bazowe traciły dokładność wraz ze wzrostem odchylenia rotacyjnego, co
 widać zarówno na przebiegach *Acc(Δθ)*, jak i na macierzach
@@ -3296,54 +3340,54 @@ kształtach.
 
 ## Wnioski z automatyzacji i systematyzacji ewaluacji
 
-Zaprojektowany pipeline (CLI + skrypty + baza **SQLite**) zapewnił
-**powtarzalność**, **spójność** i **skalowalność** procesu: od treningów,
+Zaprojektowany pipeline (CLI + skrypty + baza SQLite) zapewnił
+powtarzalność, spójność i skalowalność procesu: od treningów,
 przez testy w zdefiniowanych scenariuszach rotacyjnych, po automatyczny
 zapis metryk i eksporty do `results/exports/...`. Jednoznaczne nazwy
 przypadków (*non_rotated*, *rotated-a-b*, *range_a_b*, *full_0_360*)
-umożliwiły deterministyczne odtwarzanie **(Δθ)** (z
-wrap-around), budowę krzywych **Acc(Δθ)** oraz obliczanie
-**AUC_θ** i *worst-case*. Dzięki temu porównania między
-architekturami i transformacjami są **metodycznie równoważne** (ten sam
+umożliwiły deterministyczne odtwarzanie (Δθ) (z
+wrap-around), budowę krzywych Acc(Δθ) oraz obliczanie
+AUC_θ i *worst-case*. Dzięki temu porównania między
+architekturami i transformacjami są metodycznie równoważne (ten sam
 krok kątowy, te same reguły normalizacji i agregacji).
 
 Ujednolicenie artefaktów (logi, checkpointy `.pt`, macierze/heatmapy) i
-metryk (micro/macro accuracy, **AUC_θ**, *worst*, *mean/median/
-std*, **IQR**, **robust mean**) pozwoliło budować **rankingi
-wielowymiarowe**: *quality-only* (poziom i stabilność) oraz *time-aware*
+metryk (micro/macro accuracy, AUC_θ, *worst*, *mean/median/
+std*, IQR, robust mean) pozwoliło budować rankingi
+wielowymiarowe: *quality-only* (poziom i stabilność) oraz *time-aware*
 („jakość na jednostkę czasu”, np. `avg_perf = mean(Acc)/train_time`).
 Takie zestawienie odsłania realny kompromis jakości względem kosztu:
 modele o podobnej średniej mogą różnić się stabilnością (AUC\(_\theta\),
 *worst*) i wydajnością per-time- różnice te byłyby łatwe do przeoczenia
 bez zintegrowanej ewaluacji.
-Automatyzacja ujawniła również, że **hiperparametryzacja** (Optuna)
-**bez właściwego celu walidacji** nie poprawia odporności rotacyjnej.
+Automatyzacja ujawniła również, że hiperparametryzacja (Optuna)
+bez właściwego celu walidacji nie poprawia odporności rotacyjnej.
 Strojenie pod *non_rotated* utrzymywało co najwyżej bazową dokładność
-dla \(\Delta\theta \approx 0^\circ\), ale **nie przekładało się** na
+dla \(\Delta\theta \approx 0^\circ\), ale nie przekładało się na
 AUC_θ ani *worst*. Jest to spójne z wnioskami architektonicznymi:
-o stabilności rozstrzygają przede wszystkim **CyCNN + odwzorowania
-polar**e, a nie sam dobór LR/momentum/weight decay. Włączenie
-**rotation-aware validation** (np. AUC_θ) jako cel) jest
-metodologicznie zasadne, lecz przy **niskim budżecie epok** i bez
+o stabilności rozstrzygają przede wszystkim CyCNN + odwzorowania
+polare, a nie sam dobór LR/momentum/weight decay. Włączenie
+rotation-aware validation (np. AUC_θ) jako cel) jest
+metodologicznie zasadne, lecz przy niskim budżecie epok i bez
 rotacji w treningu nie kompensuje przewagi dobrze dobranych baseline’ów.
 
-Proces domyka **kontrola integralności** (spójne ścieżki, kompletność
+Proces domyka kontrola integralności (spójne ścieżki, kompletność
 logów, walidacja formatów), która ograniczyła błędy użytkownika i
 techniczne (np. przekroczenie VRAM, przerwy zasilania), umożliwiając
-budowę **map train→test**, porównań rodzin (VGG↔CyVGG, ResNet↔CyResNet)
+budowę map train→test, porównań rodzin (VGG↔CyVGG, ResNet↔CyResNet)
 oraz krzywych Acc(Δθ) w sposób replikowalny, porównywalny
-i diagnostyczny. Na tej podstawie formułujemy mocny wniosek: **CyCNN
-konsekwentnie podnoszą średnią jakość i stabilność rotacyjną**, a wybór
-**linear vs log-polar** pozwala świadomie balansować **odporność** względem
-**kosztu obliczeniowego**.
+i diagnostyczny. Na tej podstawie formułujemy mocny wniosek: CyCNN
+konsekwentnie podnoszą średnią jakość i stabilność rotacyjną, a wybór
+linear vs log-polar pozwala świadomie balansować odporność względem
+kosztu obliczeniowego.
 
 ## Propozycje dalszych badań
 
-Warto rozszerzyć analizę o **ciągłą grupę rotacji** \(SO(2)\) (np.
+Warto rozszerzyć analizę o ciągłą grupę rotacji \(SO(2)\) (np.
 konwolucje oparte na aproksymacjach pierścieniowych), a także połączyć
-**inwariancję rotacyjną i skalową** (hierarchie *log-polar + scale-space*).
-Kolejny kierunek to **transfer "wiedzy" między zbiorami** (np. GTSRB→LEGO) z
-utrzymaniem ekwiwariantnych reprezentacji, a także **ocena efektywności**
+inwariancję rotacyjną i skalową (hierarchie *log-polar + scale-space*).
+Kolejny kierunek to transfer "wiedzy" między zbiorami (np. GTSRB→LEGO) z
+utrzymaniem ekwiwariantnych reprezentacji, a także ocena efektywności
 na platformach wbudowanych, mobilnych i w chmurze. Równolegle warto
 rozszerzyć pipeline o testy deformacji nieliniowych (perspektywa,
 zakłócenia tekstury, przesunięty środek) oraz porównać z nowszymi
@@ -3369,7 +3413,7 @@ repozytoriach:
 ## Dodatkowe wykresy i tabele wyników
 
 Komplet artefaktów eksperymentalnych (logi, macierze pomyłek `.npy/.png`,
-heatmapy train–test, CSV z rankingami, checkpointy modeli `.pt`) został
+heatmapy train-test, CSV z rankingami, checkpointy modeli `.pt`) został
 zarchiwizowany w katalogu zbiorczym na udostępniony dysku:
 
 * **Lokalizacja:** *Dysk Google*
@@ -3377,7 +3421,7 @@ zarchiwizowany w katalogu zbiorczym na udostępniony dysku:
 https://drive.google.com/drive/folders/1C8QnvG8NkCgbtI8bVZrU9cm5SnN7XL92?usp=sharing  \
 * **Struktura:**
 
-  * `db/experiment_logs.db`- baza **SQLite** z metrykami i metadanymi,
+  * `db/experiment_logs.db`- baza SQLite z metrykami i metadanymi,
   * `results/exports/<DATASET>/<micro|macro>/`- CSV z rankingami i
     statystykami (mean/median/std, AUC_θ, worst, per-time),
   * `logs/…/`- dzienniki przebiegów trenowania i testów (`.txt`),
@@ -3390,9 +3434,9 @@ https://drive.google.com/drive/folders/1C8QnvG8NkCgbtI8bVZrU9cm5SnN7XL92?usp=sha
   scenariuszy (`non_rotated`, `rotated-a-b`, `range_a_b`, `full_0_360`),
   co umożliwia automatyczne wyliczanie Δθ i AUC_θ.
 * Artefakty zostały wygenerowane skryptami z repozytorium
-  **CyCNN-Enhanced** (foldery `train/`, `test/` na dysku chmurowym)
+  CyCNN-Enhanced (foldery `train/`, `test/` na dysku chmurowym)
 * Modele `.pt` odpowiadają najlepszym checkpointom wg metryki wskazanej
-  w logu (domyślnie **micro-accuracy** lub **AUC_θ**, zgodnie z opisem
+  w logu (domyślnie micro-accuracy lub AUC_θ, zgodnie z opisem
   eksperymentu).
 
 \newpage
