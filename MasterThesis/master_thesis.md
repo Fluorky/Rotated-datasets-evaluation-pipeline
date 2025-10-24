@@ -155,7 +155,8 @@ zastosowano następujące rozwiązania technologiczne:
   obsługą strategii TPE (Tree-structured Parzen Estimator) oraz mechanizmów 
   wczesnego przerywania treningów (np. MedianPruner).
   Umożliwia ona definiowanie przestrzeni poszukiwań, rejestrowanie metryk,
-  zapisywanie wyników (np. do CSV/JSON) oraz łatwe odtwarzanie najlepszych
+  zapisywanie wyników (np. do CSV (Comma-Separated Values) lub 
+  JSON (JavaScript Object Notation)) oraz łatwe odtwarzanie najlepszych
   konfiguracji w postaci *study*. Integracja z PyTorchem odbywa się bez
   zmian w architekturze modeli i pozwala skrócić czas eksperymentów bez
   utraty jakości [@akiba2019optuna].  \
@@ -1457,9 +1458,11 @@ Znajdują się tam także pliki uruchamiające Optunę i konfiguracje eksperymen
 
 Repozytorium zarządzające skupia narzędzia do przygotowania danych,
 rotacji i łączenia zbiorów, a także do analizy wyników. Wykorzystywany jest
-interfejs CLI (Typer), który buduje zbiory, wczytuje logi i artefakty,
+interfejs CLI (Command Line Interface), który buduje zbiory, wczytuje logi i artefakty,
 zapisuje metryki do SQLite oraz generuje mapy ciepła train-test i
-zestawienia rankingowe. Artefakty w repozytorium tresingowym są porządkowane
+zestawienia rankingowe. W pracy wykorzystano bibliotekę Typer (Python), która upraszcza
+definiowanie poleceń oraz automatycznie generuje pomoc kontekstową i
+spójny system wywołań. Artefakty w repozytorium tresingowym są porządkowane
 w powtarzalnej strukturze katalogów: `logs/` dla przebiegów, `saves/` dla wag `.pt`,
 foldery z macierzami pomyłek w wariancie `.npy` i `.png`, a wyniki
 zbiorcze w `results/`, dzięki czemu repozytorium zarządzające 
@@ -1542,7 +1545,7 @@ przepływu danych i precyzji obliczeń opisane zostały poniżej.
 Środowisko uruchomieniowe wykorzystuje akcelerację CUDA na kartach
 RTX 3070 Ti 8 GB oraz RTX 3060 12 GB. Włączone są optymalizacje
 backendowe: `torch.backends.cudnn.benchmark = True` oraz tryb TF32
-na architekturze Ampere. Transfery między CPU i GPU realizowane są z
+na architekturze kart gradicznych Ampere. Transfery między CPU i GPU realizowane są z
 `pin_memory=True` w `DataLoader` oraz `non_blocking=True` przy
 kopiowaniu tensora na urządzenie, co zmniejsza narzut I/O. W miejscach,
 gdzie to bezpieczne do użycia, wykorzystywana jest mieszana precyzja z
