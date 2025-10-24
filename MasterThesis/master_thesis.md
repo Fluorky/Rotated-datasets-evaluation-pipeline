@@ -1194,8 +1194,13 @@ Wersje cykliczne powstają przez zastąpienie każdej `Conv2d` warstwą
 z `Conv2d`, więc topologia sieci i część klasyfikacyjna pozostają bez zmian.
 `CyConv2d` opakowuje własną funkcję autograd (`CyConv2dFunction`) i
 wywołuje rozszerzenie CUDA `CyConv2d_cuda.forward/backward(...)`. Zastosowane wagi
-mają kształt `[C_out, C_in, k, k]` i są inicjalizowane przez
-`xavier_uniform_`. Moduł korzysta z dużego bufora roboczego na GPU
+mają kształt `[C_out, C_in, k, k]`, gdzie C_out oznacza liczbę filtrów 
+(map cech wyjściowych), C_in liczbę kanałów wejściowych,
+a k × k oznacza rozmiar jądra konwolucyjnego. Są inicjalizowane metodą 
+Xaviera (Glorota)[@glorot2010understanding], która dobiera wartości 
+początkowe wag tak, aby zachować zbliżoną wariancję sygnału
+we wszystkich warstwach i zapobiec zanikaniu lub eksplozji gradientów. 
+Moduł korzysta z dużego bufora roboczego na GPU
 (opisanego w kodzie jako „Workspace for Cy-Winograd algorithm”).
 
 W definicjach modeli nie występuje jawna oś orientacja ani osobny
