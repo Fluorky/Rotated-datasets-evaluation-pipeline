@@ -297,7 +297,8 @@ W pracy nie zostały poruszone następujące wątki badawcze:
 ### Artefakty pracy
 
 W ramach pracy przygotowano komplet materiałów umożliwiających replikację
-eksperymentów oraz weryfikację wyników. Zgromadzone artefakty obejmują
+eksperymentów oraz weryfikację wyników. Zgromadzone artefakty 
+(linki do niech znajdują się w rozdziale Aneks), obejmują one
 repozytoria z kodem źródłowym, skryptami uruchomieniowymi oraz plikami
 konfiguracyjnymi wykorzystywanymi w procesie trenowania i ewaluacji.
 Dołączono również zestaw plików opisujących zbiory danych oraz parametry
