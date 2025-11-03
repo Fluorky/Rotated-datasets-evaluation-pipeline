@@ -2227,13 +2227,13 @@ $\mathrm{Acc}(\Delta\theta)$ po zbinowaniu różnic kątów z wrap-around oraz
 avg\_perf rozumiane jako $\mathrm{mean}(\mathrm{Acc})/\mathrm{train\_time}$.
 
 *[Rys. 18 - Δ (log − linear) - słupki dla MNIST (np. CyResNet)]*  \
-![Rys. 18 - Δ (log − linear) - słupki dla MNIST (np. CyResNet)](media%2Fassets%2Fplots%2Fdelta_log_minus_linear_MNIST_CyResNet56.png)  \
+![Rys. 18 - Δ (log − linear) - słupki dla MNIST (np. CyResNet)](media%2Fassets%2Fplots%2Fdelta_log_linear_MNIST_CyResNet56.png)  \
 Rys. 18: Wpływ transformacji: na MNIST log-polar podnosi zarówno jakość, jak i stabilność oraz lekko poprawia per-time.  \
 
 \newpage
 
 *[Rys. 19 - Δ (log − linear) - słupki dla GTSRB (np. CyResNet)]*  \
-![Rys. 19 - Δ (log − linear) - słupki dla GTSRB (np. CyResNet)](media%2Fassets%2Fplots%2Fdelta_log_minus_linear_GTSRB_CyResNet56.png)
+![Rys. 19 - Δ (log − linear) - słupki dla GTSRB (np. CyResNet)](media%2Fassets%2Fplots%2Fdelta_log_linear_GTSRB_CyResNet56.png)
 Rys. 19: W przypadku zbioru GTSRB model linear-polar częściej wygrywa w avg i AUC θ ; log-polar bywa korzystny punktowo.
 
 ## Tabele z wynikami
@@ -2748,7 +2748,7 @@ CyResNet56-linear (cykliczny).
 ![resnet56-linearpolar-rotated-270-300_test_on_merged_datasets_merged_range_full_0_360_plus_non_rotated_confusion_matrix_row_norm.png](media%2Fassets%2Fplots%2Fresnet56-linearpolar-rotated-270-300_test_on_merged_datasets_merged_range_full_0_360_plus_non_rotated_confusion_matrix_row_norm.png)  \
 Rys. 40 - Znormalizowana macierz pomyłek (rotated-270-300) - ResNet56 linearpolar na pełnym zbiorze GTSRB RGB (zmergowane wszystkie przypadki 0-360)  \
 Widoczne jest rozproszenie błędów poza przekątną, szczególnie w rodzinach klas o podobnym kształcie. Przekątna osłabiona w szeregu wierszy.  \
-![cyresnet56-linearpolar-rotated-270-300_test_on_merged_datasets_merged_range_full_0_360_plus_non_rotated_confusion_matrix_row_norm-copy.png](media%2Fassets%2Fplots%2Fcyresnet56-linearpolar-rotated-270-300_test_on_merged_datasets_merged_range_full_0_360_plus_non_rotated_confusion_matrix_row_norm-copy.png)  \
+![cyresnet56-linearpolar-rotated-270-300_test_on_merged_datasets_merged_range_full_0_360_plus_non_rotated_confusion_matrix_row_norm.png](media%2Fassets%2Fplots%2Fcyresnet56-linearpolar-rotated-270-300_test_on_merged_datasets_merged_range_full_0_360_plus_non_rotated_confusion_matrix_row_norm.png)  \
 Rys. 41 - Znormalizowana macierz pomyłek (rotated-270-300) - CyResNet56 linearpolar na pełnym zbiorze GTSRB RGB (zmergowane wszystkie przypadki 0-360)  \
 Przekątna wyraźnie mocniejsza (wyższy recall), a wyspy poza przekątną słabsze i bardziej skupione. Spada liczba przerzutów do klas ‘symetrycznych’ kątowo.  \
 
