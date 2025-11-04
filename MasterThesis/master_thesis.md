@@ -1166,7 +1166,7 @@ po którym następuje pojedyncza warstwa liniowa `64 → C`, gdzie `C` oznacza l
 ### Cechy modelu
 Sieć charakteryzuje się umiarkowaną głębokością i niewielką liczbą parametrów
 (≈0,85 M). ResNet-56 stanowi dobry kompromis między złożonością a zdolnością
-do reprezentacji — pozwala testować wpływ modyfikacji operatora splotu przy
+do reprezentacji - pozwala testować wpływ modyfikacji operatora splotu przy
 zachowaniu rozsądnego budżetu obliczeniowego.
 
 **Kształty (dla wejścia 3×32×32).**
@@ -1182,36 +1182,47 @@ zachowaniu rozsądnego budżetu obliczeniowego.
 W CyResNet-56 wszystkie `nn.Conv2d` zastąpiono `CyConv2d` (również
 `conv1` oraz obie konwolucje w każdym `BasicBlock`). Interfejs posiadający następujące 
 parametry `kernel_size=3`,`padding=1` oraz `stride` zawierający się w przedziale {1,2}
-pozostaje kompatybilny, więc topologia, BN/ReLU, shortcut, GAP i klasyfikator 
-są niezmienione. Zmiana dotyczy wyłącznie operatora splotu 
-(implementacja cylindryczna), co pozwala izolować wpływ komponentu rotacyjnego
-przy zachowaniu budżetu parametrów i porównywalnych FLOPs.
+Dzięki temu nie zmienia się ani topologia sieci, ani pozostałe
+elementy bloku (resztowe połączenie skrótowe, normalizacja BN,
+nieliniowość ReLU, globalne uśrednianie przestrzenne GAP oraz końcowa
+warstwa liniowa odpowiedzialna za klasyfikację). Modyfikacja dotyczy
+wyłącznie samego operatora splotu (implementacja cylindryczna), co
+pozwala odseparować wpływ komponentu rotacyjnego przy zachowaniu budżetu
+parametrów oraz porównywalnej złożoności obliczeniowej (FLOPs)
 
 
 ## Wersje cykliczne: CyVGG-E i CyResNet-56
 
-Wersje cykliczne powstają przez zastąpienie każdej `Conv2d` warstwą
-`CyConv2d`. Interfejs (`kernel size`, `stride`, `padding`) jest zgodny
-z `Conv2d`, więc topologia sieci i część klasyfikacyjna pozostają bez zmian.
-`CyConv2d` opakowuje własną funkcję autograd (`CyConv2dFunction`) i
-wywołuje rozszerzenie CUDA `CyConv2d_cuda.forward/backward(...)`. Zastosowane wagi
-mają kształt `[C_out, C_in, k, k]`, gdzie C_out oznacza liczbę filtrów 
-(map cech wyjściowych), C_in liczbę kanałów wejściowych,
-a k × k oznacza rozmiar jądra konwolucyjnego. Są inicjalizowane metodą 
-Xaviera (Glorota)[@glorot2010understanding], która dobiera wartości 
-początkowe wag tak, aby zachować zbliżoną wariancję sygnału
-we wszystkich warstwach i zapobiec zanikaniu lub eksplozji gradientów. 
-Moduł korzysta z dużego bufora roboczego na GPU
-(opisanego w kodzie jako „Workspace for Cy-Winograd algorithm”).
+Wersje cykliczne powstają przez zastąpienie każdej warstwy `Conv2d`
+warstwą `CyConv2d`. Interfejs (`kernel size`, `stride`, `padding`) jest
+zgodny z `Conv2d`, dzięki czemu topologia sieci i część klasyfikacyjna
+pozostają bez zmian. `CyConv2d` opakowuje własną funkcję autograd
+(`CyConv2dFunction`) i wywołuje rozszerzenie CUDA
+`CyConv2d_cuda.forward/backward(...)`.
 
-W definicjach modeli nie występuje jawna oś orientacja ani osobny
-pooling po orientacjach. Z punktu widzenia PyTorch parametry filtrów
-zachowują standardowy kształt `[C_out, C_in, k, k]`. Mechanizmy
-rotacyjne, o ile są użyte,  realizowane są w jądrze CUDA
-`CyConv2d_cuda`, niewidocznym na poziomie kodu modeli.
+Tensory wag w warstwie `CyConv2d` mają standardową dla konwolucji
+czterowymiarową strukturę:  
+liczba filtrów wyjściowych × liczba kanałów wejściowych × wysokość jądra ×
+szerokość jądra (w notacji skróconej: `[C_out, C_in, k, k]`.  
+Wagi inicjalizowane są metodą Glorota (Xavier) [@glorot2010understanding],
+co pozwala utrzymać zbliżoną wariancję sygnału w kolejnych warstwach i
+ogranicza zjawisko zanikających lub eksplodujących gradientów. Moduł
+korzysta dodatkowo z dużego bufora roboczego na GPU (w kodzie opisany jest on
+jako „workspace for Cy-Winograd algorithm”), który służy do przyspieszenia
+obliczeń kosztem zwiększonego zużycia pamięci.
+
+W definicjach modeli nie pojawia się żaden dodatkowy, jawnie oznaczony
+wymiar odpowiadający orientacji, ani osobna warstwa odpowiedzialna za
+agregowanie wyników względem orientacji. Z punktu widzenia biblioteki
+PyTorch parametry filtrów zachowują zwykłą postać tensora
+`[C_out, C_in, k, k]`, tak jak w
+klasycznych konwolucjach. Ewentualne mechanizmy związane z rotacjami są
+realizowane wewnątrz jądra CUDA `CyConv2d_cuda`, niewidocznym na 
+poziomie kodu modeli.
+
 W praktyce inwariancja po stronie modeli nie jest wprowadzana osobno:
 `GAP` oraz ewentualne uśrednianie w klasyfikatorze działają tak samo jak
-w wersjach bazowych i nie ma dodatkowego „poolingu po orientacjach”.
+w wersjach bazowych i nie ma dodatkowego uśredniania po orientacjach.
 
 ## Uzgodnienia I/O i selektor modeli
 
@@ -1227,7 +1238,7 @@ Domyślnie używany jest jeden kanał wejściowy dla zbiorów w skali szarości
 takich jak `CIFAR-10/100` czy `GTSRB_RGB`.  
 Liczba klas na wyjściu klasyfikatora ustalana jest automatycznie przez funkcję 
 `get_num_classes(dataset)`. Przykładowo: `MNIST` i `CIFAR-10` mają po 10 klas, 
-`GTSRB` - 43, `LEGO` - 50, zaś `CIFAR-100` - 100 (niezastosowany w pracy z powodu braku czasu).
+`GTSRB` - 43, `LEGO` - 50.
 
 ### Selektor modeli
 
@@ -1239,25 +1250,34 @@ model = get_model(model="cyresnet56",
                   classify=True)
 ````
 
-Argument `model` określa wariant architektury (`vgg*`, `cyvgg*`, `resnet*`, `cyresnet*`, np. `vgg19`, `cyvgg19`, `resnet56`, `cyresnet56`).
+Argument `model` określa wariant architektury (`vgg*`, `cyvgg*`, `resnet*`, `cyresnet*`, np. `vgg19`, `cyvgg19`, `resnet56`, `cyresnet56`),
 `dataset` wskazuje nazwę zbioru danych, na podstawie której ustalane są parametry `in_channels` i `num_classes`.
 Flaga `classify=True` powoduje, że selektor domyka warstwę klasyfikacyjną (GAP + warstwa liniowa). 
-Gdy ustawiona jest na `False`, zwracany jest sam „backbone”, co przydaje się przy analizie cech lub transferze uczenia.
+Gdy flaga classify ustawiona jest na False, funkcja zwraca jedynie część odpowiedzialną za
+ekstrakcję cech (ang. backbone), czyli sieć bez końcowej warstwy klasyfikacyjnej. 
+Taki wariant jest przydatny przy analizie reprezentacji wewnętrznych lub w zadaniach transferu uczenia.
 Funkcja automatycznie dobiera liczbę kanałów wejściowych i klas, podstawia odpowiedni typ warstw (`Conv2d` lub `CyConv2d`)
 i pozostawia resztę topologii bez zmian (BN/ReLU, bloki, GAP). Dzięki temu porównania modeli bazowych i cyklicznych są 
 miarodajne - klasyfikator jest identyczny, a liczba parametrów i parametrów FLOPs zbliżona.
 
 ### Mechanizmy zapewniające poprawność i stabilność uczenia
 
-Podczas wczytywania danych sprawdzana jest zgodność wymiarów tensora z oczekiwanym układem `C×H×W`. 
-Jeśli liczba kanałów nie odpowiada zbiorowi, proces zostaje przerwany z komunikatem błędu, 
-zamiast kontynuować z niepoprawnymi danymi.
-Warstwy konwolucyjne (`Conv2d` i `CyConv2d`) są inicjalizowane metodą `xavier_uniform_`, 
-natomiast warstwy liniowe metodą `kaiming_uniform_`, o ile konfiguracja nie definiuje inaczej. 
-Taki sposób inicjalizacji zapewnia stabilny start niezależnie od wariantu modelu.
-W modelach cyklicznych statystyki normalizacji batchowej (BN) liczone są wspólnie wzdłuż 
-wymiaru „orientacja”. Dzięki temu żaden z kierunków nie jest faworyzowany, a zachowana 
-zostaje ekwiwariancja rotacyjna.
+Podczas wczytywania danych sprawdzana jest zgodność wymiarów tensora z
+oczekiwanym układem `C×H×W`. Jeśli liczba kanałów nie odpowiada
+konkretnemu zbiorowi, proces jest przerywany z komunikatem błędu, zamiast
+kontynuować uczenie na niepoprawnych danych.
+Wagi warstw konwolucyjnych (`Conv2d` i `CyConv2d`) są inicjalizowane
+funkcją `xavier_uniform_`, natomiast wagi warstw liniowych funkcją
+`kaiming_uniform_`, o ile konfiguracja nie definiuje inaczej. Xavier
+zakłada zbliżoną wariancję sygnału na wejściu i wyjściu warstwy (dobrze
+sprawdza się m.in. dla tanh/sigmoid), natomiast Kaiming jest
+zoptymalizowany pod kątem nieliniowości typu ReLU. Takie rozdzielenie
+inicjalizacji zapewnia stabilny start uczenia i ogranicza ryzyko
+zanikania lub eksplozji gradientów.
+W modelach cyklicznych statystyki normalizacji batchowej (BatchNorm)
+obliczane są wspólnie wzdłuż dodatkowego wymiaru odpowiadającego
+orientacji filtrów. Dzięki temu żaden kierunek obrotu nie jest
+faworyzowany, a własność ekwiwariancji rotacyjnej pozostaje zachowana.
 
 ### Procedura uruchomienia eksperymentu
 
@@ -1331,7 +1351,7 @@ ${VENVPY} main.py --test \
   --use-prerotated-test-set
 ```
 
-### Nazwenictwo i dodatkowe opcje
+### Konwencje nazewnicze i parametry pomocnicze
 
 Ścieżki i nazwy plików są spójne z konwencją launchera: 
 `LEGO-<model>-<act>_<train>.pt`oraz katalogami wynikowymi w formacie `<train>_test_on_<test>`.
@@ -1394,29 +1414,42 @@ logarytmiczny kosztem większej troski o okolice środka.
 Wszystkie eksperymenty realizowane zostały w środowisku PyTorch z
 rozszerzeniem CUDA dla warstwy cylindrycznej, dodatkowo zrobiona została automatyczna
 optymalizacja hiperparametrów w Optunie dla wybranych modeli (w tym referencyjnego)
-[@pytorch-docs; @akiba2019optuna]. Pipeline danych obejmuje warianty
-IDX i NPY oraz generator zbiorów rotowanych i zbiorów połączonych ze sobą(merged).
+[@pytorch-docs; @akiba2019optuna]. Proces przetwarzania danych obejmuje warianty
+IDX i NPY oraz generator zbiorów rotowanych i zbiorów połączonych ze sobą (merged).
 Wyniki treningu oraz testów dla każdego modelu są zapisywana w formacie txt wraz z
-macierzami pomyłek w fomratach png oraz npy. Następne dane są sprawdzane i automatyczne 
-generowane są heatmapy train-test oraz ranking modeli.
+macierzami pomyłek w formatach png oraz npy. Następne dane są sprawdzane i automatyczne 
+generowane są mapy cieplne (heatmaps) train-test oraz ranking modeli.
 Zapisy metryk i konfiguracji z optuny trafiają do plików CSV i JSON, co
-ułatwia powtarzalność oraz porównywanie konfiguracji. Dodakowo najlepsze checkpointy 
+ułatwia powtarzalność oraz porównywanie konfiguracji. Dodakowo najlepsze punkty kontrolne (checkpoints)
 dla danego przypadku są zapisane jako modele już przetrenowane .pt. 
 Wykorzystywany był otymalizator SGD wraz  z *momentum* i *weight decay*. 
 Zakresy i sposób doboru wartości hiperparametrów opisanostały w części poświęconej HPO.
 
 ## Warstwa `CyConv2d` oraz jej implementacja
 
-Warstwa `CyConv2d` korzysta z rozszerzenia C++/CUDA kompilowanego jako `CyConv2d_cuda`.
-Pliki źródłowe wykorzystywane do kompilacji to `cycnn.cpp` i `cycnn_cuda.cu`, ich budowanie
-przy użyciu `setuptools` z `BuildExtension`. Dzięki temu wywołania tej biblioteki z poziomu Pythona
-trafiają bezpośrednio do rdzeni CUDA.
-W pliku `cycnn.cpp` udostępnione są funkcje `forward(...)` i `backward(...)`
-z użyciem pybind11. Przyjmują one tensory `input`, `weight` oraz bufor
-`workspace`, a także parametry geometrii: `stride`, `padding`, `dilation`.
-Przed przekazaniem do implementacji CUDA sprawdzane jest, czy dane
-znajdują się na GPU i mają ciągły układ w pamięci. Następnie wywoływane są
-funkcje `cyconv2d_cuda_forward` i `cyconv2d_cuda_backward`.
+Warstwa `CyConv2d` korzysta z rozszerzenia C++/CUDA, kompilowanego jako moduł
+`CyConv2d_cuda`. Rozszerzenie to pochodzi z publicznie dostępnej implementacji
+CyCNN [@kim2020cycnn; @cycnn-github], która została przystosowana do środowiska
+eksperymentalnego opisanego w niniejszej pracy. Rozszerzenie to umożliwia 
+bezpośrednie wykonywanie obliczeń na procesorze graficznym
+z pominięciem interpretowanej części kodu Pythona, co znacząco zwiększa wydajność.
+
+Implementacja składa się z dwóch głównych plików źródłowych: `cycnn.cpp` oraz
+`cycnn_cuda.cu`. Pierwszy z nich odpowiada za integrację kodu z Pythona przy
+użyciu biblioteki **pybind11**, natomiast drugi zawiera właściwe jądra obliczeniowe CUDA.
+Kompilacja odbywa się z wykorzystaniem narzędzia `setuptools` oraz klasy
+`BuildExtension`, co pozwala na automatyczne zbudowanie modułu w trakcie instalacji.
+
+Plik `cycnn.cpp` definiuje funkcje `forward()` i `backward()`, które stanowią interfejs
+między częścią wysokopoziomową (Python) a niskopoziomową (CUDA). Funkcje te przyjmują
+tensory wejściowe (`input`), wagi (`weight`), bufor roboczy (`workspace`) oraz
+parametry konwolucji takie jak `stride`, `padding` i `dilation`.
+Przed przekazaniem danych do warstwy GPU weryfikowana jest poprawność ich formatu,
+między innymi to, czy znajdują się w pamięci karty graficznej i mają ciągły układ
+w przestrzeni adresowej, a następnie po spełnieniu werfikacji wywoływane są funkcje
+`cyconv2d_cuda_forward` i `cyconv2d_cuda_backward`, które realizują obliczenia
+propagacji w przód i wstecz.
+
 
 Po stronie PyTorch warstwa jest opakowana w `CyConv2dFunction` z własnymi
 `forward` i `backward`. Moduł `CyConv2d` przechowuje wagi o kształcie
@@ -1446,11 +1479,13 @@ bindingi z `cycnn.cpp`.
 Modele definiowane są w stylu modułów `nn.Module`, zaś pętle uczące
 korzystają z klasycznego układu: forward, obliczenie straty, backward,
 aktualizacja optymalizatora. Zastosowane zostały usprawnienia backendowe
-(`torch.backends.cudnn.benchmark = True`, czyli ustanienie F32 tam, gdzie jest to możliwe),
-co pozwaliło skrócić czas uczenia na użytych GPU. W modelach jest używany optymalizator
-SGD z *momentum* i *weight decay*, a harmonogram uczenia opiera się
-na `ReduceLROnPlateau`. Kod modeli jest kompatybilny z ekosystemem i API
-PyTorcha, przez co warstwy bazowe można bez problemowo wymieniać na odpowiedniki
+(`torch.backends.cudnn.benchmark = True`, czyli ustanienie Float32 
+(pojedynczej precyzji zmiennoprzecinkowej) tam, gdzie jest to możliwe), 
+co pozwaliło skrócić czas uczenia na użytych GPU. 
+W modelach jest używany optymalizator SGD z *momentum* i *weight decay*, 
+a harmonogram uczenia opiera się na `ReduceLROnPlateau`. 
+Kod modeli jest kompatybilny z ekosystemem i API PyTorcha, przez co warstwy 
+bazowe można bez problemowo wymieniać na odpowiedniki
 cylindryczne bez zmian w pozostałych fragmentach sieci neuronowej.
 
 ## Struktura projektu
@@ -1459,7 +1494,7 @@ Projekt podzielony jest na dwie wzajemnie uzupełniające się części. Repozyt
 treningowe zawiera modele (VGG, ResNet oraz CyVGG, CyResNet),
 warstwę `CyConv2d` z rozszerzeniem C++/CUDA, loader danych dla
 formatów IDX i NPY, transformacje i mapowania polarne oraz
-główny skrypt `main.py` oraz launchery dla poszczególnych datasetów. 
+główny skrypt `main.py` oraz skrypty uruchomieniowe dla poszczególnych datasetów. 
 Znajdują się tam także pliki uruchamiające Optunę i konfiguracje eksperymentów.
 
 Repozytorium zarządzające skupia narzędzia do przygotowania danych,
@@ -1468,7 +1503,7 @@ interfejs CLI (Command Line Interface), który buduje zbiory, wczytuje logi i ar
 zapisuje metryki do SQLite oraz generuje mapy ciepła train-test i
 zestawienia rankingowe. W pracy wykorzystano bibliotekę Typer (Python), która upraszcza
 definiowanie poleceń oraz automatycznie generuje pomoc kontekstową i
-spójny system wywołań. Artefakty w repozytorium tresingowym są porządkowane
+spójny system wywołań. Artefakty w repozytorium treningowym są porządkowane
 w powtarzalnej strukturze katalogów: `logs/` dla przebiegów, `saves/` dla wag `.pt`,
 foldery z macierzami pomyłek w wariancie `.npy` i `.png`, a wyniki
 zbiorcze w `results/`, dzięki czemu repozytorium zarządzające 
@@ -1482,7 +1517,8 @@ modelu, zbioru, wariantu przekształceń i ustawień treningu. W trakcie
 ewaluacji zapisywana jest macierz pomyłek oraz podstawowe metryki
 dokładności. Repozytorium orkiestrujące dostarcza komendy CLI do pełnego
 przebiegu. Najpierw `preprocess` przygotowuje zbiory rotowane i zestawy
-połączone. Następnie uruchamiany jest trening i test, po czym `ingest`
+połączone. Następnie uruchamiany jest trening i test, 
+po skończeniu obliczeń komenda `ingest` odpowiada
 zbiera logi oraz wyniki i zapisuje je do bazy SQLite. Komenda
 `check-logs` weryfikuje kompletność przebiegów. Moduły `analyze` i
 `matrix-analyzer` tworzą mapy ciepła train-test, agregują macierze
@@ -1505,7 +1541,7 @@ polarnych. Z tego powodu wykorzystana została biblioteka Optuna
 (*Hyperparameter Optimization, HPO*).
 
 W eksperymentach użyty został algorytm próbkowania TPE (Tree structured
-Parzen Estimator) oraz mechanizm pruning Median, który umożliwia
+Parzen Estimator)[@akiba2019optuna] oraz mechanizm pruning Median [@optuna-docs], który umożliwia
 wcześniejsze przerywanie prób o niskiej jakości. Dzięki temu czas potrzebnych obliczeń
 został skrócony o około  trzydzieści procent. Wyniki każdej próby są zapisywane
 do plików CSV i JSON, co ułatwia późniejszą analizę oraz wierne
@@ -1575,6 +1611,13 @@ docker run \
   cycnn:latest
 
 ```
+
+Obraz cycnn:latest został przygotowany samodzielnie w ramach pracy,
+a jego plik Dockerfile znajduje się w repozytorium źródłowym projektu [CyCNN-Enhanced](https://github.com/Fluorky/CyCNN-Enhanced) [@cycnn-enhanced],
+(w katalogu cycnn/). Zawiera on definicję środowiska opartego na oficjalnym
+obrazie pytorch z dodaną obsługą CUDA, biblioteką cuDNN oraz
+pakietami niezbędnymi do uruchomienia warstwy CyConv2d i narzędzi ewaluacyjnych.
+
 ### WSL2
 WSL2 umożliwia pracę z subsystemem Linux w środowisku Windows 
 z dostępem do tego samego obrazu Dockera oraz tej samej konfiguracji. 
