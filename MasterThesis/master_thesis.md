@@ -1773,16 +1773,18 @@ i LEGO. Dla wszystkich zastosowano spójny preprocessing, ustaloną
 rozdzielczość wejścia oraz normalizację. Dane przygotowano w dwóch
 formatach wejściowych (IDX i NPY), a następnie wygenerowano warianty
 obrotowe w dwóch trybach: kąty stałe oraz przedziały kątowe.
-Na tej podstawie zbudowano również presety złączone (np.
+Na tej podstawie zbudowano również połączone zestawy danych (np.
 `merged_fixed_30`, `merged_range_full_0_360` oraz wersje z dopiskiem
 `+ non_rotated`) tak, aby systematycznie zbadać uogólnianie „trenuj na
 X, testuj na Y”.
 
 Aby wyeliminować wpływ przypadkowego doboru hiperparametrów, kolejnym kroku
-kroku wykonano automatyczną optymalizację (Optuna, TPE + pruning) na
+kroku wykonano automatyczną optymalizację (Optuna, algorytm TPE z mechanizmem przycinania (ang. pruning),
+który umożliwia wcześniejsze przerywanie prób o niskiej jakości [@akiba2019optuna]) na
 przypadkach *non_rotated*, przy czym też został przeprowadzony na zbiorze GTSRB dodatkowy
 trening tak aby sprawdzić czy da się uzyskać większą odporność na obrót
-samą zmianą sposobu wybierania nalepszego checkpointu. W drugim przypadku trening
+samą zmianą sposobu wybierania nalepszego modelu (ang. checkpoint), 
+czyli zapisanego stanu sieci o najwyższej dokładności na zbiorze walidacyjnym. W drugim przypadku trening
 pozostaje *non_rotated* (bez obrotów w danych), ale walidacja i kryterium
 wyboru modelu patrzą już na zachowanie względem kątów.
 Wyniki pokazały, że początkowe parametry zostały ustawione właściwie, 
@@ -1792,7 +1794,7 @@ optymalizator`SGD` z `momentum` i `weight_decay`), a różnice dotyczą
 wyłącznie architektury splotu (`Conv2d` → `CyConv2d`) i przygotowania 
 danych poprzez dodanie rotacji.
 
-Uruchomienia są orkiestrane na podstawie plików JSON opisujących scenariusze:
+Uruchomienia są planowane i wykonywane na podstawie plików JSON opisujących scenariusze:
 każdy zestaw treningowy ma przypisaną listę zestawów testowych
 (ścieżki 1:1 z drzewem katalogów). Rozwiązanie to upraszcza replikację,
 pozwala pozwala łatwo utworzyć macierze porównań oraz utworzyć
