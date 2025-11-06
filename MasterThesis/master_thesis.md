@@ -1800,22 +1800,6 @@ każdy zestaw treningowy ma przypisaną listę zestawów testowych
 pozwala pozwala łatwo utworzyć macierze porównań oraz utworzyć
 wizualizacje w postaci map ciepła „train-test”.
 
-Obliczenia realizowane były na GPU NVIDIA RTX 3070 Ti i RTX 3060.
-Akceleracja opiera się na wykorzystaniu CUDA, cuDNN i cuBLAS, 
-dodatkowo włączony jest tryb TF32 (Ampere), a tam gdzie to bezpieczne 
-używana jest mieszana precyzja przez `torch.cuda.amp`. 
-Należy uwzględnić bufor roboczy`CyConv2d` (~4 GiB VRAM). 
-Ziarna generatorów pseudolosowych zostały z góry ustawiane dla Pythona, NumPy i PyTorcha/ 
-Ustawiene został cudnn.benchamar na wartość true (`cudnn.benchmark = True`)
-celem redukcji czasu trenowania, co nie zaburza porównywalności wyników.
-
-Wyniki zapisywane zostały w spójnej strukturze zawierającej: logi z przebiegów, najlepsze
-checkpointy `.pt`, macierze pomyłek w formatach `.npy` i `.png`,
-zestawienia CSV oraz wpisy w bazie SQLite. Na tej podstawie
-budowane zostały rankingi oraz statystyki zbiorcze (średnia, mediana,
-odchylenie standardowe). Poniżej opisany został sposób definiowania scenariuszy,
-procedurę pomiaru skuteczności oraz metodę agregacji metryk.
-
 \newpage
 
 ## Scenariusze trenowania/testowania - struktura plików JSON
@@ -1873,8 +1857,10 @@ wspólne dla całego zbioru scenariuszy.
 
 ## Pomiar skuteczności - accuracy, mapy ciepła
 
-Skuteczność modeli oceniana jest na podstawie dokładności top-1 dla
-każdej pary zbiorów treningowego i testowego. Wynikami są macierze
+Skuteczność modeli oceniana jest na podstawie dokładności *top-1* 
+(czyli odsetka przypadków, w których model poprawnie wskazał klasę o 
+najwyższym prawdopodobieństwie) dla każdej pary zbiorów 
+treningowego i testowego. Wynikami są macierze
 accuracji (train-test), w których każda komórka zawiera wartość
 procentową (w praktyce zapis 0-1) uzyskaną przez dany model w układzie
 „trenuj na X, testuj na Y”. Dane zapisywane są w dwóch plikach:
@@ -1888,16 +1874,25 @@ $$
      {\sum_{k=1}^{C}(\mathrm{TP}_k+\mathrm{FP}_k+\mathrm{FN}_k)}
 =\frac{\operatorname{tr}(CM)}{\sum CM}.
 $$
+Wskaźnik ten odpowiada dokładności mikroagregowanej, tzn. obliczanej 
+na podstawie łącznej liczby poprawnych klasyfikacji (True Positives) 
+i wszystkich próbek we wszystkich klasach, bez ich ważenia osobno.
 Wartość ta trafia następnie do odpowiedniej komórki macierzy train-test
 i jest prezentowana jako odsetek poprawnych klasyfikacji.
 
-**Macro-accuracy** - niewykorzystywana w tej pracy jest to średnia dokładność
-liczona osobno dla każdej klasy:
+**Macro-accuracy** - metryka niewykorzystywana w tej pracy, 
+określająca średnią dokładność obliczaną niezależnie dla każdej klasy:
 $$
 \mathrm{Acc}_{\mathrm{macro}}=
 \frac{1}{C}\sum_{k=1}^{C}
 \frac{\mathrm{TP}_k}{\mathrm{TP}_k+\mathrm{FN}_k}.
 $$
+Wartość ta odpowiada prostemu uśrednieniu dokładności poszczególnych klas, 
+bez uwzględniania ich liczności w zbiorze danych.
+
+Określenia `micro` oraz `macro` pochodzą z literatury dotyczącej ewaluacji klasyfikacji wieloklasowej 
+i odnoszą się odpowiednio do sposobu agregacji wyników - globalnie (micro) lub niezależnie dla każdej klasy (macro)
+[@scikit-learn; @powers2011evaluation].
 
 Mapy ciepła służą do wzrokowej oceny stabilności względem zmian rozkładu
 kątów: jaśniejsze pola oznaczają wyższe accuracy, ciemniejsze oznaczają
@@ -1911,8 +1906,12 @@ porównania modeli i transformacji (np. profile Acc(Δθ) oraz AUC\(_\theta\)).
 Dla każdego modelu agregowane są wyniki z przypisanych scenariuszy
 kątowych, raportowane są: mean, median, min, max,
 std. Dodatkowo liczone są wskaźniki stabilności: robust mean
-(średnia ucięta 10%) oraz IQR. Wyznaczany jest także
-gap train-test - różnica między przypadkami „train-like”
+(średnia ucięta 10%) oraz IQR (interquartile range - rozstęp międzykwartylowy).
+Średnia ucięta 10% została zastosowana w celu ograniczenia wpływu wartości odstających,
+które mogą wynikać z ekstremalnych kątów testowych.
+Wskaźnik IQR natomiast opisuje rozrzut 50% środkowych wyników, co pozwala ocenić spójność
+modelu bez względu na pojedyncze odchylenia.  
+Wyznaczany jest także gap train-test - różnica między przypadkami „train-like”
 (np. zawierającymi `non_rotated` albo `plus_non_rotated`), a resztą.
 
 Wyniki i metadane trafiają do SQLite (przykładowo do tabel `evaluations`,
@@ -1930,10 +1929,11 @@ przedziałów oraz różnica kątowa $\Delta\theta$ na okręgu z wrap-around
 Następnie obliczane są następujące parametry:  \
 - krzywe $Acc(\Delta\theta)$ z koszykowaniem co
   $\theta_{\text{step}}=15^\circ$,  \
-- $AUC_{\theta}$ (pole pod krzywą, obliczane metododa trapezową wraz normalizacja przez
-  $180^\circ$),  \
+- $AUC_{\theta}$ (pole pod krzywą $Acc(\Delta\theta)$, obliczane metodą trapezową
+  i znormalizowane względem zakresu kątów $180^\circ$),
 - $Acc_{\min}$ (najgorszy koszyk),  \
-- $SD_{\theta}$ (odchylenie między koszykami).  \
+- $SD_{\theta}$ (odchylenie standardowe dokładności pomiędzy koszykami,
+  obliczane według miary L2),   \
 
 Eksport tych parametrów odbywa się do `delta_curves/acc_vs_delta_<MODEL>.csv` oraz
 `auc_theta_ranking.csv`. Warto podkreślić, że spójny krok kątowy i jednolite zasady wrap-around
@@ -1943,16 +1943,21 @@ zapewniają porównywalność między modelami.
 
 Rankingi modeli są tworzone na podstawie następujących dwóch sposobów:
 
-**Quality-only.** Sortowanie po `avg`, a przy remisach kolejno:
-`std` (niższe lepsze), `min`, `median`, `max`, `robust_mean`, `IQR`
-(niższy lepszy). Ich eksport odbywa się do pliku `ranking_quality.csv`.
+**Quality-only** (z ang. „tylko jakość”) - ranking oparty wyłącznie na 
+metrykach jakościowych. Sortowanie odbywa się według średniej (`avg`), 
+a przy remisach kolejno według `std`, `min`, `median`, `max`, 
+`robust_mean` oraz `IQR` (niższe wartości uznawane są za lepsze).
 
-**Time-aware.** Uwzględnianie kosztu czasowego:  \
-- `avg/time` oraz `min/time` (`ranking_timeaware_avgperf.csv`),  \
+**Time-aware** (z ang. „uwzględniający czas treningu”).  
+Ranking uwzględnia koszt czasowy procesu uczenia modeli, czyli relację 
+między jakością a długością treningu.  
+Stosowane warianty:  
+- `avg/time` oraz `min/time` (`ranking_timeaware_avgperf.csv`),  
 - wariant zbalansowany `avg` vs `avg_perf`
-  (`ranking_timeaware_balanced.csv`),  \
-- wariant zbalansowany tylko per-time
-  (`ranking_balanced_per_time.csv`).  \
+  (`ranking_timeaware_balanced.csv`),  
+- wariant zbalansowany tylko względem czasu
+  (`ranking_balanced_per_time.csv`).
+
 
 Parametry i FLOPs nie są obecnie uwzględniane. Dzięki spójnym ścieżkom
 artefaktów i zapisowi metryk do CSV/SQLite porównywanie wariantów
@@ -1987,10 +1992,10 @@ eksport wyników. Zastosowana separacja odpowiedzialności zapewnia
 powtarzalność, transparentność oraz możliwość niezależnej rozbudowy
 poszczególnych warstw.
 
-### Interfejs uruchomieniowy - CLI
+### Skrypt uruchomieniowy - CLI
 
 Centralnym wejściem do systemu jest interfejs wiersza poleceń
-(`cli.py`), który spina operacje ingestii artefaktów, analizy macierzy
+(`cli.py`), który spina operacje obróbki i analizy artefaktów, analizy macierzy
 pomyłek oraz budowy macierzy „train-test”. Program przyjmuje ścieżki do
 logów treningowych i testowych, lokalizacje plików z macierzami pomyłek
 oraz parametry sterujące (wybór zbioru, wariantu metryki, katalogu
@@ -2004,7 +2009,7 @@ Za wczytanie i ujednolicenie materiału empirycznego odpowiada moduł
 `analysis/log_ingestor.py`. Z poziomu nazewnictwa plików odtwarza on
 konfigurację eksperymentów (architektura, transformacja, para
 train→test, znacznik czasu), następnie parsuje przebiegi uczenia i testu
-oraz rejestruje macierze pomyłek w ustalonym formacie. Wszystkie dane
+oraz zapisuje macierze pomyłek w ustalonym formacie. Wszystkie dane
 są porządkowane w relacyjnej bazie SQLite (schemat utrzymuje
 `utils/db_handler.py`), co ułatwia ich ponowne użycie, kontrolę spójności
 i odtworzenie pełnej historii eksperymentów.
@@ -2015,10 +2020,14 @@ Właściwa analiza ilościowa realizowana jest w
 `analysis/matrix_analyzer.py`. Moduł ten wyznacza dokładność micro i
 macro bezpośrednio z macierzy pomyłek, agreguje wyniki w ujęciu par
 train→test oraz w ujęciu rodzin modeli, a także oblicza miary
-stabilności względem rotacji: krzywe Acc(Δθ), pole pod krzywą
-AUC\_θ oraz wartość „worst-case”. Uzupełniają je miary
+stabilności względem rotacji:  krzywe $Acc(\Delta\theta)$, czyli zależność 
+dokładności od różnicy kątowej między zbiorem treningowym a testowym, 
+oraz pole pod tą krzywą $AUC_\theta$, które stanowi miarę ogólnej 
+odporności modelu na obrót, a także wartość „worst-case”. Uzupełniają je miary
 rozkładowe (średnia, mediana, odchylenie standardowe, rozstęp
-międzykwartylowy, średnia ucięta) oraz metryki „per-time”, w których
+międzykwartylowy (będący różnicą między trzecim a pierwszym kwartylem 
+rozkładu wyników, określający, jak szeroko rozproszone są wartości środkowe 
+i pomagający ocenić stabilność modelu), średnia ucięta) oraz metryki „per-time”, w których
 jakość odnoszona jest do czasu uczenia. Wyniki są eksportowane do
 uporządkowanej struktury plików CSV (z katalogiem nadrzędnym
 `results/exports/<DATASET>/<micro|macro>/`) oraz rejestrowane w logu
