@@ -2168,9 +2168,11 @@ do całkowitego czasu trenowania.
 Micro-accuracy oddaje skuteczność „po wszystkich próbkach”, więc jest
 odporna na nierówne liczebności klas w stopniu typowym dla zadań
 klasyfikacji. AUC_θ syntetyzuje zachowanie krzywej Acc(Δθ):
-im wyższe, tym reprezentacja bardziej wyrównana względem kątów. Wartość
-worst-case wyłapuje najtrudniejszy punkt krzywej, który jest ważny, gdy
-liczy się niezawodność w całym zakresie. Metryka per-time pomaga wybrać
+im wyższe, tym reprezentacja bardziej wyrównana względem kątów. 
+Wartość worst-case wyłapuje punkt krzywej odpowiadający najtrudniejszemu przypadkowi,
+czyli minimalnej skuteczności modelu przy danym zakresie rotacji. 
+Jest to istotne, gdy liczy się niezawodność działania w całym przedziale kątów, 
+a nie tylko średnia wydajność. Metryka per-time pomaga wybrać
 wariant pod ograniczenia budżetu czasu i energii. Wykresy heatmap
 train-test uzupełniają metryki numeryczne i pozwalają wzrokowo ocenić,
 czy model „grzeje” także w kolumnach odległych kątowo od treningu.
@@ -2178,9 +2180,10 @@ czy model „grzeje” także w kolumnach odległych kątowo od treningu.
 *[Rys. 2: Krzywe Acc(Δθ)  dla zbioru GTSRB RGB dla modeli ResNet56(logpolar) oraz CyResNet56(logpolar)]*  \
 ![Rys. 2: Ranking AUCθ (barplot) dla zbioru GTSRB RGB](media%2Fassets%2Fplots%2Facc_vs_delta_GTSRB_RGB_ResNet_log_vs_CyResNet_log.png)  \
 
-Rys. 2: Krzywe Acc(Δθ) na zbiorze GTSRB RGB: przebieg cykliczny jest wyższy i bardziej płaski w całym zakresie [0°, 180°].  \
-Wariant cykliczny (CyResNet56-log) utrzymuje stabilną dokładność ~0.9 w całym zakresie [0°, 180°], 
-podczas gdy wariant bazowy (ResNet56-log) traci ok. 0.02 na krawędziach, co przekłada się na różnicę AUC_θ ≈ +0.03 na korzyść wariantu cyklicznego.
+Rys. 2: Krzywe Acc(Δθ) na zbiorze GTSRB RGB: przebieg cykliczny jest wyższy i znacznie bardziej płaski w całym zakresie [0°, 180°].  
+Wariant cykliczny (CyResNet56-log) utrzymuje stabilną dokładność ~0.9 w całym zakresie [0°, 180°], podczas gdy wariant bazowy (ResNet56-log) spada do ok. 0.55.  
+Różnica pola pod krzywą (AUC_θ) wynosi około +0.35, co odpowiada względnemu przyrostowi rzędu ~60% względem wariantu bazowego, 
+wyraźnie na korzyść modelu cyklicznego.
 
 ## Obraz ogólny: rodziny i transformacje
 
@@ -2209,10 +2212,10 @@ co potwierdzają zarówno liczby, jak i heatmapy. Na LEGO CyVGG-log
 bywa liderem stabilności, a per-time utrzymuje rozsądny poziom. Na
 MNIST różnice są mniejsze, ale nadal widoczne w przebiegach względem Δθ.
 
-*[Rys. 10 - Acc(Δθ) - VGG19-log vs CyVGG19-log (GTSRB RGB)]*  \
-![Rys. 10 - „Acc(Δθ) - VGG19-log vs CyVGG19-log (GTSRB_RGB)”](media%2Fassets%2Fplots%2Facc_delta_gtsrb_rgb_vgglog_vs_cyvgglog.png)  \
-Rys. 10 - CyVGG-log wyraźnie przewyższa VGG-log dla całego zakresu Δθ.  \
-
+![Rys. 10 - Krzywe Acc(Δθ) dla zbioru GTSRB RGB: porównanie modeli VGG19-log i CyVGG19-log](media/assets/plots/acc_delta_gtsrb_rgb_vgglog_vs_cyvgglog.png) \
+**Rys. 10.** Krzywe Acc(Δθ) dla modeli VGG19-log i CyVGG19-log na zbiorze GTSRB RGB.  
+Model cykliczny (CyVGG19-log) utrzymuje wyższe wartości dokładności w całym zakresie Δθ,  
+z AUC = 0.466 wobec 0.344 dla wariantu bazowego, co oznacza względny przyrost ok. +35 %.  \
 \newpage 
 
 *[Rys. 11 - Macierze pomyłek VGG19-log vs CyVGG19-log (GTSRB_RGB) trenowane na rotated-90-120)]*  \
@@ -2228,9 +2231,8 @@ dla dużych delta_theta i często wygrywa AUC_theta na GTSRB oraz na RGB.
 W praktyce CyResNet bywa „bezpiecznym domyślnym wyborem”: średnia jakość
 jest wysoka, krzywe są równe, a koszt obliczeń pozostaje akceptowalny.
 
-*[Rys. 12 - „Acc(Δθ) - ResNet56-linear vs CyResNet56-linear (LEGO)”]*  \
-![Rys. 12 - „Acc(Δθ) - ResNet56-linear vs CyResNet56-linear (LEGO)”](media%2Fassets%2Fplots%2Facc_vs_delta_LEGO_ResNet_linear_vs_CyResNet_linear.png)  \
-Rys. 12: CyResNet56-linear łączy wysoką średnią z dobrą efektywnością per-time.  \
+![Rys. 12 - Krzywe Acc(Δθ) dla zbioru LEGO: porównanie modeli ResNet56-linear i CyResNet56-linear](media/assets/plots/acc_vs_delta_LEGO_ResNet_linear_vs_CyResNet_linear.png)  \
+**Rys. 12.** CyResNet56-linear utrzymuje nieco wyższą dokładność (~0.86 vs ~0.82) i większą stabilność względem kąta Δθ w porównaniu z wariantem bazowym.  
 \newpage
 *[Rys. 13 - „Acc(Δθ) - ResNet56-log vs CyResNet56-log (GTSRB_RGB)”]*  \
 ![Rys. 13 - „Acc(Δθ) - ResNet56-log vs CyResNet56-log (GTSRB_RGB)”](media%2Fassets%2Fplots%2Facc_vs_delta_LEGO_ResNet_linear_vs_CyResNet_linear.png)  \
@@ -2288,7 +2290,7 @@ Rys. 18: Wpływ transformacji: na MNIST log-polar podnosi zarówno jakość, jak
 
 *[Rys. 19 - Δ (log − linear) - słupki dla GTSRB (np. CyResNet)]*  \
 ![Rys. 19 - Δ (log − linear) - słupki dla GTSRB (np. CyResNet)](media%2Fassets%2Fplots%2Fdelta_log_linear_GTSRB_CyResNet56.png)
-Rys. 19: W przypadku zbioru GTSRB model linear-polar częściej wygrywa w avg i AUC θ ; log-polar bywa korzystny punktowo.
+Rys. 19: W przypadku zbioru GTSRB model linear-polar częściej wygrywa w avg i AUC θ zaś log-polar bywa korzystny punktowo.
 
 ## Tabele z wynikami
 
@@ -2524,11 +2526,14 @@ natomiast kolumny odległe od diagonali pokazują, jak model generalizuje
 na rotacje, których nie widział podczas treningu.
 
 ### Bazowy model VGG19 - linear vs log
-*Rys. 20: VGG19 - linear-polar*  
-![VGG19 - linear-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_vgg19_linearpolar.png)
-\newpage
-*Rys. 21: VGG19 - log-polar*  
-![VGG19 - log-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_vgg19_logpolar.png)
+*Rys. 20: VGG19 - linear-polar (GTSRB)*  
+![VGG19 - linear-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_vgg19_linearpolar.png)  
+**Rys. 20.** Wysoka dokładność ograniczona głównie do diagonali - model dobrze działa tylko dla rotacji widzianych w treningu.  
+
+*Rys. 21: VGG19 - log-polar (GTSRB)*  
+![VGG19 - log-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_vgg19_logpolar.png)  
+**Rys. 21.** Transformacja log-polar nieco poprawia uogólnianie - kolumny mniej kontrastowe, ale spadek jakości nadal widoczny.  
+
 
 Wariant bazowy VGG19 koncentruje wysokie wartości w pobliżu diagonali.
 Po wyjściu poza zakres kątów widocznych w treningu pojawia się stopniowe
@@ -2538,11 +2543,13 @@ linear-polar (bardziej równy pas w kolumnach dalszych od diagonali), ale
 nie eliminuje problemu całkowicie.
 
 ### Bazowy model ResNet56 - linear vs log
-*Rys. 22: ResNet56 - linear-polar*  
+*Rys. 22: ResNet56 - linear-polar (GTSRB)*  
 ![ResNet56 - linear-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_resnet56_linearpolar.png)  
-\newpage
-*Rys. 23: ResNet56 - log-polar*  
+**Rys. 22.** Zachowanie podobne do VGG19: silna zależność od kąta treningowego.  
+
+*Rys. 23: ResNet56 - log-polar (GTSRB)*  
 ![ResNet56 - log-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_resnet56_logpolar.png)  
+**Rys. 23.** Wariant log-polar łagodzi spadek jakości, szczególnie dla testów odległych od kąta treningu.  
 
 ResNet56 zachowuje się podobnie do VGG19: ciemna diagonala i jaśniejsze
 kolumny wraz ze wzrostem różnicy kątów. Wersja log-polar ponownie daje
@@ -2550,17 +2557,21 @@ nieco stabilniejszy obraz niż linear-polar, szczególnie dla testów
 odległych kątowo od treningu, ale nadal widać wyraźny dryf jakości.
 
 ### Modele cykliczne - CyVGG19 i CyResNet56
-*Rys. 24: CyVGG19 - linear-polar*  
+*Rys. 24: CyVGG19 - linear-polar (GTSRB)*  
 ![CyVGG19 - linear-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_cyvgg19_linearpolar.png)  
-\newpage
-*Rys. 25: CyVGG19 - log-polar*  
+**Rys. 24.** Architektura cykliczna utrzymuje wysokie wyniki także w kolumnach odległych od diagonali — większa odporność na rotacje.  
+
+*Rys. 25: CyVGG19 - log-polar (GTSRB)*  
 ![CyVGG19 - log-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_cyvgg19_logpolar.png)  
-\newpage
-*Rys. 26: CyResNet56 - linear-polar*  
+**Rys. 25.** Wariant log-polar dodatkowo wzmacnia stabilność rotacyjną — mapa bardziej wyrównana w całym zakresie.  
+
+*Rys. 26: CyResNet56 - linear-polar (GTSRB)*  
 ![CyResNet56 - linear-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_cyresnet56_linearpolar.png)  
-\newpage
-*Rys. 27: CyResNet56 - log-polar*  
+**Rys. 26.** Model cykliczny ResNet zachowuje równomierną dokładność, przewyższając wyraźnie wariant bazowy.  
+
+*Rys. 27: CyResNet56 - log-polar (GTSRB)*  
 ![CyResNet56 - log-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_cyresnet56_logpolar.png)  
+**Rys. 27.** Połączenie transformacji log-polar i cykliczności daje najbardziej płaską mapę — minimalny spadek jakości przy dużych odchyleniach.
 
 Warianty cykliczne utrzymują wysokie wartości nie tylko na diagonali,
 ale także w kolumnach odpowiadających testom odległym kątowo od
@@ -2590,9 +2601,13 @@ spadek skuteczności przy większej różnicy kątów Δθ.
 ### Bazowy model VGG19 - linear vs log
 *Rys. 28 (RGB): VGG19 - linear-polar*  
 ![VGG19 - linear-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_vgg19_linearpolar.png)  
-\newpage
+**Rys. 28.** Wysoka dokładność ograniczona do diagonali - model dobrze rozpoznaje tylko rotacje obecne w treningu.  
+
 *Rys. 29 (RGB): VGG19 - log-polar*  
 ![VGG19 - log-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_vgg19_logpolar.png)  
+**Rys. 29.** Transformacja log-polar nieco łagodzi spadek jakości poza zakresem treningowym; kolumny są bardziej wyrównane, zwłaszcza przy Δθ ≈ 30-60°.  
+Kolor poprawia stabilność, dostarczając dodatkowych wskazówek wizualnych (np. barwne kontury znaków).
+ 
 
 Model VGG19 w wersji RGB zachowuje podobny wzorzec jak dla zbioru
 monochromatycznego - wyraźna diagonala oznacza dobre dopasowanie
@@ -2603,11 +2618,15 @@ odchyleniach (Δθ ≈ 30-60°), co wskazuje, że barwa stanowi dodatkowy
 sygnał wspierający rozpoznanie kształtu.
 
 ### Bazowy model ResNet56 - linear vs log
+
 *Rys. 30 (RGB): ResNet56 - linear-polar*  
 ![ResNet56 - linear-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_resnet56_linearpolar.png)  
-\newpage
+**Rys. 30.** Wersja linear-polar zachowuje umiarkowaną odporność: ciemna diagonala z widocznym rozjaśnieniem kolumn dalszych od kąta treningu.  
+
 *Rys. 31 (RGB): ResNet56 - log-polar*  
 ![ResNet56 - log-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_resnet56_logpolar.png)  
+**Rys. 31.** Wariant log-polar utrzymuje stabilniejszą dokładność w szerszym zakresie kątów - sieć wykorzystuje barwne elementy znaków (np. czerwone ramki) jako mniej zależne od orientacji.
+
 
 ResNet56 w wersji RGB wykazuje wyraźniejszą poprawę stabilności niż
 wariant z obrazami monochromatycznymi. Dla obu transformacji, a
@@ -2618,17 +2637,23 @@ Spadek jakości poza diagonalą jest łagodniejszy, lecz architektura nadal
 nie jest w pełni inwariantna rotacyjnie.
 
 ### Modele cykliczne - CyVGG19 i CyResNet56
+
 *Rys. 32 (RGB): CyVGG19 - linear-polar*  
 ![CyVGG19 - linear-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_cyvgg19_linearpolar.png)  
-\newpage
+**Rys. 32.** Model cykliczny utrzymuje wysoki poziom dokładności również w kolumnach odległych od diagonali - znacznie lepsza generalizacja na rotacje niewidziane w treningu.  
+
 *Rys. 33 (RGB): CyVGG19 - log-polar*  
 ![CyVGG19 - log-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_cyvgg19_logpolar.png)  
-\newpage
+**Rys. 33.** Połączenie cykliczności z log-polar daje jeszcze gładszy rozkład - minimalne różnice między kolumnami testowymi.  
+
 *Rys. 34 (RGB): CyResNet56 - linear-polar*  
 ![CyResNet56 - linear-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_cyresnet56_linearpolar.png)  
-\newpage
+**Rys. 34.** CyResNet56-linear prezentuje niemal jednorodny poziom skuteczności - wysoka odporność na duże kąty Δθ.  
+
 *Rys. 35 (RGB): CyResNet56 - log-polar*  
 ![CyResNet56 - log-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_cyresnet56_logpolar.png)  
+**Rys. 35.** Wariant log-polar wzmacnia efekt: mapa równomiernie ciemna w całym zakresie, co potwierdza pełną stabilność rotacyjną.
+
 
 Wersje cykliczne w konfiguracji RGB wykazują najwyższą odporność na
 rotację. Mapa ma równomiernie ciemny profil w całym zakresie kolumn
@@ -2677,7 +2702,7 @@ dla CyVGG-log. Różnice worst-case wśród topowych konfiguracji są niewielkie
 co pozwala dobrać wariant pod budżet czasu lub wymagania stabilności.
 
 **GTSRB RGB. Przejście do CyCNN przynosi wyraźny skok jakości i AUC_theta.
-CyResNet-log zwykle prowadzi w stabilności, a szybkie klasyki (np.
+CyResNet-log zwykle prowadzi w stabilności, a klasyczne architektury o krótszym czasie uczenia (np.
 VGG-log) przegrywają jakościowo z wersjami cyklicznymi.
 
 **LEGO.** CyResNet-linear dominuje średnią i per-time, lecz CyVGG-log
@@ -3447,15 +3472,18 @@ kosztu obliczeniowego.
 ## Propozycje dalszych badań
 
 Warto rozszerzyć analizę o ciągłą grupę rotacji \(SO(2)\) (np.
-konwolucje oparte na aproksymacjach pierścieniowych), a także połączyć
-inwariancję rotacyjną i skalową (hierarchie *log-polar + scale-space*).
+konwolucje oparte na aproksymacjach pierścieniowych) co pozwala uzyskać płynną 
+ekwiwariancję rotacyjną poprzez zastosowanie filtrów definiowanych w 
+przestrzeni biegunowej lub harmonicznej. Inną propozycją jest połączenie inwariancji 
+rotacyjnej i skalowej (hierarchie *log-polar + scale-space*).
 Kolejny kierunek to transfer "wiedzy" między zbiorami (np. GTSRB→LEGO) z
 utrzymaniem ekwiwariantnych reprezentacji, a także ocena efektywności
 na platformach wbudowanych, mobilnych i w chmurze. Równolegle warto
 rozszerzyć pipeline o testy deformacji nieliniowych (perspektywa,
 zakłócenia tekstury, przesunięty środek) oraz porównać z nowszymi
-modelami ekwiwariantnymi (E(2)-CNN, Steerable CNN, LieConv) w tych samych
-warunkach rotacyjnych.
+modelami ekwiwariantnymi  takimi jak E(2)-CNN [@weiler2019e2cnn], 
+Steerable CNN [@cohen2016group; @weiler2018steerable] oraz LieConv 
+[@finzi2020lieconv] w tych samych warunkach rotacyjnych.
 
 \newpage
 
