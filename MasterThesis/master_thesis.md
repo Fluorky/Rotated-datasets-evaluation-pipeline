@@ -1166,7 +1166,7 @@ po którym następuje pojedyncza warstwa liniowa `64 → C`, gdzie `C` oznacza l
 ### Cechy modelu
 Sieć charakteryzuje się umiarkowaną głębokością i niewielką liczbą parametrów
 (≈0,85 M). ResNet-56 stanowi dobry kompromis między złożonością a zdolnością
-do reprezentacji — pozwala testować wpływ modyfikacji operatora splotu przy
+do reprezentacji - pozwala testować wpływ modyfikacji operatora splotu przy
 zachowaniu rozsądnego budżetu obliczeniowego.
 
 **Kształty (dla wejścia 3×32×32).**
@@ -1182,36 +1182,47 @@ zachowaniu rozsądnego budżetu obliczeniowego.
 W CyResNet-56 wszystkie `nn.Conv2d` zastąpiono `CyConv2d` (również
 `conv1` oraz obie konwolucje w każdym `BasicBlock`). Interfejs posiadający następujące 
 parametry `kernel_size=3`,`padding=1` oraz `stride` zawierający się w przedziale {1,2}
-pozostaje kompatybilny, więc topologia, BN/ReLU, shortcut, GAP i klasyfikator 
-są niezmienione. Zmiana dotyczy wyłącznie operatora splotu 
-(implementacja cylindryczna), co pozwala izolować wpływ komponentu rotacyjnego
-przy zachowaniu budżetu parametrów i porównywalnych FLOPs.
+Dzięki temu nie zmienia się ani topologia sieci, ani pozostałe
+elementy bloku (resztowe połączenie skrótowe, normalizacja BN,
+nieliniowość ReLU, globalne uśrednianie przestrzenne GAP oraz końcowa
+warstwa liniowa odpowiedzialna za klasyfikację). Modyfikacja dotyczy
+wyłącznie samego operatora splotu (implementacja cylindryczna), co
+pozwala odseparować wpływ komponentu rotacyjnego przy zachowaniu budżetu
+parametrów oraz porównywalnej złożoności obliczeniowej (FLOPs)
 
 
 ## Wersje cykliczne: CyVGG-E i CyResNet-56
 
-Wersje cykliczne powstają przez zastąpienie każdej `Conv2d` warstwą
-`CyConv2d`. Interfejs (`kernel size`, `stride`, `padding`) jest zgodny
-z `Conv2d`, więc topologia sieci i część klasyfikacyjna pozostają bez zmian.
-`CyConv2d` opakowuje własną funkcję autograd (`CyConv2dFunction`) i
-wywołuje rozszerzenie CUDA `CyConv2d_cuda.forward/backward(...)`. Zastosowane wagi
-mają kształt `[C_out, C_in, k, k]`, gdzie C_out oznacza liczbę filtrów 
-(map cech wyjściowych), C_in liczbę kanałów wejściowych,
-a k × k oznacza rozmiar jądra konwolucyjnego. Są inicjalizowane metodą 
-Xaviera (Glorota)[@glorot2010understanding], która dobiera wartości 
-początkowe wag tak, aby zachować zbliżoną wariancję sygnału
-we wszystkich warstwach i zapobiec zanikaniu lub eksplozji gradientów. 
-Moduł korzysta z dużego bufora roboczego na GPU
-(opisanego w kodzie jako „Workspace for Cy-Winograd algorithm”).
+Wersje cykliczne powstają przez zastąpienie każdej warstwy `Conv2d`
+warstwą `CyConv2d`. Interfejs (`kernel size`, `stride`, `padding`) jest
+zgodny z `Conv2d`, dzięki czemu topologia sieci i część klasyfikacyjna
+pozostają bez zmian. `CyConv2d` opakowuje własną funkcję autograd
+(`CyConv2dFunction`) i wywołuje rozszerzenie CUDA
+`CyConv2d_cuda.forward/backward(...)`.
 
-W definicjach modeli nie występuje jawna oś orientacja ani osobny
-pooling po orientacjach. Z punktu widzenia PyTorch parametry filtrów
-zachowują standardowy kształt `[C_out, C_in, k, k]`. Mechanizmy
-rotacyjne, o ile są użyte,  realizowane są w jądrze CUDA
-`CyConv2d_cuda`, niewidocznym na poziomie kodu modeli.
+Tensory wag w warstwie `CyConv2d` mają standardową dla konwolucji
+czterowymiarową strukturę:  
+liczba filtrów wyjściowych × liczba kanałów wejściowych × wysokość jądra ×
+szerokość jądra (w notacji skróconej: `[C_out, C_in, k, k]`.  
+Wagi inicjalizowane są metodą Glorota (Xavier) [@glorot2010understanding],
+co pozwala utrzymać zbliżoną wariancję sygnału w kolejnych warstwach i
+ogranicza zjawisko zanikających lub eksplodujących gradientów. Moduł
+korzysta dodatkowo z dużego bufora roboczego na GPU (w kodzie opisany jest on
+jako „workspace for Cy-Winograd algorithm”), który służy do przyspieszenia
+obliczeń kosztem zwiększonego zużycia pamięci.
+
+W definicjach modeli nie pojawia się żaden dodatkowy, jawnie oznaczony
+wymiar odpowiadający orientacji, ani osobna warstwa odpowiedzialna za
+agregowanie wyników względem orientacji. Z punktu widzenia biblioteki
+PyTorch parametry filtrów zachowują zwykłą postać tensora
+`[C_out, C_in, k, k]`, tak jak w
+klasycznych konwolucjach. Ewentualne mechanizmy związane z rotacjami są
+realizowane wewnątrz jądra CUDA `CyConv2d_cuda`, niewidocznym na 
+poziomie kodu modeli.
+
 W praktyce inwariancja po stronie modeli nie jest wprowadzana osobno:
 `GAP` oraz ewentualne uśrednianie w klasyfikatorze działają tak samo jak
-w wersjach bazowych i nie ma dodatkowego „poolingu po orientacjach”.
+w wersjach bazowych i nie ma dodatkowego uśredniania po orientacjach.
 
 ## Uzgodnienia I/O i selektor modeli
 
@@ -1227,7 +1238,7 @@ Domyślnie używany jest jeden kanał wejściowy dla zbiorów w skali szarości
 takich jak `CIFAR-10/100` czy `GTSRB_RGB`.  
 Liczba klas na wyjściu klasyfikatora ustalana jest automatycznie przez funkcję 
 `get_num_classes(dataset)`. Przykładowo: `MNIST` i `CIFAR-10` mają po 10 klas, 
-`GTSRB` - 43, `LEGO` - 50, zaś `CIFAR-100` - 100 (niezastosowany w pracy z powodu braku czasu).
+`GTSRB` - 43, `LEGO` - 50.
 
 ### Selektor modeli
 
@@ -1239,25 +1250,34 @@ model = get_model(model="cyresnet56",
                   classify=True)
 ````
 
-Argument `model` określa wariant architektury (`vgg*`, `cyvgg*`, `resnet*`, `cyresnet*`, np. `vgg19`, `cyvgg19`, `resnet56`, `cyresnet56`).
+Argument `model` określa wariant architektury (`vgg*`, `cyvgg*`, `resnet*`, `cyresnet*`, np. `vgg19`, `cyvgg19`, `resnet56`, `cyresnet56`),
 `dataset` wskazuje nazwę zbioru danych, na podstawie której ustalane są parametry `in_channels` i `num_classes`.
 Flaga `classify=True` powoduje, że selektor domyka warstwę klasyfikacyjną (GAP + warstwa liniowa). 
-Gdy ustawiona jest na `False`, zwracany jest sam „backbone”, co przydaje się przy analizie cech lub transferze uczenia.
+Gdy flaga classify ustawiona jest na False, funkcja zwraca jedynie część odpowiedzialną za
+ekstrakcję cech (ang. backbone), czyli sieć bez końcowej warstwy klasyfikacyjnej. 
+Taki wariant jest przydatny przy analizie reprezentacji wewnętrznych lub w zadaniach transferu uczenia.
 Funkcja automatycznie dobiera liczbę kanałów wejściowych i klas, podstawia odpowiedni typ warstw (`Conv2d` lub `CyConv2d`)
 i pozostawia resztę topologii bez zmian (BN/ReLU, bloki, GAP). Dzięki temu porównania modeli bazowych i cyklicznych są 
 miarodajne - klasyfikator jest identyczny, a liczba parametrów i parametrów FLOPs zbliżona.
 
 ### Mechanizmy zapewniające poprawność i stabilność uczenia
 
-Podczas wczytywania danych sprawdzana jest zgodność wymiarów tensora z oczekiwanym układem `C×H×W`. 
-Jeśli liczba kanałów nie odpowiada zbiorowi, proces zostaje przerwany z komunikatem błędu, 
-zamiast kontynuować z niepoprawnymi danymi.
-Warstwy konwolucyjne (`Conv2d` i `CyConv2d`) są inicjalizowane metodą `xavier_uniform_`, 
-natomiast warstwy liniowe metodą `kaiming_uniform_`, o ile konfiguracja nie definiuje inaczej. 
-Taki sposób inicjalizacji zapewnia stabilny start niezależnie od wariantu modelu.
-W modelach cyklicznych statystyki normalizacji batchowej (BN) liczone są wspólnie wzdłuż 
-wymiaru „orientacja”. Dzięki temu żaden z kierunków nie jest faworyzowany, a zachowana 
-zostaje ekwiwariancja rotacyjna.
+Podczas wczytywania danych sprawdzana jest zgodność wymiarów tensora z
+oczekiwanym układem `C×H×W`. Jeśli liczba kanałów nie odpowiada
+konkretnemu zbiorowi, proces jest przerywany z komunikatem błędu, zamiast
+kontynuować uczenie na niepoprawnych danych.
+Wagi warstw konwolucyjnych (`Conv2d` i `CyConv2d`) są inicjalizowane
+funkcją `xavier_uniform_`, natomiast wagi warstw liniowych funkcją
+`kaiming_uniform_`, o ile konfiguracja nie definiuje inaczej. Xavier
+zakłada zbliżoną wariancję sygnału na wejściu i wyjściu warstwy (dobrze
+sprawdza się m.in. dla tanh/sigmoid), natomiast Kaiming jest
+zoptymalizowany pod kątem nieliniowości typu ReLU. Takie rozdzielenie
+inicjalizacji zapewnia stabilny start uczenia i ogranicza ryzyko
+zanikania lub eksplozji gradientów.
+W modelach cyklicznych statystyki normalizacji batchowej (BatchNorm)
+obliczane są wspólnie wzdłuż dodatkowego wymiaru odpowiadającego
+orientacji filtrów. Dzięki temu żaden kierunek obrotu nie jest
+faworyzowany, a własność ekwiwariancji rotacyjnej pozostaje zachowana.
 
 ### Procedura uruchomienia eksperymentu
 
@@ -1331,7 +1351,7 @@ ${VENVPY} main.py --test \
   --use-prerotated-test-set
 ```
 
-### Nazwenictwo i dodatkowe opcje
+### Konwencje nazewnicze i parametry pomocnicze
 
 Ścieżki i nazwy plików są spójne z konwencją launchera: 
 `LEGO-<model>-<act>_<train>.pt`oraz katalogami wynikowymi w formacie `<train>_test_on_<test>`.
@@ -1394,29 +1414,42 @@ logarytmiczny kosztem większej troski o okolice środka.
 Wszystkie eksperymenty realizowane zostały w środowisku PyTorch z
 rozszerzeniem CUDA dla warstwy cylindrycznej, dodatkowo zrobiona została automatyczna
 optymalizacja hiperparametrów w Optunie dla wybranych modeli (w tym referencyjnego)
-[@pytorch-docs; @akiba2019optuna]. Pipeline danych obejmuje warianty
-IDX i NPY oraz generator zbiorów rotowanych i zbiorów połączonych ze sobą(merged).
+[@pytorch-docs; @akiba2019optuna]. Proces przetwarzania danych obejmuje warianty
+IDX i NPY oraz generator zbiorów rotowanych i zbiorów połączonych ze sobą (merged).
 Wyniki treningu oraz testów dla każdego modelu są zapisywana w formacie txt wraz z
-macierzami pomyłek w fomratach png oraz npy. Następne dane są sprawdzane i automatyczne 
-generowane są heatmapy train-test oraz ranking modeli.
+macierzami pomyłek w formatach png oraz npy. Następne dane są sprawdzane i automatyczne 
+generowane są mapy cieplne (heatmaps) train-test oraz ranking modeli.
 Zapisy metryk i konfiguracji z optuny trafiają do plików CSV i JSON, co
-ułatwia powtarzalność oraz porównywanie konfiguracji. Dodakowo najlepsze checkpointy 
+ułatwia powtarzalność oraz porównywanie konfiguracji. Dodakowo najlepsze punkty kontrolne (checkpoints)
 dla danego przypadku są zapisane jako modele już przetrenowane .pt. 
 Wykorzystywany był otymalizator SGD wraz  z *momentum* i *weight decay*. 
 Zakresy i sposób doboru wartości hiperparametrów opisanostały w części poświęconej HPO.
 
 ## Warstwa `CyConv2d` oraz jej implementacja
 
-Warstwa `CyConv2d` korzysta z rozszerzenia C++/CUDA kompilowanego jako `CyConv2d_cuda`.
-Pliki źródłowe wykorzystywane do kompilacji to `cycnn.cpp` i `cycnn_cuda.cu`, ich budowanie
-przy użyciu `setuptools` z `BuildExtension`. Dzięki temu wywołania tej biblioteki z poziomu Pythona
-trafiają bezpośrednio do rdzeni CUDA.
-W pliku `cycnn.cpp` udostępnione są funkcje `forward(...)` i `backward(...)`
-z użyciem pybind11. Przyjmują one tensory `input`, `weight` oraz bufor
-`workspace`, a także parametry geometrii: `stride`, `padding`, `dilation`.
-Przed przekazaniem do implementacji CUDA sprawdzane jest, czy dane
-znajdują się na GPU i mają ciągły układ w pamięci. Następnie wywoływane są
-funkcje `cyconv2d_cuda_forward` i `cyconv2d_cuda_backward`.
+Warstwa `CyConv2d` korzysta z rozszerzenia C++/CUDA, kompilowanego jako moduł
+`CyConv2d_cuda`. Rozszerzenie to pochodzi z publicznie dostępnej implementacji
+CyCNN [@kim2020cycnn; @cycnn-github], która została przystosowana do środowiska
+eksperymentalnego opisanego w niniejszej pracy. Rozszerzenie to umożliwia 
+bezpośrednie wykonywanie obliczeń na procesorze graficznym
+z pominięciem interpretowanej części kodu Pythona, co znacząco zwiększa wydajność.
+
+Implementacja składa się z dwóch głównych plików źródłowych: `cycnn.cpp` oraz
+`cycnn_cuda.cu`. Pierwszy z nich odpowiada za integrację kodu z Pythona przy
+użyciu biblioteki **pybind11**, natomiast drugi zawiera właściwe jądra obliczeniowe CUDA.
+Kompilacja odbywa się z wykorzystaniem narzędzia `setuptools` oraz klasy
+`BuildExtension`, co pozwala na automatyczne zbudowanie modułu w trakcie instalacji.
+
+Plik `cycnn.cpp` definiuje funkcje `forward()` i `backward()`, które stanowią interfejs
+między częścią wysokopoziomową (Python) a niskopoziomową (CUDA). Funkcje te przyjmują
+tensory wejściowe (`input`), wagi (`weight`), bufor roboczy (`workspace`) oraz
+parametry konwolucji takie jak `stride`, `padding` i `dilation`.
+Przed przekazaniem danych do warstwy GPU weryfikowana jest poprawność ich formatu,
+między innymi to, czy znajdują się w pamięci karty graficznej i mają ciągły układ
+w przestrzeni adresowej, a następnie po spełnieniu werfikacji wywoływane są funkcje
+`cyconv2d_cuda_forward` i `cyconv2d_cuda_backward`, które realizują obliczenia
+propagacji w przód i wstecz.
+
 
 Po stronie PyTorch warstwa jest opakowana w `CyConv2dFunction` z własnymi
 `forward` i `backward`. Moduł `CyConv2d` przechowuje wagi o kształcie
@@ -1446,11 +1479,13 @@ bindingi z `cycnn.cpp`.
 Modele definiowane są w stylu modułów `nn.Module`, zaś pętle uczące
 korzystają z klasycznego układu: forward, obliczenie straty, backward,
 aktualizacja optymalizatora. Zastosowane zostały usprawnienia backendowe
-(`torch.backends.cudnn.benchmark = True`, czyli ustanienie F32 tam, gdzie jest to możliwe),
-co pozwaliło skrócić czas uczenia na użytych GPU. W modelach jest używany optymalizator
-SGD z *momentum* i *weight decay*, a harmonogram uczenia opiera się
-na `ReduceLROnPlateau`. Kod modeli jest kompatybilny z ekosystemem i API
-PyTorcha, przez co warstwy bazowe można bez problemowo wymieniać na odpowiedniki
+(`torch.backends.cudnn.benchmark = True`, czyli ustanienie Float32 
+(pojedynczej precyzji zmiennoprzecinkowej) tam, gdzie jest to możliwe), 
+co pozwaliło skrócić czas uczenia na użytych GPU. 
+W modelach jest używany optymalizator SGD z *momentum* i *weight decay*, 
+a harmonogram uczenia opiera się na `ReduceLROnPlateau`. 
+Kod modeli jest kompatybilny z ekosystemem i API PyTorcha, przez co warstwy 
+bazowe można bez problemowo wymieniać na odpowiedniki
 cylindryczne bez zmian w pozostałych fragmentach sieci neuronowej.
 
 ## Struktura projektu
@@ -1459,7 +1494,7 @@ Projekt podzielony jest na dwie wzajemnie uzupełniające się części. Repozyt
 treningowe zawiera modele (VGG, ResNet oraz CyVGG, CyResNet),
 warstwę `CyConv2d` z rozszerzeniem C++/CUDA, loader danych dla
 formatów IDX i NPY, transformacje i mapowania polarne oraz
-główny skrypt `main.py` oraz launchery dla poszczególnych datasetów. 
+główny skrypt `main.py` oraz skrypty uruchomieniowe dla poszczególnych datasetów. 
 Znajdują się tam także pliki uruchamiające Optunę i konfiguracje eksperymentów.
 
 Repozytorium zarządzające skupia narzędzia do przygotowania danych,
@@ -1468,7 +1503,7 @@ interfejs CLI (Command Line Interface), który buduje zbiory, wczytuje logi i ar
 zapisuje metryki do SQLite oraz generuje mapy ciepła train-test i
 zestawienia rankingowe. W pracy wykorzystano bibliotekę Typer (Python), która upraszcza
 definiowanie poleceń oraz automatycznie generuje pomoc kontekstową i
-spójny system wywołań. Artefakty w repozytorium tresingowym są porządkowane
+spójny system wywołań. Artefakty w repozytorium treningowym są porządkowane
 w powtarzalnej strukturze katalogów: `logs/` dla przebiegów, `saves/` dla wag `.pt`,
 foldery z macierzami pomyłek w wariancie `.npy` i `.png`, a wyniki
 zbiorcze w `results/`, dzięki czemu repozytorium zarządzające 
@@ -1482,7 +1517,8 @@ modelu, zbioru, wariantu przekształceń i ustawień treningu. W trakcie
 ewaluacji zapisywana jest macierz pomyłek oraz podstawowe metryki
 dokładności. Repozytorium orkiestrujące dostarcza komendy CLI do pełnego
 przebiegu. Najpierw `preprocess` przygotowuje zbiory rotowane i zestawy
-połączone. Następnie uruchamiany jest trening i test, po czym `ingest`
+połączone. Następnie uruchamiany jest trening i test, 
+po skończeniu obliczeń komenda `ingest` odpowiada
 zbiera logi oraz wyniki i zapisuje je do bazy SQLite. Komenda
 `check-logs` weryfikuje kompletność przebiegów. Moduły `analyze` i
 `matrix-analyzer` tworzą mapy ciepła train-test, agregują macierze
@@ -1505,7 +1541,7 @@ polarnych. Z tego powodu wykorzystana została biblioteka Optuna
 (*Hyperparameter Optimization, HPO*).
 
 W eksperymentach użyty został algorytm próbkowania TPE (Tree structured
-Parzen Estimator) oraz mechanizm pruning Median, który umożliwia
+Parzen Estimator)[@akiba2019optuna] oraz mechanizm pruning Median [@optuna-docs], który umożliwia
 wcześniejsze przerywanie prób o niskiej jakości. Dzięki temu czas potrzebnych obliczeń
 został skrócony o około  trzydzieści procent. Wyniki każdej próby są zapisywane
 do plików CSV i JSON, co ułatwia późniejszą analizę oraz wierne
@@ -1575,6 +1611,13 @@ docker run \
   cycnn:latest
 
 ```
+
+Obraz cycnn:latest został przygotowany samodzielnie w ramach pracy,
+a jego plik Dockerfile znajduje się w repozytorium źródłowym projektu [CyCNN-Enhanced](https://github.com/Fluorky/CyCNN-Enhanced) [@cycnn-enhanced],
+(w katalogu cycnn/). Zawiera on definicję środowiska opartego na oficjalnym
+obrazie pytorch z dodaną obsługą CUDA, biblioteką cuDNN oraz
+pakietami niezbędnymi do uruchomienia warstwy CyConv2d i narzędzi ewaluacyjnych.
+
 ### WSL2
 WSL2 umożliwia pracę z subsystemem Linux w środowisku Windows 
 z dostępem do tego samego obrazu Dockera oraz tej samej konfiguracji. 
@@ -1730,16 +1773,18 @@ i LEGO. Dla wszystkich zastosowano spójny preprocessing, ustaloną
 rozdzielczość wejścia oraz normalizację. Dane przygotowano w dwóch
 formatach wejściowych (IDX i NPY), a następnie wygenerowano warianty
 obrotowe w dwóch trybach: kąty stałe oraz przedziały kątowe.
-Na tej podstawie zbudowano również presety złączone (np.
+Na tej podstawie zbudowano również połączone zestawy danych (np.
 `merged_fixed_30`, `merged_range_full_0_360` oraz wersje z dopiskiem
 `+ non_rotated`) tak, aby systematycznie zbadać uogólnianie „trenuj na
 X, testuj na Y”.
 
 Aby wyeliminować wpływ przypadkowego doboru hiperparametrów, kolejnym kroku
-kroku wykonano automatyczną optymalizację (Optuna, TPE + pruning) na
+kroku wykonano automatyczną optymalizację (Optuna, algorytm TPE z mechanizmem przycinania (ang. pruning),
+który umożliwia wcześniejsze przerywanie prób o niskiej jakości [@akiba2019optuna]) na
 przypadkach *non_rotated*, przy czym też został przeprowadzony na zbiorze GTSRB dodatkowy
 trening tak aby sprawdzić czy da się uzyskać większą odporność na obrót
-samą zmianą sposobu wybierania nalepszego checkpointu. W drugim przypadku trening
+samą zmianą sposobu wybierania nalepszego modelu (ang. checkpoint), 
+czyli zapisanego stanu sieci o najwyższej dokładności na zbiorze walidacyjnym. W drugim przypadku trening
 pozostaje *non_rotated* (bez obrotów w danych), ale walidacja i kryterium
 wyboru modelu patrzą już na zachowanie względem kątów.
 Wyniki pokazały, że początkowe parametry zostały ustawione właściwie, 
@@ -1749,27 +1794,11 @@ optymalizator`SGD` z `momentum` i `weight_decay`), a różnice dotyczą
 wyłącznie architektury splotu (`Conv2d` → `CyConv2d`) i przygotowania 
 danych poprzez dodanie rotacji.
 
-Uruchomienia są orkiestrane na podstawie plików JSON opisujących scenariusze:
+Uruchomienia są planowane i wykonywane na podstawie plików JSON opisujących scenariusze:
 każdy zestaw treningowy ma przypisaną listę zestawów testowych
 (ścieżki 1:1 z drzewem katalogów). Rozwiązanie to upraszcza replikację,
 pozwala pozwala łatwo utworzyć macierze porównań oraz utworzyć
 wizualizacje w postaci map ciepła „train-test”.
-
-Obliczenia realizowane były na GPU NVIDIA RTX 3070 Ti i RTX 3060.
-Akceleracja opiera się na wykorzystaniu CUDA, cuDNN i cuBLAS, 
-dodatkowo włączony jest tryb TF32 (Ampere), a tam gdzie to bezpieczne 
-używana jest mieszana precyzja przez `torch.cuda.amp`. 
-Należy uwzględnić bufor roboczy`CyConv2d` (~4 GiB VRAM). 
-Ziarna generatorów pseudolosowych zostały z góry ustawiane dla Pythona, NumPy i PyTorcha/ 
-Ustawiene został cudnn.benchamar na wartość true (`cudnn.benchmark = True`)
-celem redukcji czasu trenowania, co nie zaburza porównywalności wyników.
-
-Wyniki zapisywane zostały w spójnej strukturze zawierającej: logi z przebiegów, najlepsze
-checkpointy `.pt`, macierze pomyłek w formatach `.npy` i `.png`,
-zestawienia CSV oraz wpisy w bazie SQLite. Na tej podstawie
-budowane zostały rankingi oraz statystyki zbiorcze (średnia, mediana,
-odchylenie standardowe). Poniżej opisany został sposób definiowania scenariuszy,
-procedurę pomiaru skuteczności oraz metodę agregacji metryk.
 
 \newpage
 
@@ -1828,8 +1857,10 @@ wspólne dla całego zbioru scenariuszy.
 
 ## Pomiar skuteczności - accuracy, mapy ciepła
 
-Skuteczność modeli oceniana jest na podstawie dokładności top-1 dla
-każdej pary zbiorów treningowego i testowego. Wynikami są macierze
+Skuteczność modeli oceniana jest na podstawie dokładności *top-1* 
+(czyli odsetka przypadków, w których model poprawnie wskazał klasę o 
+najwyższym prawdopodobieństwie) dla każdej pary zbiorów 
+treningowego i testowego. Wynikami są macierze
 accuracji (train-test), w których każda komórka zawiera wartość
 procentową (w praktyce zapis 0-1) uzyskaną przez dany model w układzie
 „trenuj na X, testuj na Y”. Dane zapisywane są w dwóch plikach:
@@ -1843,16 +1874,25 @@ $$
      {\sum_{k=1}^{C}(\mathrm{TP}_k+\mathrm{FP}_k+\mathrm{FN}_k)}
 =\frac{\operatorname{tr}(CM)}{\sum CM}.
 $$
+Wskaźnik ten odpowiada dokładności mikroagregowanej, tzn. obliczanej 
+na podstawie łącznej liczby poprawnych klasyfikacji (True Positives) 
+i wszystkich próbek we wszystkich klasach, bez ich ważenia osobno.
 Wartość ta trafia następnie do odpowiedniej komórki macierzy train-test
 i jest prezentowana jako odsetek poprawnych klasyfikacji.
 
-**Macro-accuracy** - niewykorzystywana w tej pracy jest to średnia dokładność
-liczona osobno dla każdej klasy:
+**Macro-accuracy** - metryka niewykorzystywana w tej pracy, 
+określająca średnią dokładność obliczaną niezależnie dla każdej klasy:
 $$
 \mathrm{Acc}_{\mathrm{macro}}=
 \frac{1}{C}\sum_{k=1}^{C}
 \frac{\mathrm{TP}_k}{\mathrm{TP}_k+\mathrm{FN}_k}.
 $$
+Wartość ta odpowiada prostemu uśrednieniu dokładności poszczególnych klas, 
+bez uwzględniania ich liczności w zbiorze danych.
+
+Określenia `micro` oraz `macro` pochodzą z literatury dotyczącej ewaluacji klasyfikacji wieloklasowej 
+i odnoszą się odpowiednio do sposobu agregacji wyników - globalnie (micro) lub niezależnie dla każdej klasy (macro)
+[@scikit-learn; @powers2011evaluation].
 
 Mapy ciepła służą do wzrokowej oceny stabilności względem zmian rozkładu
 kątów: jaśniejsze pola oznaczają wyższe accuracy, ciemniejsze oznaczają
@@ -1866,8 +1906,12 @@ porównania modeli i transformacji (np. profile Acc(Δθ) oraz AUC\(_\theta\)).
 Dla każdego modelu agregowane są wyniki z przypisanych scenariuszy
 kątowych, raportowane są: mean, median, min, max,
 std. Dodatkowo liczone są wskaźniki stabilności: robust mean
-(średnia ucięta 10%) oraz IQR. Wyznaczany jest także
-gap train-test - różnica między przypadkami „train-like”
+(średnia ucięta 10%) oraz IQR (interquartile range - rozstęp międzykwartylowy).
+Średnia ucięta 10% została zastosowana w celu ograniczenia wpływu wartości odstających,
+które mogą wynikać z ekstremalnych kątów testowych.
+Wskaźnik IQR natomiast opisuje rozrzut 50% środkowych wyników, co pozwala ocenić spójność
+modelu bez względu na pojedyncze odchylenia.  
+Wyznaczany jest także gap train-test - różnica między przypadkami „train-like”
 (np. zawierającymi `non_rotated` albo `plus_non_rotated`), a resztą.
 
 Wyniki i metadane trafiają do SQLite (przykładowo do tabel `evaluations`,
@@ -1885,10 +1929,11 @@ przedziałów oraz różnica kątowa $\Delta\theta$ na okręgu z wrap-around
 Następnie obliczane są następujące parametry:  \
 - krzywe $Acc(\Delta\theta)$ z koszykowaniem co
   $\theta_{\text{step}}=15^\circ$,  \
-- $AUC_{\theta}$ (pole pod krzywą, obliczane metododa trapezową wraz normalizacja przez
-  $180^\circ$),  \
+- $AUC_{\theta}$ (pole pod krzywą $Acc(\Delta\theta)$, obliczane metodą trapezową
+  i znormalizowane względem zakresu kątów $180^\circ$),
 - $Acc_{\min}$ (najgorszy koszyk),  \
-- $SD_{\theta}$ (odchylenie między koszykami).  \
+- $SD_{\theta}$ (odchylenie standardowe dokładności pomiędzy koszykami,
+  obliczane według miary L2),   \
 
 Eksport tych parametrów odbywa się do `delta_curves/acc_vs_delta_<MODEL>.csv` oraz
 `auc_theta_ranking.csv`. Warto podkreślić, że spójny krok kątowy i jednolite zasady wrap-around
@@ -1898,16 +1943,21 @@ zapewniają porównywalność między modelami.
 
 Rankingi modeli są tworzone na podstawie następujących dwóch sposobów:
 
-**Quality-only.** Sortowanie po `avg`, a przy remisach kolejno:
-`std` (niższe lepsze), `min`, `median`, `max`, `robust_mean`, `IQR`
-(niższy lepszy). Ich eksport odbywa się do pliku `ranking_quality.csv`.
+**Quality-only** (z ang. „tylko jakość”) - ranking oparty wyłącznie na 
+metrykach jakościowych. Sortowanie odbywa się według średniej (`avg`), 
+a przy remisach kolejno według `std`, `min`, `median`, `max`, 
+`robust_mean` oraz `IQR` (niższe wartości uznawane są za lepsze).
 
-**Time-aware.** Uwzględnianie kosztu czasowego:  \
-- `avg/time` oraz `min/time` (`ranking_timeaware_avgperf.csv`),  \
+**Time-aware** (z ang. „uwzględniający czas treningu”).  
+Ranking uwzględnia koszt czasowy procesu uczenia modeli, czyli relację 
+między jakością a długością treningu.  
+Stosowane warianty:  
+- `avg/time` oraz `min/time` (`ranking_timeaware_avgperf.csv`),  
 - wariant zbalansowany `avg` vs `avg_perf`
-  (`ranking_timeaware_balanced.csv`),  \
-- wariant zbalansowany tylko per-time
-  (`ranking_balanced_per_time.csv`).  \
+  (`ranking_timeaware_balanced.csv`),  
+- wariant zbalansowany tylko względem czasu
+  (`ranking_balanced_per_time.csv`).
+
 
 Parametry i FLOPs nie są obecnie uwzględniane. Dzięki spójnym ścieżkom
 artefaktów i zapisowi metryk do CSV/SQLite porównywanie wariantów
@@ -1942,10 +1992,10 @@ eksport wyników. Zastosowana separacja odpowiedzialności zapewnia
 powtarzalność, transparentność oraz możliwość niezależnej rozbudowy
 poszczególnych warstw.
 
-### Interfejs uruchomieniowy - CLI
+### Skrypt uruchomieniowy - CLI
 
 Centralnym wejściem do systemu jest interfejs wiersza poleceń
-(`cli.py`), który spina operacje ingestii artefaktów, analizy macierzy
+(`cli.py`), który spina operacje obróbki i analizy artefaktów, analizy macierzy
 pomyłek oraz budowy macierzy „train-test”. Program przyjmuje ścieżki do
 logów treningowych i testowych, lokalizacje plików z macierzami pomyłek
 oraz parametry sterujące (wybór zbioru, wariantu metryki, katalogu
@@ -1959,7 +2009,7 @@ Za wczytanie i ujednolicenie materiału empirycznego odpowiada moduł
 `analysis/log_ingestor.py`. Z poziomu nazewnictwa plików odtwarza on
 konfigurację eksperymentów (architektura, transformacja, para
 train→test, znacznik czasu), następnie parsuje przebiegi uczenia i testu
-oraz rejestruje macierze pomyłek w ustalonym formacie. Wszystkie dane
+oraz zapisuje macierze pomyłek w ustalonym formacie. Wszystkie dane
 są porządkowane w relacyjnej bazie SQLite (schemat utrzymuje
 `utils/db_handler.py`), co ułatwia ich ponowne użycie, kontrolę spójności
 i odtworzenie pełnej historii eksperymentów.
@@ -1970,10 +2020,14 @@ Właściwa analiza ilościowa realizowana jest w
 `analysis/matrix_analyzer.py`. Moduł ten wyznacza dokładność micro i
 macro bezpośrednio z macierzy pomyłek, agreguje wyniki w ujęciu par
 train→test oraz w ujęciu rodzin modeli, a także oblicza miary
-stabilności względem rotacji: krzywe Acc(Δθ), pole pod krzywą
-AUC\_θ oraz wartość „worst-case”. Uzupełniają je miary
+stabilności względem rotacji:  krzywe $Acc(\Delta\theta)$, czyli zależność 
+dokładności od różnicy kątowej między zbiorem treningowym a testowym, 
+oraz pole pod tą krzywą $AUC_\theta$, które stanowi miarę ogólnej 
+odporności modelu na obrót, a także wartość „worst-case”. Uzupełniają je miary
 rozkładowe (średnia, mediana, odchylenie standardowe, rozstęp
-międzykwartylowy, średnia ucięta) oraz metryki „per-time”, w których
+międzykwartylowy (będący różnicą między trzecim a pierwszym kwartylem 
+rozkładu wyników, określający, jak szeroko rozproszone są wartości środkowe 
+i pomagający ocenić stabilność modelu), średnia ucięta) oraz metryki „per-time”, w których
 jakość odnoszona jest do czasu uczenia. Wyniki są eksportowane do
 uporządkowanej struktury plików CSV (z katalogiem nadrzędnym
 `results/exports/<DATASET>/<micro|macro>/`) oraz rejestrowane w logu
@@ -2227,13 +2281,13 @@ $\mathrm{Acc}(\Delta\theta)$ po zbinowaniu różnic kątów z wrap-around oraz
 avg\_perf rozumiane jako $\mathrm{mean}(\mathrm{Acc})/\mathrm{train\_time}$.
 
 *[Rys. 18 - Δ (log − linear) - słupki dla MNIST (np. CyResNet)]*  \
-![Rys. 18 - Δ (log − linear) - słupki dla MNIST (np. CyResNet)](media%2Fassets%2Fplots%2Fdelta_log_minus_linear_MNIST_CyResNet56.png)  \
+![Rys. 18 - Δ (log − linear) - słupki dla MNIST (np. CyResNet)](media%2Fassets%2Fplots%2Fdelta_log_linear_MNIST_CyResNet56.png)  \
 Rys. 18: Wpływ transformacji: na MNIST log-polar podnosi zarówno jakość, jak i stabilność oraz lekko poprawia per-time.  \
 
 \newpage
 
 *[Rys. 19 - Δ (log − linear) - słupki dla GTSRB (np. CyResNet)]*  \
-![Rys. 19 - Δ (log − linear) - słupki dla GTSRB (np. CyResNet)](media%2Fassets%2Fplots%2Fdelta_log_minus_linear_GTSRB_CyResNet56.png)
+![Rys. 19 - Δ (log − linear) - słupki dla GTSRB (np. CyResNet)](media%2Fassets%2Fplots%2Fdelta_log_linear_GTSRB_CyResNet56.png)
 Rys. 19: W przypadku zbioru GTSRB model linear-polar częściej wygrywa w avg i AUC θ ; log-polar bywa korzystny punktowo.
 
 ## Tabele z wynikami
@@ -2748,7 +2802,7 @@ CyResNet56-linear (cykliczny).
 ![resnet56-linearpolar-rotated-270-300_test_on_merged_datasets_merged_range_full_0_360_plus_non_rotated_confusion_matrix_row_norm.png](media%2Fassets%2Fplots%2Fresnet56-linearpolar-rotated-270-300_test_on_merged_datasets_merged_range_full_0_360_plus_non_rotated_confusion_matrix_row_norm.png)  \
 Rys. 40 - Znormalizowana macierz pomyłek (rotated-270-300) - ResNet56 linearpolar na pełnym zbiorze GTSRB RGB (zmergowane wszystkie przypadki 0-360)  \
 Widoczne jest rozproszenie błędów poza przekątną, szczególnie w rodzinach klas o podobnym kształcie. Przekątna osłabiona w szeregu wierszy.  \
-![cyresnet56-linearpolar-rotated-270-300_test_on_merged_datasets_merged_range_full_0_360_plus_non_rotated_confusion_matrix_row_norm-copy.png](media%2Fassets%2Fplots%2Fcyresnet56-linearpolar-rotated-270-300_test_on_merged_datasets_merged_range_full_0_360_plus_non_rotated_confusion_matrix_row_norm-copy.png)  \
+![cyresnet56-linearpolar-rotated-270-300_test_on_merged_datasets_merged_range_full_0_360_plus_non_rotated_confusion_matrix_row_norm.png](media%2Fassets%2Fplots%2Fcyresnet56-linearpolar-rotated-270-300_test_on_merged_datasets_merged_range_full_0_360_plus_non_rotated_confusion_matrix_row_norm.png)  \
 Rys. 41 - Znormalizowana macierz pomyłek (rotated-270-300) - CyResNet56 linearpolar na pełnym zbiorze GTSRB RGB (zmergowane wszystkie przypadki 0-360)  \
 Przekątna wyraźnie mocniejsza (wyższy recall), a wyspy poza przekątną słabsze i bardziej skupione. Spada liczba przerzutów do klas ‘symetrycznych’ kątowo.  \
 
