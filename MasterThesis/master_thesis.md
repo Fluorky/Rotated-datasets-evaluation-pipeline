@@ -3382,23 +3382,41 @@ nawet po nauce z rotacją, gdyż nie posiadają one odporności na rotacje obraz
 \begin{table}[ht]
 \centering
 \small
-\setlength{\tabcolsep}{4pt}
-\renewcommand{\arraystretch}{1.12}
-\resizebox{\linewidth}{!}{%
+\setlength{\tabcolsep}{6pt}
+\renewcommand{\arraystretch}{1.15}
 \begin{tabular}{lccc}
 \hline
-Zbiór & Lider średniej (avg) & Lider AUC\(_\theta\) & Lider avg\_perf \\
+Zbiór & Cy (avg, model) & CNN (avg, model) & $\Delta$avg \\
 \hline
-GTSRB      & CyResNet56-linear (0.8688)  & CyResNet56-linear (0.8640)  & CyVGG19-log (0.001250) \\
-GTSRB\_RGB & CyVGG19-linear (0.9025)     & CyVGG19-linear (0.9006)     & CyVGG19-linear (0.001791) \\
-LEGO       & CyVGG19-linear (0.8816)     & CyVGG19-linear (0.8789)     & ResNet56-linear (0.001429) \\
-MNIST      & CyResNet56-log (0.9544)     & CyResNet56-log (0.9520)     & CyVGG19-log (0.001005) \\
+MNIST      & CyResNet56-log (0{,}955)   & ResNet56-log (0{,}710)   & +0{,}245 \\
+GTSRB      & CyResNet56-linear (0{,}900) & ResNet56-linear (0{,}582) & +0{,}317 \\
+GTSRB\_RGB & CyResNet56-linear (0{,}920) & ResNet56-linear (0{,}622) & +0{,}298 \\
+LEGO       & CyVGG19-linear (0{,}882)    & VGG19-linear (0{,}850)    & +0{,}031 \\
 \hline
-\end{tabular}%
-}
-\caption{Liderzy średniej jakości, stabilności (AUC\(_\theta\)) i efektywności
-per-time dla metryki micro; porównanie rodzin i transformacji.}
+\end{tabular}
+\caption{Porównanie średniej dokładności (avg) modeli cyklicznych i bazowych.}
+\label{tab:cycnn-avg}
 \end{table}
+
+\begin{table}[ht]
+\centering
+\small
+\setlength{\tabcolsep}{6pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{lccc}
+\hline
+Zbiór & Cy (AUC$_\theta$, model) & CNN (AUC$_\theta$, model) & $\Delta$AUC$_\theta$ \\
+\hline
+MNIST      & CyResNet56-log (0{,}953)   & ResNet56-log (0{,}689)   & +0{,}264 \\
+GTSRB      & CyResNet56-linear (0{,}896) & ResNet56-linear (0{,}554) & +0{,}342 \\
+GTSRB\_RGB & CyResNet56-linear (0{,}919) & ResNet56-linear (0{,}597) & +0{,}322 \\
+LEGO       & CyVGG19-linear (0{,}879)    & VGG19-linear (0{,}845)    & +0{,}034 \\
+\hline
+\end{tabular}
+\caption{Porównanie stabilności rotacyjnej (AUC$_\theta$) modeli cyklicznych i bazowych.}
+\label{tab:cycnn-auc}
+\end{table}
+
 
 Źródło danych: dane z results/exports/<DATASET>/micro/*.csv skonsolidowane w family_summary_<DATASET>_micro.csv.
 Interpretacja: kolumny wskazują najlepszą rodzinę/transformację dla średniej jakości (avg), stabilności rotacyjnej 
