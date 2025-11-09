@@ -2716,13 +2716,13 @@ rozsądnym wyborem jest ResNet-linear.
 \newpage
 
 [Rys 36-38 - Acc(Δθ) - panel 2×2 ]  \
-![Rys. 36 - Acc(Δθ) - panel 2×2 MNIST](media%2Fassets%2Fplots%2Facc_vs_delta_MNIST_2x2.png)  \
+![Rys. 36 - Acc(Δθ) - panel 2×2 MNIST](media%2Fassets%2Fplots%2Facc_vs_delta_MNIST_all.png)  \
 Rys. 36 - Acc(Δθ) - panel 2×2 MNIST  \
-![Rys. 37 - Acc(Δθ) - panel 2×2 GTSRB-RGB](media%2Fassets%2Fplots%2Facc_vs_delta_GTSRB_RGB_2x2.png)  \
+![Rys. 37 - Acc(Δθ) - panel 2×2 GTSRB-RGB](media%2Fassets%2Fplots%2Facc_vs_delta_GTSRB_RGB_all.png)  \
 Rys. 37 - Acc(Δθ) - panel 2×2 GTSRB-RGB  \
-![Rys. 38 - Acc(Δθ) - panel 2×2 GTSRB](media%2Fassets%2Fplots%2Facc_vs_delta_GTSRB_2x2.png)  \
+![Rys. 38 - Acc(Δθ) - panel 2×2 GTSRB](media%2Fassets%2Fplots%2Facc_vs_delta_GTSRB_all.png)  \
 Rys. 38 - Acc(Δθ) - panel 2×2 GTSRB  \
-![Rys. 39 - Acc(Δθ) - panel 2×2 LEGO](media%2Fassets%2Fplots%2Facc_vs_delta_LEGO_2x2.png)  \
+![Rys. 39 - Acc(Δθ) - panel 2×2 LEGO](media%2Fassets%2Fplots%2Facc_vs_delta_LEGO_all.png)  \
 Rys. 39 - Acc(Δθ) - panel 2×2 LEGO  \
  
 Przekrój stabilności: przewaga modeli cyklicznych utrzymuje się niezależnie od zbioru.  \
