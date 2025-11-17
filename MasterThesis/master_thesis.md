@@ -2963,11 +2963,11 @@ Po wyjściu poza ten zakres dokładność systematycznie spada (rozjaśnienie ko
 Transformacja *log-polar* (rys. 22) łagodzi spadek jakości, kolumny stają się mniej kontrastowe, 
 ale efekt nie jest całkowicie eliminowany, gdyż nadal widoczny jest dryf dokładności dla odległych kątów.
 
-![VGG19 - linear-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_vgg19_linearpolar.png)  
+![VGG19 - linear-polar (GTSRB)](media/assets/heatmaps_compressed/GTSRB/heatmap_vgg19_linearpolar.jpg)  
 *Rys. 21.* VGG19 - linear-polar (GTSRB). Wysoka dokładność ograniczona do przekatnych, brak uogólniania na nieznane rotacje.  
 
  
-![VGG19 - log-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_vgg19_logpolar.png)  
+![VGG19 - log-polar (GTSRB)](media/assets/heatmaps_compressed/GTSRB/heatmap_vgg19_logpolar.jpg)  
 *Rys. 22.* VGG19 - log-polar (GTSRB). Transformacja log-polar nieco poprawia uogólnianie - kolumny mniej kontrastowe, ale spadek jakości nadal widoczny.  
 
 
@@ -2978,10 +2978,10 @@ treningowego i gwałtowne pogorszenie jakości poza przekątną. Wariant *log-po
 łagodzi ten efekt i pozwala utrzymać nieco wyższe wyniki dla testów odległych od kąta 
 treningowego, ale wciąż widać wyraźny spadek poza przypadkami na których model był uczony.
 
-![ResNet56 - linear-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_resnet56_linearpolar.png)  
+![ResNet56 - linear-polar (GTSRB)](media/assets/heatmaps_compressed/GTSRB/heatmap_resnet56_linearpolar.jpg)  
 *Rys. 23.* ResNet56 - linear-polar (GTSRB). Silna zależność od kąta treningowego, brak ekwiwariancji rotacyjnej.  
 
-![ResNet56 - log-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_resnet56_logpolar.png)  
+![ResNet56 - log-polar (GTSRB)](media/assets/heatmaps_compressed/GTSRB/heatmap_resnet56_logpolar.jpg)  
 *Rys. 24.* ResNet56 - log-polar (GTSRB). Wariant log-polar poprawia stabilność przy większych odchyleniach, choć efekt pozostaje ograniczony.  
 
 
@@ -2994,19 +2994,19 @@ Oznacza to, że modele cykliczne potrafią poprawnie klasyfikować obrazy o orie
 wcześniej, zachowując ciągłość reprezentacji w przestrzeni kątów. Wariant *log-polar* (rys. 26 i 28) 
 dodatkowo wzmacnia ten efekt, szczególnie dla dużych odchyleń, zapewniając niemal płaską mapę dokładności.
 
-![CyVGG19 - linear-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_cyvgg19_linearpolar.png)  
+![CyVGG19 - linear-polar (GTSRB)](media/assets/heatmaps_compressed/GTSRB/heatmap_cyvgg19_linearpolar.jpg)  
 *Rys. 25. CyVGG19 - linear-polar (GTSRB).*  
 Architektura cykliczna utrzymuje wysoką jakość także w kolumnach odległych od diagonali.  
 
-![CyVGG19 - log-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_cyvgg19_logpolar.png)  
+![CyVGG19 - log-polar (GTSRB)](media/assets/heatmaps_compressed/GTSRB/heatmap_cyvgg19_logpolar.jpg)  
 *Rys. 26. CyVGG19 - log-polar (GTSRB).*  
 Wariant log-polar zwiększa stabilność, mapa niemal równomierna w całym zakresie.  
 
-![CyResNet56 - linear-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_cyresnet56_linearpolar.png)  
+![CyResNet56 - linear-polar (GTSRB)](media/assets/heatmaps_compressed/GTSRB/heatmap_cyresnet56_linearpolar.jpg)  
 *Rys. 27. CyResNet56 - linear-polar (GTSRB).*  
 Model cykliczny ResNet zachowuje równomierną dokładność i przewyższa wyraźnie wersję bazową. 
 
-![CyResNet56 - log-polar (GTSRB)](media/assets/heatmaps/GTSRB/heatmap_cyresnet56_logpolar.png)  
+![CyResNet56 - log-polar (GTSRB)](media/assets/heatmaps_compressed/GTSRB/heatmap_cyresnet56_logpolar.jpg)  
 *Rys. 28. CyResNet56 - log-polar (GTSRB).*  
 Połączenie cykliczności i log-polar daje najstabilniejszą reprezentację - minimalny spadek przy dużych rotacjach.
 
@@ -3039,11 +3039,11 @@ zakresie Δθ ≈ 30-60°, gdzie mapa jest bardziej wyrównana. Dodatkowo, obecn
 poprawia stabilność predykcji, co sugeruje, że barwne kontury i tła znaków dostarczają sieci 
 dodatkowych, mniej rotacyjnie wrażliwych wskazówek.
 
-![VGG19 - linear-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_vgg19_linearpolar.png){ width=75% .center }  
+![VGG19 - linear-polar (GTSRB RGB)](media/assets/heatmaps_compressed/GTSRB_RGB/heatmap_vgg19_linearpolar.jpg){ width=75% .center }  
 *Rys. 29. VGG19 - linear-polar (GTSRB RGB).*  
 Wysoka dokładność ograniczona do przekątnej, brak generalizacji na nieznane rotacje.  
 
-![VGG19 - log-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_vgg19_logpolar.png){ width=75% .center }  
+![VGG19 - log-polar (GTSRB RGB)](media/assets/heatmaps_compressed/GTSRB_RGB/heatmap_vgg19_logpolar.jpg){ width=75% .center }  
 *Rys. 30. VGG19 - log-polar (GTSRB RGB).*  
 Transformacja log-polar poprawia uogólnianie, kolumny testowe bardziej wyrównane.  
 
@@ -3056,11 +3056,11 @@ diagonali, ale widoczny jest spadek jakości w miarę oddalania się od niej. Z 
 zakresie kątów, co wskazuje, że model potrafi częściowo wykorzystywać barwne elementy znaków 
 (np. czerwone obramowanie) jako cechy mniej zależne od orientacji.
 
-![ResNet56 - linear-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_resnet56_linearpolar.png)  
+![ResNet56 - linear-polar (GTSRB RGB)](media/assets/heatmaps_compressed/GTSRB_RGB/heatmap_resnet56_linearpolar.jpg)  
 *Rys. 31. ResNet56 - linear-polar (GTSRB RGB).*  
 Umiarkowana odporność, spadek skuteczności dla rotacji spoza zakresu treningu.  
  
-![ResNet56 - log-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_resnet56_logpolar.png)  
+![ResNet56 - log-polar (GTSRB RGB)](media/assets/heatmaps_compressed/GTSRB_RGB/heatmap_resnet56_logpolar.jpg)  
 *Rys. 32. ResNet56 - log-polar (GTSRB RGB).*  
 Stabilniejsza dokładność przy większych kątach, lepsze wykorzystanie sygnału barwnego.  
 
@@ -3074,19 +3074,19 @@ co oznacza utrzymanie wysokiej dokładności nawet przy dużych różnicach Δθ
 Podobne zachowanie wykazuje CyResNet56 (rys. 35-36), którego wariant *linear-polar* prezentuje już niemal pełną 
 inwariancję rotacyjną, a *log-polar* wzmacnia ten efekt, minimalizując różnice między rotacjami.  
 
-![CyVGG19 - linear-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_cyvgg19_linearpolar.png){ width=80% .center }  
+![CyVGG19 - linear-polar (GTSRB RGB)](media/assets/heatmaps_compressed/GTSRB_RGB/heatmap_cyvgg19_linearpolar.jpg){ width=80% .center }  
 *Rys. 33. CyVGG19 - linear-polar (GTSRB RGB).*  
 Wysoka dokładność utrzymana w całym zakresie kątów, dobra generalizacja na rotacje niewidziane w treningu.  
  
-![CyVGG19 - log-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_cyvgg19_logpolar.png){ width=80% .center }  
+![CyVGG19 - log-polar (GTSRB RGB)](media/assets/heatmaps_compressed/GTSRB_RGB/heatmap_cyvgg19_logpolar.jpg){ width=80% .center }  
 *Rys. 34. CyVGG19 - log-polar (GTSRB RGB).*  
 Jeszcze gładszy rozkład dokładności, minimalne różnice między kolumnami testowymi.  
   
-![CyResNet56 - linear-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_cyresnet56_linearpolar.png){ width=80% .center }  
+![CyResNet56 - linear-polar (GTSRB RGB)](media/assets/heatmaps_compressed/GTSRB_RGB/heatmap_cyresnet56_linearpolar.jpg){ width=80% .center }  
 *Rys. 35. CyResNet56 - linear-polar (GTSRB RGB).*  
 Niemal jednorodny poziom skuteczności, wysoka odporność na duże kąty Δθ.  
 
-![CyResNet56 - log-polar (GTSRB RGB)](media/assets/heatmaps/GTSRB_RGB/heatmap_cyresnet56_logpolar.png){ width=80% .center }  
+![CyResNet56 - log-polar (GTSRB RGB)](media/assets/heatmaps_compressed/GTSRB_RGB/heatmap_cyresnet56_logpolar.jpg){ width=80% .center }  
 *Rys. 36. CyResNet56 - log-polar (GTSRB RGB).*  
 Najbardziej płaska mapa - połączenie cykliczności i log-polar zapewnia pełną stabilność rotacyjną.  
 
