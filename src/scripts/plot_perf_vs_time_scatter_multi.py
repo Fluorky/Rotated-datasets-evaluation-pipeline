@@ -211,14 +211,22 @@ def plot_scatter(points, fam_count, dataset, metric, out_path,
         if fam_count.get(fam, 0) > 0:
             h = plt.Line2D([0],[0], marker="o", linestyle="", markersize=6, color=col, label=fam)
             handles.append(h); labels.append(fam)
+    # if handles:
+    #     ax.legend(handles, labels, title="Family", loc="upper left")
+    #
+    # # axes & title
+    # ax.set_xlabel("Avg accuracy")
+    # ax.set_ylabel("Avg perf (mean(acc) / train_time)")
+    # ax.set_title(f"{dataset} — per-time vs average (metric={metric})")
+    # ax.grid(True, alpha=0.25)
     if handles:
-        ax.legend(handles, labels, title="Family", loc="upper left")
-
-    # axes & title
-    ax.set_xlabel("Avg accuracy")
-    ax.set_ylabel("Avg perf (mean(acc) / train_time)")
-    ax.set_title(f"{dataset} — per-time vs average (metric={metric})")
+        ax.legend(handles, labels, title="Rodzina modelu", loc="upper left")
+    ax.set_xlabel("Średnia dokładność (avg)")
+    ax.set_ylabel("Średnia wydajność per-time (avg_perf)")
+    ax.set_title(f"{dataset} — kompromis jakość / czas trenowania (metryka={metric})")
     ax.grid(True, alpha=0.25)
+
+
 
     # comfortable margins
     if points:
@@ -300,7 +308,7 @@ def main():
     ap.add_argument("--all", action="store_true", help="Plot all default datasets.")
     ap.add_argument("--metric", default="micro", choices=["micro","macro"])
     ap.add_argument("--exports-root", default="results/exports")
-    ap.add_argument("--out-dir", default="results/fig")
+    ap.add_argument("--out-dir", default="results/figv4")
 
     # Labeling strategies
     ap.add_argument("--label-strategy", default="per_family",
