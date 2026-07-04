@@ -6,12 +6,19 @@ import matplotlib.pyplot as plt
 from src.utils.db_handler import init_database, insert_training_logs, insert_test_logs, insert_training_run
 from src.utils.wsl_handler import sync_wsl_logs
 
+import ast
+
 
 def extract_config(line):
     if not isinstance(line, str):
         return {}
     match = re.search(r"configuration:\s+({.*})", line)
-    return eval(match.group(1)) if match else {}
+    if not match:
+        return {}
+    try:
+        return ast.literal_eval(match.group(1))
+    except (SyntaxError, ValueError):
+        return {}
 
 
 def parse_filename(filename):
@@ -164,11 +171,11 @@ def collect_log_files(log_path):
 
 
 def ingest_logs(
-    wsl_source: str,
-    local_logs_path: str,
-    db_path: str,
-    overwrite_logs=False,
-    overwrite_db=False
+        wsl_source: str,
+        local_logs_path: str,
+        db_path: str,
+        overwrite_logs=False,
+        overwrite_db=False
 ):
     print("🔄 Syncing logs from WSL...")
     sync_wsl_logs(wsl_source, local_logs_path, overwrite=overwrite_logs)
