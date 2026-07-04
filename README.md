@@ -1,4 +1,17 @@
-# MasterThesis
+# rotated-datasets-evaluation-pipeline
+
+Pipeline for generating rotated image dataset variants and evaluating CNN/CyCNN models across rotation-based train-test scenarios.
+
+## What this repository contains
+
+- dataset preparation utilities for MNIST, GTSRB, GTSRB_RGB and LEGO-like datasets
+- rotation pipeline for fixed-angle and angle-range variants
+- train/test scenario generation
+- log ingestion and validation
+- confusion matrix analysis
+- heatmap, ranking and learning-curve generation
+
+## Repository structure
 
 # Rotationally Invariant Neural Networks
 
