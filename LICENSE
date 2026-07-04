@@ -1,0 +1,29 @@
+MIT License
+
+Copyright (c) 2026 Maciej
+
+Scope of this license
+
+This license applies to the source code, scripts, configuration files, and project-specific documentation contained in this repository.
+
+Datasets, pre-trained models, third-party assets, and any files derived from external datasets are not relicensed by this repository. They remain subject to their original licenses, terms of use, and citation requirements. Users are responsible for ensuring that they have the appropriate rights to use, modify, and redistribute such materials.
+
+In particular, this repository may include or refer to datasets such as MNIST, GTSRB, GTSRB_RGB, LEGO-derived data, or generated/rotated variants of those datasets. The MIT License applies only to the original code and documentation authored for this project, not to the underlying external datasets unless explicitly stated otherwise.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice, this scope notice, and this permission notice
+shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
