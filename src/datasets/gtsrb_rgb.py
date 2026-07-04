@@ -1,15 +1,9 @@
 import os
-import struct
-import shutil
-import zipfile
 import numpy as np
-import pandas as pd
 from PIL import Image
 from pathlib import Path
-import matplotlib.pyplot as plt
-from kaggle.api.kaggle_api_extended import KaggleApi
+from src.datasets.gtsrb import download_dataset, prepare_gtsrb_dataset, check_dataset, clean_up
 
-from gtsrb import download_dataset, prepare_gtsrb_dataset, check_dataset, clean_up
 
 def save_as_idx(image_dir, output_prefix):
     """Convert 32x32 images into IDX format used in MNIST."""
@@ -32,23 +26,13 @@ def save_as_idx(image_dir, output_prefix):
 
     images = np.stack(images)
     labels = np.array(labels, dtype=np.uint8)
-    num_images, rows, cols, channels = images.shape
+    num_images, _, cols, channels = images.shape
 
     os.makedirs(os.path.dirname(output_prefix), exist_ok=True)
 
     np.save(f"{output_prefix}_images.npy", images)
     np.save(f"{output_prefix}_labels.npy", labels)
     print(f"✅ Saved .npy dataset to {output_prefix}_images.npy and _labels.npy")
-    # with open(f"{output_prefix}-images-idx3-ubyte", "wb") as f_img:
-    #     f_img.write(struct.pack(">IIII", 2051, num_images, rows, cols * channels))
-    #     f_img.write(images.tobytes())
-    #
-    # with open(f"{output_prefix}-labels-idx1-ubyte", "wb") as f_lbl:
-    #     f_lbl.write(struct.pack(">II", 2049, num_images))
-    #     f_lbl.write(labels.tobytes())
-    #
-    # print(f"✅ IDX files saved to: {output_prefix}-images-idx3-ubyte / -labels-idx1-ubyte")
-
 
 
 def main():
