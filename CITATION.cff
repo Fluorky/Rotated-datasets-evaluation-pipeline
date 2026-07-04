@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+title: "Rotated Datasets Evaluation Pipeline"
+message: "If you use this repository, please cite it using the metadata from this file."
+type: software
+authors:
+  - family-names: "TWOJE_NAZWISKO"
+    given-names: "Maciej"
+repository-code: "https://github.com/Fluorky/Rotated-datasets-evaluation-pipeline"
+license: MIT
+version: "1.0.0"
+date-released: "2026-07-04"
+abstract: "Pipeline for generating rotated image dataset variants and evaluating CNN/CyCNN models across rotation-based train-test scenarios."
+keywords:
+  - rotated datasets
+  - image classification
+  - computer vision
+  - CNN
+  - CyCNN
+  - model evaluation
+  - robustness
