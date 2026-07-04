@@ -1,6 +1,28 @@
-.venv
-.ideadataset/GTSRB_RGB/dataset_GTSRB_non_rotated/*.npy
-Master Thesis/
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Local environment
+# Environments
+.venv/
+venv/
 .env
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+__MACOSX/
+
+# Logs / generated outputs
+*.log
+results/log_files_from_slave/logs/
+results/heatmaps/
+results/plots/
+results/exports/
+results/fig/
+
+# Local data / raw data
+dataset/*_raw/
