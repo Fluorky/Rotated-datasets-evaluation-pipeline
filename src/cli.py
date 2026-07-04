@@ -204,6 +204,7 @@ def matrix_analyzer_cmd(
             alpha=alpha,
             top_n=top_n,
             theta_step=theta_step,
+            metric=metric,
         )
 
         if per_class_angles:

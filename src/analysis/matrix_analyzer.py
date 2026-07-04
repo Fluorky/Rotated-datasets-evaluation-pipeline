@@ -43,9 +43,21 @@ from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime
 
-
 # put this right after the existing imports
 _CURRENT_METRIC: Optional[str] = None  # optional hint set by CLI or env
+
+
+def _normalize_metric(metric: Optional[str] = None) -> str:
+    """
+    Normalize the metric used for storing and querying evaluation rows.
+
+    This keeps micro and macro runs separated in the database and in exports.
+    """
+    value = (metric or _CURRENT_METRIC or os.environ.get("MATRIX_ANALYZER_METRIC") or "micro").lower().strip()
+    if value not in {"micro", "macro"}:
+        raise ValueError(f"Unsupported metric: {metric!r}. Expected 'micro' or 'macro'.")
+    return value
+
 
 def _export_root(dataset: str, metric: Optional[str]) -> str:
     """
@@ -53,11 +65,12 @@ def _export_root(dataset: str, metric: Optional[str]) -> str:
       <cwd>/results/exports/<dataset>/<metric>/
     Falls back to _CURRENT_METRIC or env MATRIX_ANALYZER_METRIC, then 'micro'.
     """
-    m = (metric or _CURRENT_METRIC or os.environ.get("MATRIX_ANALYZER_METRIC") or "micro").lower()
+    m = _normalize_metric(metric)
     root = os.path.join(os.getcwd(), "results", "exports", dataset, m)
     _ensure_dir(root)
     print(f"\n📁 Export directory: {root}")
     return root
+
 
 # =============================== tee / logging ===============================
 
@@ -77,10 +90,14 @@ def tee_to_file(log_file: Optional[str]):
     class TeeWriter:
         def __init__(self, a, b):
             self.a, self.b = a, b
+
         def write(self, s):
-            self.a.write(s); self.b.write(s)
+            self.a.write(s);
+            self.b.write(s)
+
         def flush(self):
-            self.a.flush(); self.b.flush()
+            self.a.flush();
+            self.b.flush()
 
     old = sys.stdout
     f = open(log_file, "w", encoding="utf-8")
@@ -110,6 +127,7 @@ def _ensure_dir(path: str):
     if path:
         os.makedirs(path, exist_ok=True)
 
+
 def _write_csv(path: str, rows: List[Tuple], header: List[str]):
     _ensure_dir(os.path.dirname(path))
     with open(path, "w", newline="", encoding="utf-8") as f:
@@ -119,11 +137,13 @@ def _write_csv(path: str, rows: List[Tuple], header: List[str]):
         for r in rows:
             w.writerow(r)
 
+
 def _safe_load_cm(path: str) -> Optional[np.ndarray]:
     try:
         return np.load(path)
     except Exception:
         return None
+
 
 def _upper(s: str) -> str:
     return s.upper().replace("-", "_")
@@ -149,6 +169,7 @@ def _model_belongs_to_dataset(model_name: str, dataset: str) -> bool:
 def _micro_acc_from_cm(cm: np.ndarray) -> float:
     total = cm.sum()
     return float(np.trace(cm)) / float(total) if total > 0 else 0.0
+
 
 def _macro_acc_from_cm(cm: np.ndarray) -> float:
     # per-class accuracy: diag(row) / row sum; then mean across classes
@@ -214,9 +235,11 @@ def _initialize_db(db_path: str) -> sqlite3.Connection:
 
 def _safe_alter_add(conn: sqlite3.Connection, sql: str):
     try:
-        conn.execute(sql); conn.commit()
+        conn.execute(sql);
+        conn.commit()
     except sqlite3.OperationalError:
         pass  # column probably exists
+
 
 def _ensure_eval_extra_cols(db_path: str):
     conn = sqlite3.connect(db_path)
@@ -224,13 +247,16 @@ def _ensure_eval_extra_cols(db_path: str):
     _safe_alter_add(conn, "ALTER TABLE evaluations ADD COLUMN metric TEXT")
     conn.close()
 
+
 def ensure_indices(db_path: str):
-    conn = sqlite3.connect(db_path); cur = conn.cursor()
+    conn = sqlite3.connect(db_path);
+    cur = conn.cursor()
     cur.execute("CREATE INDEX IF NOT EXISTS idx_eval_model   ON evaluations(model)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_eval_dataset ON evaluations(dataset)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_eval_metric  ON evaluations(metric)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_eval_m_t     ON evaluations(model, test_case)")
-    conn.commit(); conn.close()
+    conn.commit();
+    conn.close()
 
 
 def create_training_runs_table(db_path: str) -> None:
@@ -288,11 +314,11 @@ def compute_training_times(db_path: str) -> None:
 
 # ========================== ingestion from confusion matrices ===============
 def collect_and_store_results(
-    cm_root: str,
-    db_path: str,
-    dataset: Optional[str] = None,
-    metric: str = "micro",
-    clear_dataset: bool = False,
+        cm_root: str,
+        db_path: str,
+        dataset: Optional[str] = None,
+        metric: str = "micro",
+        clear_dataset: bool = False,
 ) -> None:
     """
     Scan confusion matrices and insert enriched rows into 'evaluations'.
@@ -302,27 +328,39 @@ def collect_and_store_results(
         db_path: SQLite file
         dataset: if provided, accept only models belonging to this dataset
         metric: 'micro' (default) or 'macro'
-        clear_dataset: if True, delete previous rows for this dataset
+        clear_dataset: if True, delete previous rows for this dataset and metric
+
+    Notes:
+        ``perf_per_time`` is stored per evaluation row as ``accuracy / train_time``.
+        Model-level time-aware rankings are computed explicitly later as
+        ``mean(accuracy) / train_time`` and ``min(accuracy) / train_time``.
+        Since train time is constant per model, averaging ``accuracy / train_time``
+        is numerically equivalent for the mean, but keeping the ranking calculation
+        explicit makes the intended semantics clearer.
     """
+    metric = _normalize_metric(metric)
+
     _ensure_eval_extra_cols(db_path)
     conn = _initialize_db(db_path)
-    cur  = conn.cursor()
+    cur = conn.cursor()
 
-    # Optional cleanup: now that 'dataset' column exists, wipe by dataset directly.
+    # Optional cleanup: wipe only the selected dataset+metric, not all metrics.
     if clear_dataset and dataset:
-        cur.execute("DELETE FROM evaluations WHERE dataset = ?", (dataset,))
+        cur.execute(
+            "DELETE FROM evaluations WHERE dataset = ? AND metric = ?",
+            (dataset, metric),
+        )
         conn.commit()
-        print(f"🧹 Cleared existing rows for dataset={dataset}")
+        print(f"🧹 Cleared existing rows for dataset={dataset}, metric={metric}")
 
     if not os.path.isdir(cm_root):
         print(f"❌ Not a directory: {cm_root}")
         conn.close()
         return
 
-    use_macro = (metric.lower() == "macro")
+    use_macro = metric == "macro"
 
     raw: List[Tuple[str, str, float]] = []
-    seen_models: set[str] = set()
 
     for model_dir in tqdm(sorted(os.listdir(cm_root)), desc="📁 Scanning models"):
         model_path = os.path.join(cm_root, model_dir)
@@ -337,31 +375,30 @@ def collect_and_store_results(
             cm_file = os.path.join(model_path, test_subdir, "confusion_matrix.npy")
             if not os.path.exists(cm_file):
                 continue
+
             cm = _safe_load_cm(cm_file)
             if cm is None:
                 print(f"⚠️ Failed to load {cm_file}")
                 continue
 
-            if use_macro:
-                acc = _macro_acc_from_cm(cm)
-            else:
-                acc = _micro_acc_from_cm(cm)
-
+            acc = _macro_acc_from_cm(cm) if use_macro else _micro_acc_from_cm(cm)
             raw.append((model_dir, test_subdir, float(acc)))
-            seen_models.add(model_dir)
 
-    # Group accuracies by model
+    # Group accuracies by model.
     acc_by_model: Dict[str, List[float]] = defaultdict(list)
-    for m, _, a in raw:
-        acc_by_model[m].append(a)
+    for model, _, accuracy in raw:
+        acc_by_model[model].append(accuracy)
 
-    # Training time map
+    # Training time map.
     cur.execute("SELECT model, total_train_time FROM training_runs")
-    time_map = {m: (float(t) if t is not None else None) for (m, t) in cur.fetchall()}
+    time_map = {
+        model: (float(total_time) if total_time is not None else None)
+        for model, total_time in cur.fetchall()
+    }
 
-    # Build enriched rows
+    # Build enriched rows.
     rows_to_insert = []
-    for model, test_case, acc in raw:
+    for model, test_case, accuracy in raw:
         accs = acc_by_model[model]
         avg_ = mean(accs)
         med_ = median(accs)
@@ -369,44 +406,50 @@ def collect_and_store_results(
         max_ = max(accs)
         std_ = stdev(accs) if len(accs) > 1 else 0.0
 
-        ttime = time_map.get(model)
-        perf  = (acc / ttime) if (ttime and ttime > 0) else None
+        train_time = time_map.get(model)
+        perf_per_time = (
+            accuracy / train_time
+            if train_time is not None and train_time > 0
+            else None
+        )
 
-        rows_to_insert.append((
-            model, test_case, acc,
-            avg_, med_, min_, max_, std_,
-            ttime if ttime is not None else None,
-            perf if perf is not None else None
-        ))
+        rows_to_insert.append(
+            (
+                model,
+                test_case,
+                accuracy,
+                avg_,
+                med_,
+                min_,
+                max_,
+                std_,
+                train_time,
+                perf_per_time,
+                dataset,
+                metric,
+            )
+        )
 
-    # Insert all rows first
     if rows_to_insert:
-        cur.executemany("""
+        cur.executemany(
+            """
             INSERT INTO evaluations (
                 model, test_case, accuracy,
                 avg, median, min, max, std,
-                train_time, perf_per_time
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, rows_to_insert)
-        conn.commit()
-
-    # Now safely stamp 'dataset' and 'metric' **only for newly seen models**
-    # (prevents touching unrelated legacy rows).
-    if seen_models:
-        if dataset:
-            cur.executemany(
-                "UPDATE evaluations SET dataset = ? WHERE dataset IS NULL AND model = ?",
-                [(dataset, m) for m in seen_models]
-            )
-        if metric:
-            cur.executemany(
-                "UPDATE evaluations SET metric = ? WHERE metric IS NULL AND model = ?",
-                [(metric, m) for m in seen_models]
-            )
+                train_time, perf_per_time,
+                dataset, metric
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            rows_to_insert,
+        )
         conn.commit()
 
     conn.close()
-    print(f"✅ Saved {len(rows_to_insert)} rows into evaluations (db: {db_path})")
+    print(
+        f"✅ Saved {len(rows_to_insert)} rows into evaluations "
+        f"(dataset={dataset}, metric={metric}, db: {db_path})"
+    )
+
 
 # def collect_and_store_results(
 #     cm_root: str,
@@ -521,29 +564,99 @@ def collect_and_store_results(
 
 # ========================== queries & helpers (report) ======================
 
-def _fetch_eval_rows(db_path: str, dataset: str) -> List[Tuple[str, float]]:
-    conn = sqlite3.connect(db_path)
-    cur  = conn.cursor()
-    cur.execute("SELECT model, accuracy FROM evaluations")
-    rows = cur.fetchall()
-    conn.close()
-    return [(m, a) for (m, a) in rows if _model_belongs_to_dataset(m, dataset)]
+def _table_has_column(cur: sqlite3.Cursor, table: str, column: str) -> bool:
+    cur.execute(f"PRAGMA table_info({table})")
+    return any(row[1] == column for row in cur.fetchall())
 
-def _fetch_eval_rows_full(db_path: str, dataset: str) -> List[Tuple[str, str, float]]:
+
+def _fetch_eval_rows(
+        db_path: str,
+        dataset: str,
+        metric: Optional[str] = None,
+) -> List[Tuple[str, float]]:
+    """
+    Fetch evaluation rows for exactly one dataset and metric.
+
+    Falls back to the legacy model-name dataset guard if older DB rows do not
+    contain dataset/metric metadata.
+    """
+    metric = _normalize_metric(metric)
     conn = sqlite3.connect(db_path)
-    cur  = conn.cursor()
-    cur.execute("SELECT model, test_case, accuracy FROM evaluations")
-    rows = cur.fetchall()
+    cur = conn.cursor()
+
+    has_dataset = _table_has_column(cur, "evaluations", "dataset")
+    has_metric = _table_has_column(cur, "evaluations", "metric")
+
+    if has_dataset and has_metric:
+        cur.execute(
+            """
+            SELECT model, accuracy
+            FROM evaluations
+            WHERE dataset = ? AND metric = ?
+            """,
+            (dataset, metric),
+        )
+        rows = cur.fetchall()
+    else:
+        cur.execute("SELECT model, accuracy FROM evaluations")
+        rows = [
+            (model, accuracy)
+            for model, accuracy in cur.fetchall()
+            if _model_belongs_to_dataset(model, dataset)
+        ]
+
     conn.close()
-    return [(m, t, a) for (m, t, a) in rows if _model_belongs_to_dataset(m, dataset)]
+    return rows
+
+
+def _fetch_eval_rows_full(
+        db_path: str,
+        dataset: str,
+        metric: Optional[str] = None,
+) -> List[Tuple[str, str, float]]:
+    """
+    Fetch full evaluation rows for exactly one dataset and metric.
+
+    Falls back to the legacy model-name dataset guard if older DB rows do not
+    contain dataset/metric metadata.
+    """
+    metric = _normalize_metric(metric)
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+
+    has_dataset = _table_has_column(cur, "evaluations", "dataset")
+    has_metric = _table_has_column(cur, "evaluations", "metric")
+
+    if has_dataset and has_metric:
+        cur.execute(
+            """
+            SELECT model, test_case, accuracy
+            FROM evaluations
+            WHERE dataset = ? AND metric = ?
+            """,
+            (dataset, metric),
+        )
+        rows = cur.fetchall()
+    else:
+        cur.execute("SELECT model, test_case, accuracy FROM evaluations")
+        rows = [
+            (model, test_case, accuracy)
+            for model, test_case, accuracy in cur.fetchall()
+            if _model_belongs_to_dataset(model, dataset)
+        ]
+
+    conn.close()
+    return rows
+
 
 def _fetch_train_times(db_path: str) -> Dict[str, float]:
     conn = sqlite3.connect(db_path)
-    cur  = conn.cursor()
+    cur = conn.cursor()
     cur.execute("SELECT model, total_train_time FROM training_runs")
     d = {m: float(t) for (m, t) in cur.fetchall() if t is not None}
     conn.close()
     return d
+
 
 # def _extended_stats_table(acc_by_model: Dict[str, List[float]]) -> List[Dict[str, float]]:
 #     tab = []
@@ -576,10 +689,10 @@ def _fetch_train_times(db_path: str) -> Dict[str, float]:
 #             [(s["model"], s["avg"], s["median"], s["min"], s["max"], s["std"]) for s in tab],
 #             ["model","avg","median","min","max","std"]
 #         )
-def _export_gap_train_test(db_path: str, dataset: str, export_dir: Optional[str]):
+def _export_gap_train_test(db_path: str, dataset: str, export_dir: Optional[str], metric: Optional[str] = None):
     if not export_dir:
         return
-    rows = _fetch_eval_rows_full(db_path, dataset)
+    rows = _fetch_eval_rows_full(db_path, dataset, metric)
     per_model: Dict[str, Dict[str, List[float]]] = defaultdict(lambda: {"trainlike": [], "ood": []})
     for m, t, a in rows:
         (per_model[m]["trainlike"] if _is_train_like(t) else per_model[m]["ood"]).append(a)
@@ -590,7 +703,8 @@ def _export_gap_train_test(db_path: str, dataset: str, export_dir: Optional[str]
             gap = mean(tl) - mean(od)
             out.append((m, gap, mean(tl), mean(od)))
     out.sort(key=lambda r: -r[1])  # biggest gap first
-    _write_csv(os.path.join(export_dir, "train_test_gap.csv"), out, ["model","gap","avg_trainlike","avg_ood"])
+    _write_csv(os.path.join(export_dir, "train_test_gap.csv"), out, ["model", "gap", "avg_trainlike", "avg_ood"])
+
 
 def _print_extended_stats(acc_by_model: Dict[str, List[float]], export_dir: Optional[str] = None):
     tab = _extended_stats_table(acc_by_model)
@@ -604,13 +718,14 @@ def _print_extended_stats(acc_by_model: Dict[str, List[float]], export_dir: Opti
     if export_dir:
         _write_csv(
             os.path.join(export_dir, "ranking_quality.csv"),
-            [(s["model"], s["avg"], s["median"], s["min"], s["max"], s["std"], s["robust_mean"], s["iqr"]) for s in tab],
-            ["model","avg","median","min","max","std","robust_mean","iqr"]
+            [(s["model"], s["avg"], s["median"], s["min"], s["max"], s["std"], s["robust_mean"], s["iqr"]) for s in
+             tab],
+            ["model", "avg", "median", "min", "max", "std", "robust_mean", "iqr"]
         )
 
 
-def _print_gap_train_test(db_path: str, dataset: str):
-    rows = _fetch_eval_rows_full(db_path, dataset)
+def _print_gap_train_test(db_path: str, dataset: str, metric: Optional[str] = None):
+    rows = _fetch_eval_rows_full(db_path, dataset, metric)
     if not rows:
         return
     per_model: Dict[str, Dict[str, List[float]]] = defaultdict(lambda: {"trainlike": [], "ood": []})
@@ -618,7 +733,8 @@ def _print_gap_train_test(db_path: str, dataset: str):
         (per_model[m]["trainlike"] if _is_train_like(t) else per_model[m]["ood"]).append(a)
     print("\n🔀 Train–test gap (avg_trainlike - avg_ood):")
     for m, parts in per_model.items():
-        tl = parts["trainlike"]; od = parts["ood"]
+        tl = parts["trainlike"];
+        od = parts["ood"]
         if tl and od:
             gap = mean(tl) - mean(od)
             print(f"🪢 {m}: gap={gap:.4f} (trainlike={mean(tl):.4f}, ood={mean(od):.4f})")
@@ -629,22 +745,26 @@ def _print_gap_train_test(db_path: str, dataset: str):
 def _norm_minmax_dict(d: Dict[str, float]) -> Dict[str, float]:
     if not d:
         return {}
-    vmin = min(d.values()); vmax = max(d.values())
+    vmin = min(d.values());
+    vmax = max(d.values())
     span = (vmax - vmin) if (vmax > vmin) else 1.0
     return {k: (v - vmin) / span for k, v in d.items()}
+
 
 def _trimmed_mean(values: List[float], trim: float = 0.10) -> float:
     if not values:
         return 0.0
-    n = len(values); k = int(n * trim)
+    n = len(values);
+    k = int(n * trim)
     vals = sorted(values)
-    core = vals[k:n-k] if n - 2*k > 0 else vals
+    core = vals[k:n - k] if n - 2 * k > 0 else vals
     return mean(core) if core else mean(vals)
 
+
 def _print_extended_stats_per_time(
-    acc_by_model: Dict[str, List[float]],
-    train_times: Dict[str, float],
-    export_dir: Optional[str] = None,
+        acc_by_model: Dict[str, List[float]],
+        train_times: Dict[str, float],
+        export_dir: Optional[str] = None,
 ) -> None:
     rows = []
     for model, accs in acc_by_model.items():
@@ -677,16 +797,18 @@ def _print_extended_stats_per_time(
     if export_dir:
         _write_csv(
             os.path.join(export_dir, "ranking_per_time.csv"),
-            [(s["model"], s["avg_perf"], s["median_perf"], s["min_perf"], s["max_perf"], s["std_perf"], s["time"]) for s in rows],
-            ["model","avg_perf","median_perf","min_perf","max_perf","std_perf","time_s"]
+            [(s["model"], s["avg_perf"], s["median_perf"], s["min_perf"], s["max_perf"], s["std_perf"], s["time"]) for s
+             in rows],
+            ["model", "avg_perf", "median_perf", "min_perf", "max_perf", "std_perf", "time_s"]
         )
 
+
 def _print_time_aware_stats(
-    acc_by_model: Dict[str, List[float]],
-    train_times: Dict[str, float],
-    alpha: float = 0.70,
-    top_n: Optional[int] = None,
-    export_dir: Optional[str] = None,
+        acc_by_model: Dict[str, List[float]],
+        train_times: Dict[str, float],
+        alpha: float = 0.70,
+        top_n: Optional[int] = None,
+        export_dir: Optional[str] = None,
 ) -> None:
     avg_map: Dict[str, float] = {}
     min_map: Dict[str, float] = {}
@@ -705,7 +827,7 @@ def _print_time_aware_stats(
             avg_perf[model] = a / t
             robust_perf[model] = m / t
 
-    norm_avg      = _norm_minmax_dict(avg_map)
+    norm_avg = _norm_minmax_dict(avg_map)
     norm_avg_perf = _norm_minmax_dict(avg_perf) if avg_perf else {}
     score: Dict[str, float] = {}
     for model in avg_map.keys():
@@ -715,6 +837,7 @@ def _print_time_aware_stats(
 
     def _sort_key_avgperf(m):
         return (-avg_perf.get(m, -math.inf), -robust_perf.get(m, -math.inf))
+
     def _sort_key_score(m):
         return (-score.get(m, -math.inf), -avg_map.get(m, -math.inf))
 
@@ -723,17 +846,21 @@ def _print_time_aware_stats(
     print("\n⚡ Time-aware ranking (average performance = avg/time):")
     top_avgperf = []
     for m in sorted(models, key=_sort_key_avgperf)[:top_n]:
-        t = train_times.get(m); ap = avg_perf.get(m); rp = robust_perf.get(m)
+        t = train_times.get(m);
+        ap = avg_perf.get(m);
+        rp = robust_perf.get(m)
         if t is None or ap is None:
             continue
         top_avgperf.append((m, t, ap, rp))
         print(f"🚀 {m}: train_time={t:.2f}s, avg_perf={ap:.6f}, robust_perf={rp:.6f}")
 
     print("\n🏅 Balanced ranking (alpha-weighted quality + efficiency):")
-    print(f"    score = {alpha:.2f}·norm(avg) + {1-alpha:.2f}·norm(avg_perf)")
+    print(f"    score = {alpha:.2f}·norm(avg) + {1 - alpha:.2f}·norm(avg_perf)")
     top_balanced = []
     for m in sorted(models, key=_sort_key_score)[:top_n]:
-        t = train_times.get(m); ap = avg_perf.get(m); sc = score.get(m)
+        t = train_times.get(m);
+        ap = avg_perf.get(m);
+        sc = score.get(m)
         if t is None or ap is None or sc is None:
             continue
         top_balanced.append((m, sc, avg_map[m], ap, t))
@@ -743,20 +870,21 @@ def _print_time_aware_stats(
         _write_csv(
             os.path.join(export_dir, "ranking_timeaware_avgperf.csv"),
             [(m, ap, rp, t) for (m, t, ap, rp) in top_avgperf],
-            ["model","avg_perf","robust_perf","time_s"]
+            ["model", "avg_perf", "robust_perf", "time_s"]
         )
         _write_csv(
             os.path.join(export_dir, "ranking_timeaware_balanced.csv"),
             [(m, sc, avg, ap, t) for (m, sc, avg, ap, t) in top_balanced],
-            ["model","score","avg","avg_perf","time_s"]
+            ["model", "score", "avg", "avg_perf", "time_s"]
         )
 
+
 def _print_balanced_ranking_per_time(
-    acc_by_model: Dict[str, List[float]],
-    train_times: Dict[str, float],
-    alpha: float = 0.70,
-    top_n: int = 20,
-    export_dir: Optional[str] = None,
+        acc_by_model: Dict[str, List[float]],
+        train_times: Dict[str, float],
+        alpha: float = 0.70,
+        top_n: int = 20,
+        export_dir: Optional[str] = None,
 ) -> None:
     """
     Balanced ranking based ONLY on per-time metrics:
@@ -796,7 +924,7 @@ def _print_balanced_ranking_per_time(
     rows.sort(key=lambda x: (-x["score"], -x["avg_perf"], -x["robust_perf"]))
 
     print("\n🏅 Balanced ranking (per-time only):")
-    print(f"    score = {alpha:.2f}·norm(avg_perf) + {1-alpha:.2f}·norm(robust_perf)")
+    print(f"    score = {alpha:.2f}·norm(avg_perf) + {1 - alpha:.2f}·norm(robust_perf)")
     for r in rows[:top_n]:
         print(
             "🥇 {model}: score={score:.4f}, "
@@ -808,7 +936,7 @@ def _print_balanced_ranking_per_time(
         _write_csv(
             os.path.join(export_dir, "ranking_balanced_per_time.csv"),
             [(r["model"], r["score"], r["avg_perf"], r["robust_perf"], r["time"]) for r in rows],
-            ["model","score","avg_perf","robust_perf","time_s"]
+            ["model", "score", "avg_perf", "robust_perf", "time_s"]
         )
 
 
@@ -818,6 +946,7 @@ ANGLE_TOKEN = re.compile(
     r'(?i)(?:rotated-(\d+)(?:-(\d+))?)|(?:range[_-](\d+)[_-](\d+))|(?:full[_-]0[_-]360)'
 )
 
+
 def _interval_from_token(name: str) -> Optional[Tuple[float, float]]:
     s = name.lower()
     m = ANGLE_TOKEN.search(s)
@@ -826,38 +955,45 @@ def _interval_from_token(name: str) -> Optional[Tuple[float, float]]:
             return (0.0, 0.0)
         return None
     if m.group(1):  # rotated-a or rotated-a-b
-        a = float(m.group(1)); b = float(m.group(2)) if m.group(2) else float(m.group(1))
+        a = float(m.group(1));
+        b = float(m.group(2)) if m.group(2) else float(m.group(1))
         return (a, b)
     if m.group(3):  # range_a_b
-        a = float(m.group(3)); b = float(m.group(4))
+        a = float(m.group(3));
+        b = float(m.group(4))
         return (a, b)
     return (0.0, 360.0)  # full_0_360
 
-def _center_deg(iv: Tuple[float,float]) -> float:
+
+def _center_deg(iv: Tuple[float, float]) -> float:
     a, b = iv
     if b >= a:
         return (a + b) / 2.0
     # wrap (e.g., 330..30)
     return (a + ((b + 360.0 - a) / 2.0)) % 360.0
 
+
 def _delta_deg(train_name: str, test_name: str) -> Optional[float]:
     it = _interval_from_token(train_name)
     ie = _interval_from_token(test_name)
     if not it or not ie:
         return None
-    ct = _center_deg(it); ce = _center_deg(ie)
+    ct = _center_deg(it);
+    ce = _center_deg(ie)
     d = abs(ct - ce) % 360.0
     if d > 180.0:
         d = 360.0 - d
     return d
 
+
 def _bin_delta(d: float, step: int = 15) -> int:
     b = int(round(d / step) * step)
     return min(b, 180)
 
+
 def _acc_vs_delta_and_auc(db_path: str, dataset: str, theta_step: int = 15,
-                          out_dir: Optional[str] = None):
-    rows = _fetch_eval_rows_full(db_path, dataset)
+                          out_dir: Optional[str] = None, metric: Optional[str] = None):
+    rows = _fetch_eval_rows_full(db_path, dataset, metric)
     if not rows:
         return
     by_model: Dict[str, Dict[int, List[float]]] = defaultdict(lambda: defaultdict(list))
@@ -878,15 +1014,17 @@ def _acc_vs_delta_and_auc(db_path: str, dataset: str, theta_step: int = 15,
         # simple forward fill, then fill initial None with first known
         last = None
         for i, v in enumerate(ys):
-            if v is None: ys[i] = last
-            else: last = v
+            if v is None:
+                ys[i] = last
+            else:
+                last = v
         first_known = next((v for v in ys if v is not None), 0.0)
         ys = [first_known if v is None else v for v in ys]
 
         # AUCθ (trapezoidal), normalized by 180°
         auc = 0.0
         for i in range(1, len(xgrid)):
-            auc += (ys[i-1] + ys[i]) * (xgrid[i] - xgrid[i-1]) / 2.0
+            auc += (ys[i - 1] + ys[i]) * (xgrid[i] - xgrid[i - 1]) / 2.0
         auc_norm = auc / 180.0
         acc_worst = min(ys) if ys else 0.0
         sd_theta = float(np.std(ys)) if ys else 0.0
@@ -920,7 +1058,8 @@ def create_model_summary_table(db_path: str):
     """
     Optional legacy table for summaries, kept for CLI compatibility.
     """
-    conn = sqlite3.connect(db_path); cur = conn.cursor()
+    conn = sqlite3.connect(db_path);
+    cur = conn.cursor()
     cur.execute('DROP TABLE IF EXISTS model_summary')
     cur.execute('''
         CREATE TABLE model_summary (
@@ -934,7 +1073,8 @@ def create_model_summary_table(db_path: str):
             perf_per_time REAL
         )
     ''')
-    conn.commit(); conn.close()
+    conn.commit();
+    conn.close()
     print("✅ Created table: model_summary")
 
 
@@ -942,7 +1082,8 @@ def compute_and_insert_model_summaries(db_path: str):
     """
     Populate 'model_summary' using 'evaluations' + 'training_runs'.
     """
-    conn = sqlite3.connect(db_path); cur = conn.cursor()
+    conn = sqlite3.connect(db_path);
+    cur = conn.cursor()
     cur.execute('SELECT model, accuracy FROM evaluations')
     rows = cur.fetchall()
 
@@ -956,10 +1097,13 @@ def compute_and_insert_model_summaries(db_path: str):
     inserts = []
     for model, accs in acc_by_model.items():
         if not accs: continue
-        avg_ = mean(accs); med_ = median(accs); min_ = min(accs); max_ = max(accs)
+        avg_ = mean(accs);
+        med_ = median(accs);
+        min_ = min(accs);
+        max_ = max(accs)
         std_ = stdev(accs) if len(accs) > 1 else 0.0
-        tt  = time_map.get(model)
-        ppt = (avg_/tt) if tt else None
+        tt = time_map.get(model)
+        ppt = (avg_ / tt) if tt else None
         inserts.append((model, avg_, med_, min_, max_, std_, tt, ppt))
 
     if inserts:
@@ -1018,7 +1162,7 @@ def compute_and_insert_model_summaries(db_path: str):
 #     _print_extended_stats(acc_by_model, export_dir=export_root)
 #
 #     # train–test gap
-#     _print_gap_train_test(db_path, dataset)
+#     _print_gap_train_test(db_path, dataset, metric)
 #
 #     # time-aware views
 #     train_times = _fetch_train_times(db_path)
@@ -1028,16 +1172,16 @@ def compute_and_insert_model_summaries(db_path: str):
 #
 #     # rotation stability
 #     delta_dir = os.path.join(export_root, "delta_curves")
-#     _acc_vs_delta_and_auc(db_path, dataset, theta_step=theta_step, out_dir=delta_dir)
-#     _export_gap_train_test(db_path, dataset, export_root)
+#     _acc_vs_delta_and_auc(db_path, dataset, theta_step=theta_step, out_dir=delta_dir, metric=metric)
+#     _export_gap_train_test(db_path, dataset, export_root, metric)
 
 def query_best_models(
-    db_path: str,
-    dataset: str,
-    alpha: float = 0.70,
-    top_n: int = 500,
-    theta_step: int = 15,
-    metric: Optional[str] = None,   # NEW
+        db_path: str,
+        dataset: str,
+        alpha: float = 0.70,
+        top_n: int = 500,
+        theta_step: int = 15,
+        metric: Optional[str] = None,  # NEW
 ) -> None:
     """
     Per-dataset report:
@@ -1048,7 +1192,8 @@ def query_best_models(
       - Acc(Δθ) / AUCθ + CSV
     Exports go to: <cwd>/results/exports/<dataset>/<metric>/
     """
-    rows = _fetch_eval_rows(db_path, dataset)
+    metric = _normalize_metric(metric)
+    rows = _fetch_eval_rows(db_path, dataset, metric)
     if not rows:
         print(f"⚠️ No evaluation rows for dataset '{dataset}'.")
         return
@@ -1074,7 +1219,7 @@ def query_best_models(
     _print_extended_stats(acc_by_model, export_dir=export_root)
 
     # train–test gap
-    _print_gap_train_test(db_path, dataset)
+    _print_gap_train_test(db_path, dataset, metric)
 
     # time-aware views
     train_times = _fetch_train_times(db_path)
@@ -1084,8 +1229,8 @@ def query_best_models(
 
     # rotation stability
     delta_dir = os.path.join(export_root, "delta_curves")
-    _acc_vs_delta_and_auc(db_path, dataset, theta_step=theta_step, out_dir=delta_dir)
-    _export_gap_train_test(db_path, dataset, export_root)
+    _acc_vs_delta_and_auc(db_path, dataset, theta_step=theta_step, out_dir=delta_dir, metric=metric)
+    _export_gap_train_test(db_path, dataset, export_root, metric)
 
 
 def _iqr(values: List[float]) -> float:
@@ -1120,8 +1265,10 @@ def _extended_stats_table(acc_by_model: Dict[str, List[float]]) -> List[Dict[str
 
 # ======== Per-class vs angle (by test-angle and by Δθ) ======================
 import matplotlib
+
 matplotlib.use("Agg")  # headless
 import matplotlib.pyplot as plt
+
 
 def _per_class_acc_from_cm(cm: np.ndarray) -> np.ndarray:
     """Return per-class accuracy vector (len = C)."""
@@ -1132,16 +1279,18 @@ def _per_class_acc_from_cm(cm: np.ndarray) -> np.ndarray:
         acc[~np.isfinite(acc)] = 0.0
     return acc
 
+
 def _angle_center_from_name(name: str) -> Optional[float]:
     iv = _interval_from_token(name)
     return _center_deg(iv) if iv else None
 
+
 def _export_per_class_matrix(
-    model: str,
-    mat: np.ndarray,
-    angle_bins: List[int],
-    out_dir: str,
-    title: str
+        model: str,
+        mat: np.ndarray,
+        angle_bins: List[int],
+        out_dir: str,
+        title: str
 ):
     """
     mat: shape [num_classes, num_bins] in [0,1]
@@ -1170,11 +1319,12 @@ def _export_per_class_matrix(
     plt.savefig(png_path)
     plt.close()
 
+
 def export_per_class_vs_angle(
-    cm_root: str,
-    dataset: str,
-    theta_step: int = 15,
-    by_delta: bool = False,
+        cm_root: str,
+        dataset: str,
+        theta_step: int = 15,
+        by_delta: bool = False,
 ):
     """
     Build per-class accuracy heatmaps per model:
@@ -1249,18 +1399,18 @@ def export_per_class_vs_angle(
             vecs = buckets.get(b, [])
             if not vecs:
                 continue
-            V = np.stack(vecs, axis=0)   # [K, C]
+            V = np.stack(vecs, axis=0)  # [K, C]
             mat[:, j] = V.mean(axis=0)
 
         # fill NaNs (forward/backward fill along angle axis)
         # left->right
         for j in range(1, mat.shape[1]):
             nan_rows = np.isnan(mat[:, j])
-            mat[nan_rows, j] = mat[nan_rows, j-1]
+            mat[nan_rows, j] = mat[nan_rows, j - 1]
         # right->left
-        for j in range(mat.shape[1]-2, -1, -1):
+        for j in range(mat.shape[1] - 2, -1, -1):
             nan_rows = np.isnan(mat[:, j])
-            mat[nan_rows, j] = mat[nan_rows, j+1]
+            mat[nan_rows, j] = mat[nan_rows, j + 1]
 
         out_dir = os.path.join(base_out)
         title = f"{model_dir} – per-class accuracy vs {'Δθ' if by_delta else 'test angle'}"
