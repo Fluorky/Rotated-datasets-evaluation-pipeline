@@ -247,7 +247,6 @@ def _initialize_db(db_path: str) -> sqlite3.Connection:
     conn.commit()
 
     # ---- MIGRATIONS (idempotent) ----
-    # Add new columns if they don't exist yet.
     def _safe_alter_add(sql: str):
         try:
             cur.execute(sql)
@@ -488,117 +487,6 @@ def collect_and_store_results(
     )
 
 
-# def collect_and_store_results(
-#     cm_root: str,
-#     db_path: str,
-#     dataset: Optional[str] = None,
-#     metric: str = "micro",
-#     clear_dataset: bool = False,
-# ) -> None:
-#     """
-#     Scan confusion matrices and insert enriched rows into 'evaluations'.
-#
-#     Args:
-#         cm_root: base dir with <MODEL>/<TEST_CASE>/confusion_matrix.npy
-#         db_path: SQLite file
-#         dataset: if provided, accept only models belonging to this dataset
-#         metric: 'micro' (default) or 'macro'
-#         clear_dataset: if True, delete previous rows for this dataset (heuristic via model name)
-#     """
-#     conn = _initialize_db(db_path)
-#     cur  = conn.cursor()
-#
-#     # optional cleanup
-#     if clear_dataset and dataset:
-#         cur.execute("SELECT id, model FROM evaluations")
-#         rows_all = cur.fetchall()
-#         ids_to_del = [rid for (rid, m) in rows_all if _model_belongs_to_dataset(m, dataset)]
-#         if ids_to_del:
-#             cur.executemany("DELETE FROM evaluations WHERE id = ?", [(i,) for i in ids_to_del])
-#             conn.commit()
-#             print(f"🧹 Cleared {len(ids_to_del)} existing rows for dataset={dataset}")
-#
-#     if not os.path.isdir(cm_root):
-#         print(f"❌ Not a directory: {cm_root}")
-#         conn.close()
-#         return
-#
-#     use_macro = (metric.lower() == "macro")
-#
-#     raw: List[Tuple[str, str, float]] = []
-#     for model_dir in tqdm(sorted(os.listdir(cm_root)), desc="📁 Scanning models"):
-#         model_path = os.path.join(cm_root, model_dir)
-#         if not os.path.isdir(model_path):
-#             continue
-#
-#         # dataset guard
-#         if dataset and not _model_belongs_to_dataset(model_dir, dataset):
-#             continue
-#
-#         for test_subdir in sorted(os.listdir(model_path)):
-#             cm_file = os.path.join(model_path, test_subdir, "confusion_matrix.npy")
-#             if not os.path.exists(cm_file):
-#                 continue
-#             cm = _safe_load_cm(cm_file)
-#             if cm is None:
-#                 print(f"⚠️ Failed to load {cm_file}")
-#                 continue
-#             acc = _macro_acc_from_cm(cm) if use_macro else _micro_acc_from_cm(cm)
-#             raw.append((model_dir, test_subdir, float(acc)))
-#
-#     # group accuracies by model
-#     acc_by_model: Dict[str, List[float]] = defaultdict(list)
-#     for m, _, a in raw:
-#         acc_by_model[m].append(a)
-#
-#     # training time map
-#     cur.execute("SELECT model, total_train_time FROM training_runs")
-#     time_map = {r[0]: (float(r[1]) if r[1] is not None else None) for r in cur.fetchall()}
-#
-#     # insert enriched rows
-#     rows_to_insert = []
-#     for model, test_case, acc in raw:
-#         accs = acc_by_model[model]
-#         avg_ = mean(accs)
-#         med_ = median(accs)
-#         min_ = min(accs)
-#         max_ = max(accs)
-#         std_ = stdev(accs) if len(accs) > 1 else 0.0
-#
-#         ttime = time_map.get(model)
-#         perf  = (acc / ttime) if (ttime and ttime > 0) else None
-#
-#         rows_to_insert.append((
-#             model, test_case, acc,
-#             avg_, med_, min_, max_, std_,
-#             ttime if ttime is not None else None,
-#             perf if perf is not None else None
-#         ))
-#     # after executemany insert:
-#     if dataset or metric:
-#         conn = sqlite3.connect(db_path);
-#         cur = conn.cursor()
-#         if dataset:
-#             cur.execute("UPDATE evaluations SET dataset = ? WHERE dataset IS NULL", (dataset,))
-#         if metric:
-#             cur.execute("UPDATE evaluations SET metric = ? WHERE metric IS NULL", (metric,))
-#         conn.commit();
-#         conn.close()
-#
-#     if rows_to_insert:
-#         cur.executemany("""
-#             INSERT INTO evaluations (
-#                 model, test_case, accuracy,
-#                 avg, median, min, max, std,
-#                 train_time, perf_per_time
-#             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-#         """, rows_to_insert)
-#         conn.commit()
-#
-#     conn.close()
-#     print(f"✅ Saved {len(rows_to_insert)} rows into evaluations (db: {db_path})")
-
-
 # ========================== queries & helpers (report) ======================
 
 def _table_has_column(cur: sqlite3.Cursor, table: str, column: str) -> bool:
@@ -695,37 +583,6 @@ def _fetch_train_times(db_path: str) -> Dict[str, float]:
     return d
 
 
-# def _extended_stats_table(acc_by_model: Dict[str, List[float]]) -> List[Dict[str, float]]:
-#     tab = []
-#     for model, accs in acc_by_model.items():
-#         accs_clean = [a for a in accs if a is not None]
-#         if not accs_clean:
-#             continue
-#         tab.append({
-#             "model": model,
-#             "avg": mean(accs_clean),
-#             "median": median(accs_clean),
-#             "min": min(accs_clean),
-#             "max": max(accs_clean),
-#             "std": stdev(accs_clean) if len(accs_clean) > 1 else 0.0
-#         })
-#     # Order: avg desc, std asc, min desc, median desc, max desc
-#     tab.sort(key=lambda s: (-s["avg"], s["std"], -s["min"], -s["median"], -s["max"]))
-#     return tab
-
-
-# def _print_extended_stats(acc_by_model: Dict[str, List[float]], export_dir: Optional[str] = None):
-#     tab = _extended_stats_table(acc_by_model)
-#     print("\n📈 Extended stats per model (quality):")
-#     for s in tab:
-#         print(f"🧪 {s['model']}: avg={s['avg']:.4f}, median={s['median']:.4f}, "
-#               f"min={s['min']:.4f}, max={s['max']:.4f}, std={s['std']:.4f}")
-#     if export_dir:
-#         _write_csv(
-#             os.path.join(export_dir, "ranking_quality.csv"),
-#             [(s["model"], s["avg"], s["median"], s["min"], s["max"], s["std"]) for s in tab],
-#             ["model","avg","median","min","max","std"]
-#         )
 def _export_gap_train_test(db_path: str, dataset: str, export_dir: Optional[str], metric: Optional[str] = None):
     if not export_dir:
         return
@@ -1155,62 +1012,6 @@ def compute_and_insert_model_summaries(db_path: str):
 
 
 # ================================ main report ===============================
-#
-# def query_best_models(
-#     db_path: str,
-#     dataset: str,
-#     alpha: float = 0.70,
-#     top_n: int = 50,
-#     theta_step: int = 15,
-# ) -> None:
-#     """
-#     Per-dataset report:
-#       - average accuracy per model
-#       - extended stats (quality) + CSV
-#       - train–test gap
-#       - per-time extended + time-aware + balanced per-time + CSV
-#       - Acc(Δθ) / AUCθ + CSV
-#       Exports go to results/exports/<dataset>/
-#     """
-#     rows = _fetch_eval_rows(db_path, dataset)
-#     if not rows:
-#         print(f"⚠️ No evaluation rows for dataset '{dataset}'.")
-#         return
-#
-#     export_root = os.path.join("results", "exports", dataset)
-#     _ensure_dir(export_root)
-#
-#     # group
-#     acc_by_model: Dict[str, List[float]] = defaultdict(list)
-#     for m, a in rows:
-#         acc_by_model[m].append(a)
-#
-#     # avg per model
-#     avg_list = [(m, mean(v)) for m, v in acc_by_model.items()]
-#     avg_list.sort(key=lambda x: -x[1])
-#
-#     print("\n📊 Average accuracy per model (per-dataset):")
-#     for m, a in avg_list:
-#         print(f"🧠 {m}: {a:.4f}")
-#     if avg_list:
-#         print(f"\n🏆 Best model (by accuracy): {avg_list[0][0]} with avg accuracy: {avg_list[0][1]:.4f}")
-#
-#     # quality-only extended + CSV
-#     _print_extended_stats(acc_by_model, export_dir=export_root)
-#
-#     # train–test gap
-#     _print_gap_train_test(db_path, dataset, metric)
-#
-#     # time-aware views
-#     train_times = _fetch_train_times(db_path)
-#     _print_extended_stats_per_time(acc_by_model, train_times, export_dir=export_root)
-#     _print_time_aware_stats(acc_by_model, train_times, alpha=alpha, top_n=top_n, export_dir=export_root)
-#     _print_balanced_ranking_per_time(acc_by_model, train_times, alpha=alpha, top_n=top_n, export_dir=export_root)
-#
-#     # rotation stability
-#     delta_dir = os.path.join(export_root, "delta_curves")
-#     _acc_vs_delta_and_auc(db_path, dataset, theta_step=theta_step, out_dir=delta_dir, metric=metric)
-#     _export_gap_train_test(db_path, dataset, export_root, metric)
 
 def query_best_models(
         db_path: str,
@@ -1218,7 +1019,7 @@ def query_best_models(
         alpha: float = 0.70,
         top_n: int = 500,
         theta_step: int = 15,
-        metric: Optional[str] = None,  # NEW
+        metric: Optional[str] = None,
 ) -> None:
     """
     Per-dataset report:
