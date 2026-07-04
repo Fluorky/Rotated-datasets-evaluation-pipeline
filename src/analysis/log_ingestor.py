@@ -9,6 +9,13 @@ from src.utils.wsl_handler import sync_wsl_logs
 import ast
 
 
+_FLOAT_RE = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
+_TRAIN_RE = re.compile(rf"\[Epoch\s+(\d+)\]\s+Train Loss:\s+({_FLOAT_RE})")
+_VAL_RE = re.compile(rf"Validation loss:\s+({_FLOAT_RE}),\s+Accuracy:\s+(\d+)/(\d+)\s+\(({_FLOAT_RE})%\)")
+_TEST_RE = re.compile(rf"Test loss:\s+({_FLOAT_RE}),\s+Accuracy:\s+(\d+)/(\d+)\s+\(({_FLOAT_RE})%\)")
+_ELAPSED_RE = re.compile(rf"Elapsed time:\s+({_FLOAT_RE})\s+sec")
+
+
 def extract_config(line):
     if not isinstance(line, str):
         return {}
@@ -24,65 +31,91 @@ def extract_config(line):
 def parse_filename(filename):
     name = os.path.basename(filename).replace('_train.txt', '').replace('.txt', '')
     if "_test_on_" in name:
-        train_part, test_part = name.split("_test_on_")
+        train_part, test_part = name.split("_test_on_", maxsplit=1)
         return train_part, test_part
     return name, ''
 
 
-def parse_log_file(filepath):
+def _read_log_lines(filepath):
     with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-        lines = f.readlines()
-    # with open(filepath, 'r', encoding='utf-8') as f:
-    #     lines = f.readlines()
+        return f.readlines()
+
+
+def _base_log_metadata(filepath, lines):
+    config_line = next((line for line in lines if line.startswith("configuration:")), None)
+    config = extract_config(config_line)
+    dataset, augmentation = parse_filename(filepath)
+
+    return {
+        'model_id': config.get('model', ''),
+        'log_file': os.path.basename(filepath),
+        'dataset': dataset,
+        'augmentation_info': augmentation,
+        'transform': config.get('polar_transform', ''),
+        'batch_size': config.get('batch_size', None),
+        'lr': config.get('lr', None),
+    }
+
+
+def parse_log_file(filepath):
+    """
+    Parse a training log without assuming that validation and elapsed-time lines
+    are located at fixed offsets after the epoch line.
+
+    Expected fragments can appear with extra logging between them, for example:
+      [Epoch 1] Train Loss: ...
+      ... optional extra lines ...
+      Validation loss: ..., Accuracy: ...
+      ... optional extra lines ...
+      Elapsed time: ... sec
+    """
+    lines = _read_log_lines(filepath)
 
     config_line = next((line for line in lines if line.startswith("configuration:")), None)
     if not config_line:
         return []
 
-    config = extract_config(config_line)
-    dataset, augmentation = parse_filename(filepath)
-
-    model_id = config.get('model', '')
-    transform = config.get('polar_transform', '')
-    batch_size = config.get('batch_size', None)
-    lr = config.get('lr', None)
+    metadata = _base_log_metadata(filepath, lines)
 
     total_elapsed_time = 0.0
     rows = []
+    current_row = None
 
-    for i, line in enumerate(lines):
-        match = re.match(r'\[Epoch (\d+)\] Train Loss: ([\d.]+)', line)
-        if match:
-            epoch = int(match.group(1))
-            train_loss = float(match.group(2))
+    def flush_current_row():
+        if current_row is not None:
+            rows.append(current_row)
 
-            val_line = lines[i + 1] if (i + 1) < len(lines) else ''
-            val_match = re.search(r'Validation loss: ([\d.]+), Accuracy: (\d+)/(\d+) \(([\d.]+)%\)', val_line)
+    for line in lines:
+        train_match = _TRAIN_RE.search(line)
+        if train_match:
+            flush_current_row()
+            current_row = {
+                **metadata,
+                'epoch': int(train_match.group(1)),
+                'train_loss': float(train_match.group(2)),
+                'val_loss': None,
+                'accuracy': None,
+                'elapsed_time': None,
+            }
+            continue
 
-            val_loss = float(val_match.group(1)) if val_match else None
-            accuracy = float(val_match.group(4)) if val_match else None
+        if current_row is None:
+            continue
 
-            time_line = lines[i + 2] if (i + 2) < len(lines) else ''
-            elapsed_match = re.search(r'Elapsed time: ([\d.]+) sec', time_line)
-            elapsed = float(elapsed_match.group(1)) if elapsed_match else None
+        val_match = _VAL_RE.search(line)
+        if val_match:
+            current_row['val_loss'] = float(val_match.group(1))
+            current_row['accuracy'] = float(val_match.group(4))
+            continue
 
-            if elapsed:
-                total_elapsed_time += elapsed
+        elapsed_match = _ELAPSED_RE.search(line)
+        if elapsed_match:
+            elapsed = float(elapsed_match.group(1))
+            current_row['elapsed_time'] = elapsed
+            total_elapsed_time += elapsed
+            continue
 
-            rows.append({
-                'model_id': model_id,
-                'log_file': os.path.basename(filepath),
-                'dataset': dataset,
-                'augmentation_info': augmentation,
-                'transform': transform,
-                'batch_size': batch_size,
-                'lr': lr,
-                'epoch': epoch,
-                'train_loss': train_loss,
-                'val_loss': val_loss,
-                'accuracy': accuracy,
-                'elapsed_time': elapsed
-            })
+    flush_current_row()
 
     for row in rows:
         row['total_train_time'] = total_elapsed_time
@@ -91,34 +124,20 @@ def parse_log_file(filepath):
 
 
 def parse_test_log_file(filepath):
-    with open(filepath, 'r') as f:
-        lines = f.readlines()
+    lines = _read_log_lines(filepath)
 
-    config_line = next((line for line in lines if line.startswith("configuration:")), None)
-    config = extract_config(config_line)
-    dataset, augmentation = parse_filename(filepath)
-
-    model_id = config.get('model', '')
-    transform = config.get('polar_transform', '')
-    batch_size = config.get('batch_size', None)
-    lr = config.get('lr', None)
+    metadata = _base_log_metadata(filepath, lines)
 
     test_line = next((line for line in lines if line.startswith("Test loss:")), None)
     if not test_line:
         return []
 
-    match = re.search(r'Test loss: ([\d.]+), Accuracy: (\d+)/(\d+) \(([\d.]+)%\)', test_line)
+    match = _TEST_RE.search(test_line)
     if not match:
         return []
 
     return [{
-        'model_id': model_id,
-        'log_file': os.path.basename(filepath),
-        'dataset': dataset,
-        'augmentation_info': augmentation,
-        'transform': transform,
-        'batch_size': batch_size,
-        'lr': lr,
+        **metadata,
         'test_loss': float(match.group(1)),
         'accuracy': float(match.group(4)),
         'total': int(match.group(3)),
