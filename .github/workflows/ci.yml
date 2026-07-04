@@ -32,3 +32,6 @@ jobs:
 
       - name: Check CLI entrypoint
         run: python main.py --help
+
+      - name: Run tests
+        run: python -m pytest
