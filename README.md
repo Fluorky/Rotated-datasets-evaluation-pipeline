@@ -1,4 +1,4 @@
-# rotated-datasets-evaluation-pipeline
+# Rotated-datasets-evaluation-pipeline
 
 Pipeline for generating rotated image dataset variants and evaluating CNN/CyCNN models across rotation-based train-test scenarios.
 
