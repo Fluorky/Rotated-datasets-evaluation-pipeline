@@ -201,17 +201,17 @@ def _micro_acc_from_cm(cm: np.ndarray) -> float:
 
 
 def _macro_acc_from_cm(cm: np.ndarray) -> float:
-    # per-class accuracy: diag(row) / row sum; then mean across classes
+    # Per-class accuracy: diagonal(row) / row sum.
+    # Classes with zero support are ignored instead of counted as 0.0.
     diag = np.diag(cm).astype(np.float64)
     rows = cm.sum(axis=1).astype(np.float64)
     valid = rows > 0
+
     if not np.any(valid):
         return 0.0
-    per_class = np.zeros_like(diag, dtype=np.float64)
-    per_class[valid] = diag[valid] / rows[valid]
+
+    per_class = diag[valid] / rows[valid]
     return float(np.mean(per_class))
-
-
 # ============================ train-like vs OOD ==============================
 
 def _is_train_like(test_case: str) -> bool:
