@@ -3,14 +3,6 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from src.datasets.gtsrb import (
-    check_dataset,
-    clean_up,
-    download_dataset,
-    prepare_gtsrb_dataset,
-)
-
-
 IMAGE_SIZE = (32, 32)
 IMAGE_PATTERN = "*.png"
 
@@ -108,17 +100,18 @@ def save_as_idx(image_dir, output_prefix):
 
 
 def main():
+    from src.datasets.gtsrb import (
+        download_dataset,
+        prepare_gtsrb_dataset,
+        check_dataset,
+        clean_up,
+    )
+
     download_dataset()
     prepare_gtsrb_dataset()
     check_dataset()
-    save_as_idx(
-        "dataset/GTSRB_32x32/train",
-        "dataset/GTSRB_RGB/dataset_GTSRB_non_rotated/train",
-    )
-    save_as_idx(
-        "dataset/GTSRB_32x32/test",
-        "dataset/GTSRB_RGB/dataset_GTSRB_non_rotated/test",
-    )
+    save_as_idx("dataset/GTSRB_32x32/train", "dataset/GTSRB_RGB/dataset_GTSRB_non_rotated/train")
+    save_as_idx("dataset/GTSRB_32x32/test", "dataset/GTSRB_RGB/dataset_GTSRB_non_rotated/test")
     clean_up(["dataset/GTSRB_32x32", "dataset/GTSRB_raw"])
 
 
