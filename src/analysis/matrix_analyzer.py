@@ -139,10 +139,39 @@ def _write_csv(path: str, rows: List[Tuple], header: List[str]):
 
 
 def _safe_load_cm(path: str) -> Optional[np.ndarray]:
+    """
+    Load and validate a confusion matrix.
+
+    Invalid matrices are skipped with a concrete reason instead of hiding the
+    original error behind a generic "failed to load" message.
+    """
     try:
-        return np.load(path)
-    except Exception:
+        cm = np.load(path)
+    except Exception as exc:
+        print(f"⚠️ Failed to load confusion matrix {path}: {exc}")
         return None
+
+    if cm.ndim != 2:
+        print(f"⚠️ Invalid confusion matrix shape in {path}: expected 2D, got {cm.shape}")
+        return None
+
+    if cm.shape[0] != cm.shape[1]:
+        print(f"⚠️ Invalid confusion matrix shape in {path}: expected square matrix, got {cm.shape}")
+        return None
+
+    if not np.issubdtype(cm.dtype, np.number):
+        print(f"⚠️ Invalid confusion matrix dtype in {path}: expected numeric, got {cm.dtype}")
+        return None
+
+    if np.any(~np.isfinite(cm)):
+        print(f"⚠️ Invalid confusion matrix values in {path}: matrix contains NaN or infinite values")
+        return None
+
+    if np.any(cm < 0):
+        print(f"⚠️ Invalid confusion matrix values in {path}: matrix contains negative values")
+        return None
+
+    return cm
 
 
 def _upper(s: str) -> str:
@@ -361,6 +390,7 @@ def collect_and_store_results(
     use_macro = metric == "macro"
 
     raw: List[Tuple[str, str, float]] = []
+    skipped_models: List[str] = []
 
     for model_dir in tqdm(sorted(os.listdir(cm_root)), desc="📁 Scanning models"):
         model_path = os.path.join(cm_root, model_dir)
@@ -369,6 +399,7 @@ def collect_and_store_results(
 
         # dataset guard (avoid e.g. GTSRB vs GTSRB_RGB mixing)
         if dataset and not _model_belongs_to_dataset(model_dir, dataset):
+            skipped_models.append(model_dir)
             continue
 
         for test_subdir in sorted(os.listdir(model_path)):
@@ -378,11 +409,17 @@ def collect_and_store_results(
 
             cm = _safe_load_cm(cm_file)
             if cm is None:
-                print(f"⚠️ Failed to load {cm_file}")
                 continue
 
             acc = _macro_acc_from_cm(cm) if use_macro else _micro_acc_from_cm(cm)
             raw.append((model_dir, test_subdir, float(acc)))
+
+    if skipped_models:
+        print(f"⚠️ Skipped {len(skipped_models)} model directories not matching dataset={dataset}:")
+        for model_name in skipped_models[:20]:
+            print(f"   - {model_name}")
+        if len(skipped_models) > 20:
+            print(f"   ... and {len(skipped_models) - 20} more")
 
     # Group accuracies by model.
     acc_by_model: Dict[str, List[float]] = defaultdict(list)
