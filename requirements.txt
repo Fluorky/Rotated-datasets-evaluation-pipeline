@@ -8,6 +8,7 @@ cycler==0.12.1
 fonttools==4.57.0
 idna==3.18
 importlib_resources==6.5.2
+iniconfig==2.3.0
 kaggle==1.7.4.5
 kiwisolver==1.4.7
 markdown-it-py==4.2.0
@@ -18,9 +19,11 @@ opencv-python==5.0.0.93
 packaging==25.0
 pandas==2.2.3
 pillow==11.2.1
+pluggy==1.6.0
 protobuf==7.35.1
 Pygments==2.20.0
 pyparsing==3.2.3
+pytest==9.1.1
 python-dateutil==2.9.0.post0
 python-slugify==8.0.4
 pytz==2025.2
