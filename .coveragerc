@@ -1,0 +1,23 @@
+[run]
+source = src
+
+omit =
+    src/scripts/*
+    src/cli.py
+    src/analysis/best_models.py
+    src/analysis/family_aggregator.py
+    src/analysis/learning_curves.py
+    src/analysis/learning_matrix.py
+    src/analysis/log_checker.py
+    src/analysis/optuna_analyzer.py
+    src/datasets/gtsrb.py
+    src/datasets/lego.py
+    src/utils/wsl_handler.py
+
+[report]
+show_missing = True
+skip_empty = True
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+    def main\(
