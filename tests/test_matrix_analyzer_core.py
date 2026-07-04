@@ -31,7 +31,7 @@ def test_macro_accuracy_ignores_classes_with_zero_support():
         [0, 0],   # no samples for this class
     ])
 
-    assert _macro_acc_from_cm(cm) == 0.8
+    assert _macro_acc_from_cm(cm) == pytest.approx(0.8)
 
 
 def test_dataset_scoping_does_not_mix_gtsrb_and_gtsrb_rgb():
@@ -46,12 +46,8 @@ def test_normalize_metric_accepts_only_micro_or_macro():
     assert _normalize_metric("MICRO") == "micro"
     assert _normalize_metric(" macro ") == "macro"
 
-    try:
+    with pytest.raises(ValueError, match="Unsupported metric"):
         _normalize_metric("weighted")
-    except ValueError as exc:
-        assert "Unsupported metric" in str(exc)
-    else:
-        raise AssertionError("Expected ValueError for unsupported metric")
 
 
 def test_safe_load_cm_accepts_valid_square_numeric_matrix(tmp_path):
