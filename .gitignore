@@ -1,3 +1,6 @@
 .venv
 .ideadataset/GTSRB_RGB/dataset_GTSRB_non_rotated/*.npy
 Master Thesis/
+
+# Local environment
+.env
