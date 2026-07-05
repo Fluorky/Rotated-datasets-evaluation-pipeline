@@ -1,8 +1,8 @@
-# Rotated-datasets-evaluation-pipeline
+# Rotated Datasets Evaluation Pipeline
 
-Pipeline for generating rotated image dataset variants and evaluating CNN/CyCNN models across rotation-based train-test scenarios.
+This repository contains a research artifact for generating rotated image dataset variants and evaluating CNN/CyCNN models across rotation-based train-test scenarios.
 
-This repository contains research code and experiment utilities developed for working with rotated image datasets, model evaluation logs, confusion matrices, and result analysis. It was created as part of a master's thesis project and later adapted as a public research artifact for scientific publication.
+It supports dataset preparation, fixed-angle and angle-range rotations, train/test scenario generation, log ingestion, confusion-matrix analysis, ranking generation, and result visualization.
 
 ## Overview
 
@@ -31,11 +31,13 @@ The code is intended for experiments involving standard CNN models and rotation-
 - Learning curve generation.
 - Optuna experiment analysis.
 - Best-model ranking and summary generation.
+- Core tests for result logic, parser behavior, dataset conversion, and pipeline safety.
 
 ## Repository structure
 
 ```text
 .
+├── .github/workflows/          # GitHub Actions CI
 ├── configs/
 │   └── scenarios/              # Train/test scenario JSON files
 ├── dataset/                    # Dataset files and generated dataset variants
@@ -46,8 +48,11 @@ The code is intended for experiments involving standard CNN models and rotation-
 │   ├── pipelines/              # Dataset rotation and scenario-generation pipeline
 │   ├── scripts/                # Additional plotting/export scripts
 │   └── utils/                  # Shared helpers
-├── main.py
-├── requirements.txt
+├── tests/                      # Core tests for result logic and pipeline safety
+├── main.py                     # CLI entrypoint wrapper
+├── requirements.txt            # Runtime dependencies
+├── requirements-dev.txt        # Test/development dependencies
+├── CITATION.cff                # Machine-readable citation metadata
 ├── LICENSE
 └── README.md
 ```
@@ -87,13 +92,13 @@ merged_range_full_0_360_plus_non_rotated
 
 ## Installation
 
-Python 3.9 or newer is recommended.
+Python 3.12 is recommended for the current public artifact and CI configuration.
 
 Clone the repository:
 
 ```bash
-git clone https://github.com/Fluorky/rotated-datasets-evaluation-pipeline.git
-cd rotated-datasets-evaluation-pipeline
+git clone https://github.com/Fluorky/Rotated-datasets-evaluation-pipeline.git
+cd Rotated-datasets-evaluation-pipeline
 ```
 
 Optionally create a virtual environment:
@@ -110,13 +115,23 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+For development and tests:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
 If you use GPU-based model training or evaluation, make sure that your PyTorch installation matches your CUDA version.
 
 ## Usage
 
-The repository exposes a Typer-based CLI.
+The repository exposes a Typer-based CLI. The recommended entrypoint is:
 
-Show available commands:
+```bash
+python main.py --help
+```
+
+You can also run the CLI module directly:
 
 ```bash
 python -m src.cli --help
@@ -125,7 +140,7 @@ python -m src.cli --help
 ### Analyze logs and generate heatmaps
 
 ```bash
-python -m src.cli analyze \
+python main.py analyze \
   --dataset MNIST \
   --logs-dir results/log_files_from_slave/logs \
   --output-dir results/heatmaps
@@ -134,7 +149,7 @@ python -m src.cli analyze \
 ### Ingest experiment logs
 
 ```bash
-python -m src.cli ingest \
+python main.py ingest \
   --wsl-path "<path-to-source-logs>" \
   --local-logs results/log_files_from_slave/logs \
   --db results/db/experiment_logs.db
@@ -143,7 +158,7 @@ python -m src.cli ingest \
 ### Check training and test logs
 
 ```bash
-python -m src.cli check-logs \
+python main.py check-logs \
   --train "<path-to-training-logs>" \
   --test "<path-to-test-logs>"
 ```
@@ -151,14 +166,14 @@ python -m src.cli check-logs \
 ### Analyze confusion matrices
 
 ```bash
-python -m src.cli matrix-analyzer \
-  --cm-root "<path-to-confusion-matrices>" \
+python main.py matrix-analyzer \
+  --cm-root "<path-to-confusion-matrix-root>" \
   --db results/db/experiment_logs.db \
   --dataset MNIST \
   --metric micro
 ```
 
-Optional flags:
+Useful optional flags:
 
 ```bash
 --metric micro
@@ -168,12 +183,13 @@ Optional flags:
 --top-n 50
 --per-class-angles
 --by-delta
+--clear
 ```
 
 ### Generate learning curves
 
 ```bash
-python -m src.cli learning-curves \
+python main.py learning-curves \
   --dataset MNIST \
   --logs-dir results/log_files_from_slave/logs \
   --output-dir results/plots
@@ -182,7 +198,7 @@ python -m src.cli learning-curves \
 ### Analyze Optuna logs
 
 ```bash
-python -m src.cli optuna-analyze \
+python main.py optuna-analyze \
   --dataset MNIST \
   --optuna-logs "<path-to-optuna-logs>" \
   --output-dir results
@@ -191,7 +207,7 @@ python -m src.cli optuna-analyze \
 ### Summarize best models
 
 ```bash
-python -m src.cli best-models \
+python main.py best-models \
   --dataset MNIST \
   --results-dir results/heatmaps
 ```
@@ -223,6 +239,8 @@ PY
 
 Adjust `base_dir`, `dataset_name`, `dataset_key`, and `file_format` for the dataset you want to process.
 
+By default, the pipeline avoids overwriting complete existing outputs. Use the relevant CLI or Python-level overwrite option only when you intentionally want to regenerate outputs.
+
 ## Results and outputs
 
 Depending on the command, outputs may be written to:
@@ -246,9 +264,44 @@ Common output types include:
 - heatmaps
 - best-model summaries
 
+## Testing
+
+The repository includes core tests for result logic and pipeline safety.
+
+Run tests locally:
+
+```bash
+python -m pytest
+```
+
+Run tests with coverage diagnostics:
+
+```bash
+python -m pytest --cov=src --cov-report=term-missing
+```
+
+The tests focus on the parts of the repository most likely to affect scientific results:
+
+- micro and macro accuracy from confusion matrices
+- zero-support class handling in macro accuracy
+- dataset and metric scoping in SQLite evaluation rows
+- matrix ingestion from `confusion_matrix.npy`
+- rotation interval parsing and Δθ binning
+- log parsing for training and test logs
+- rotation pipeline input validation and overwrite safety
+- GTSRB_RGB conversion validation
+
+## Project status
+
+[![Tests](https://github.com/Fluorky/Rotated-datasets-evaluation-pipeline/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/Fluorky/Rotated-datasets-evaluation-pipeline/actions/workflows/ci.yml)
+
+This repository includes automated smoke tests and core logic tests for metric computation, log parsing, dataset/metric scoping, rotation-angle parsing, database ingestion, and preprocessing safeguards.
+
 ## Reproducibility notes
 
-This repository contains research code used for dataset generation and experimental analysis. Some paths, logs, datasets, or generated artifacts may depend on the local experimental environment used during the original work.
+This repository contains research code used for dataset generation and experimental analysis.
+
+Some paths, logs, datasets, or generated artifacts may depend on the local experimental environment used during the original work.
 
 For reproducible use, check and adjust:
 
@@ -264,17 +317,17 @@ The recommended workflow is to keep raw data, generated datasets, logs, and resu
 
 ## Relationship to CyCNN
 
-This repository is not a standalone reimplementation of CyCNN. It contains dataset preparation, rotation, evaluation, and analysis utilities used around CNN/CyCNN-style experiments.
+This repository is not a standalone reimplementation of CyCNN.
 
-If your experiment depends on an external CyCNN implementation, install and configure that project separately, then use this repository to prepare rotated datasets and analyze experiment outputs.
+It contains dataset preparation, rotation, evaluation, and analysis utilities used around CNN/CyCNN-style experiments. If your experiment depends on an external CyCNN implementation, install and configure that project separately, then use this repository to prepare rotated datasets and analyze experiment outputs.
 
 ## Datasets and licensing
 
-This repository may include dataset files, generated dataset variants, experiment outputs, and analysis artifacts used during the research workflow. These files are kept in the repository to preserve the original experimental artifact structure.
+This repository may include dataset files, generated dataset variants, experiment outputs, and analysis artifacts used during the research workflow.
 
-The MIT License in this repository applies only to the original source code, scripts, configuration files, and project-specific documentation authored for this project.
+These files are kept in the repository to preserve the original experimental artifact structure. The MIT License in this repository applies only to the original source code, scripts, configuration files, and project-specific documentation authored for this project. It does **not** relicense external datasets, third-party data, pre-trained models, or files derived from external datasets.
 
-It does **not** relicense external datasets, third-party data, pre-trained models, or files derived from external datasets. Such materials remain subject to their original licenses, terms of use, attribution requirements, and citation requirements.
+Such materials remain subject to their original licenses, terms of use, attribution requirements, and citation requirements.
 
 ### Dataset provenance
 
@@ -282,11 +335,11 @@ The project uses or refers to the following datasets and derived variants:
 
 | Dataset | Usage in this repository | Source / provenance | Licensing note |
 |---|---|---|---|
-| MNIST | Baseline image classification dataset and source for rotated variants | MNIST handwritten digit database by Yann LeCun, Corinna Cortes, and Christopher J.C. Burges; derived from NIST datasets | MNIST is not relicensed by this repository. Users should follow the original MNIST terms and attribution requirements. |
-| GTSRB | Traffic sign classification dataset and source for rotated variants | German Traffic Sign Recognition Benchmark (GTSRB), originally provided by the Ruhr University Bochum / INI benchmark site; some workflows may use publicly available mirrors such as Kaggle | GTSRB is not relicensed by this repository. Users should follow the terms of the exact source from which they obtain the dataset. |
-| GTSRB_RGB | RGB-formatted or converted GTSRB-derived dataset variant used in experiments | Derived from GTSRB preprocessing/conversion steps used in this project | This variant inherits the licensing and usage restrictions of the underlying GTSRB data. |
-| LEGO-like data | Image classification dataset used for rotation-based experiments | Project-specific or third-party LEGO-like image data used during the original experiments | LEGO-derived or LEGO-like data is not relicensed by this repository. Users should verify the original source and its terms before redistribution or reuse. |
-| Rotated dataset variants | Fixed-angle, angle-range, and merged variants generated by this repository | Generated from the datasets listed above using the rotation pipeline | Generated variants inherit the licensing and usage restrictions of their source datasets. |
+| MNIST | Baseline image classification dataset and source for rotated variants. | MNIST handwritten digit database by Yann LeCun, Corinna Cortes, and Christopher J.C. Burges; derived from NIST datasets. | MNIST is not relicensed by this repository. Users should follow the original MNIST terms and attribution requirements. |
+| GTSRB | Traffic sign classification dataset and source for rotated variants. | German Traffic Sign Recognition Benchmark (GTSRB), originally provided by the Ruhr University Bochum / INI benchmark site; some workflows may use publicly available mirrors such as Kaggle. | GTSRB is not relicensed by this repository. Users should follow the terms of the exact source from which they obtain the dataset. |
+| GTSRB_RGB | RGB-formatted or converted GTSRB-derived dataset variant used in experiments. | Derived from GTSRB preprocessing/conversion steps used in this project. | This variant inherits the licensing and usage restrictions of the underlying GTSRB data. |
+| LEGO-like data | Image classification dataset used for rotation-based experiments. | Project-specific or third-party LEGO-like image data used during the original experiments. | LEGO-derived or LEGO-like data is not relicensed by this repository. Users should verify the original source and its terms before redistribution or reuse. |
+| Rotated dataset variants | Fixed-angle, angle-range, and merged variants generated by this repository. | Generated from the datasets listed above using the rotation pipeline. | Generated variants inherit the licensing and usage restrictions of their source datasets. |
 
 ### Generated artifacts
 
@@ -310,9 +363,9 @@ If you use this repository in academic work, please cite the relevant original d
 
 ## Citation
 
-If this repository is used in academic work, please cite the related publication or thesis when available.
+This repository includes a `CITATION.cff` file with machine-readable citation metadata.
 
-A `CITATION.cff` file may be added in the future to provide machine-readable citation metadata.
+If this repository is used in academic work, please cite the related publication or thesis when available, and use the metadata from `CITATION.cff` for citing this software artifact.
 
 ## License
 
