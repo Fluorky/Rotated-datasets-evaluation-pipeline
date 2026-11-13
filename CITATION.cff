@@ -3,7 +3,7 @@ title: "Rotated Datasets Evaluation Pipeline"
 message: "If you use this repository, please cite it using the metadata from this file."
 type: software
 authors:
-  - family-names: "TWOJE_NAZWISKO"
+  - family-names: "Bujalski"
     given-names: "Maciej"
 repository-code: "https://github.com/Fluorky/Rotated-datasets-evaluation-pipeline"
 license: MIT
